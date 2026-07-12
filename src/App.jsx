@@ -13,6 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB } from "./db";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -1448,7 +1449,16 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [settings, setSettings] = useState({ currency: "USD", timezone: "UTC", defaultRiskPct: 1, minTradingDays: 10 });
 
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 650); return () => clearTimeout(t); }, []);
+  const [dataError, setDataError] = useState("");
+
+  useEffect(() => {
+    if (!session?.user) { if (session === null) setLoading(false); return; }
+    setLoading(true);
+    Promise.all([fetchTrades(), fetchChallenges()])
+      .then(([t, c]) => { setTrades(t); setChallenges(c); setDataError(""); })
+      .catch((err) => setDataError(err.message || "Failed to load your data."))
+      .finally(() => setLoading(false));
+  }, [session]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
@@ -1473,20 +1483,73 @@ export default function App() {
     settings: ["Settings", "Personalize Strike Trading"],
   };
 
-  const addTrade = (t) => { setTrades((prev) => [t, ...prev]); addToast("Trade logged successfully"); };
-  const updateTrade = (t) => { setTrades((prev) => prev.map((x) => (x.id === t.id ? t : x))); setSelectedTrade(null); addToast("Trade updated"); };
-  const deleteTrade = (id) => { setTrades((prev) => prev.filter((t) => t.id !== id)); setSelectedTrade(null); addToast("Trade removed", "info"); };
-  const addChallenge = (c) => { setChallenges((prev) => [c, ...prev]); addToast(`${c.firm} challenge created`); };
-  const deleteChallenge = (id) => { setChallenges((prev) => prev.filter((c) => c.id !== id)); addToast("Challenge removed", "info"); };
-  const markFunded = (id) => { setChallenges((prev) => prev.map((c) => c.id === id ? { ...c, stage: "funded", phase: "Funded", profitSplitPct: 80, lastPayoutNetProfit: 0, payoutHistory: [] } : c)); addToast("Challenge marked as Funded 🎉"); };
-  const requestPayout = (id) => {
-    setChallenges((prev) => prev.map((c) => {
-      if (c.id !== id) return c;
-      const s = computeChallengeStats(c, trades);
-      if (s.payoutAmount <= 0) return c;
-      return { ...c, lastPayoutNetProfit: s.netPnl, payoutHistory: [...(c.payoutHistory || []), { date: "2026-07-10", amount: +s.payoutAmount.toFixed(2), split: c.profitSplitPct }] };
-    }));
-    addToast("Payout requested");
+  const addTrade = async (t) => {
+    try {
+      const saved = await insertTrade(t, session.user.id);
+      setTrades((prev) => [saved, ...prev]);
+      addToast("Trade logged successfully");
+    } catch (err) { addToast(err.message || "Failed to save trade", "error"); }
+  };
+
+  const updateTrade = async (t) => {
+    try {
+      const saved = await updateTradeDB(t, session.user.id);
+      setTrades((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
+      setSelectedTrade(null);
+      addToast("Trade updated");
+    } catch (err) { addToast(err.message || "Failed to update trade", "error"); }
+  };
+
+  const deleteTrade = async (id) => {
+    try {
+      await deleteTradeDB(id);
+      setTrades((prev) => prev.filter((t) => t.id !== id));
+      setSelectedTrade(null);
+      addToast("Trade removed", "info");
+    } catch (err) { addToast(err.message || "Failed to delete trade", "error"); }
+  };
+
+  const addChallenge = async (c) => {
+    try {
+      const saved = await insertChallenge(c, session.user.id);
+      setChallenges((prev) => [saved, ...prev]);
+      addToast(`${saved.firm} challenge created`);
+    } catch (err) { addToast(err.message || "Failed to create challenge", "error"); }
+  };
+
+  const deleteChallenge = async (id) => {
+    try {
+      await deleteChallengeDB(id);
+      setChallenges((prev) => prev.filter((c) => c.id !== id));
+      addToast("Challenge removed", "info");
+    } catch (err) { addToast(err.message || "Failed to delete challenge", "error"); }
+  };
+
+  const markFunded = async (id) => {
+    const c = challenges.find((x) => x.id === id);
+    if (!c) return;
+    const updated = { ...c, stage: "funded", phase: "Funded", profitSplitPct: 80, lastPayoutNetProfit: 0, payoutHistory: [] };
+    try {
+      const saved = await updateChallengeDB(updated, session.user.id);
+      setChallenges((prev) => prev.map((x) => (x.id === id ? saved : x)));
+      addToast("Challenge marked as Funded 🎉");
+    } catch (err) { addToast(err.message || "Failed to update challenge", "error"); }
+  };
+
+  const requestPayout = async (id) => {
+    const c = challenges.find((x) => x.id === id);
+    if (!c) return;
+    const s = computeChallengeStats(c, trades);
+    if (s.payoutAmount <= 0) return;
+    const updated = {
+      ...c, lastPayoutNetProfit: s.netPnl,
+      payoutHistory: [...(c.payoutHistory || []), { date: new Date().toISOString().slice(0, 10), amount: +s.payoutAmount.toFixed(2), split: c.profitSplitPct }],
+    };
+    try {
+      const saved = await updateChallengeDB(updated, session.user.id);
+      setChallenges((prev) => prev.map((x) => (x.id === id ? saved : x)));
+      addToast("Payout requested");
+    } catch (err) { addToast(err.message || "Failed to request payout", "error"); }
   };
 
   if (session === undefined) {
@@ -1507,6 +1570,11 @@ export default function App() {
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
           <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} />
+          {dataError && (
+            <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
+              <AlertTriangle size={14} /> Couldn't load your data: {dataError}
+            </div>
+          )}
           <main className="flex-1 min-w-0">
             {loading ? <LoadingScreen /> : (
               <>
