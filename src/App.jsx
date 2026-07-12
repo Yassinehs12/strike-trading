@@ -10,8 +10,9 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, Loader2, Upload, Image as ImageIcon,
-  ArrowUpDown, CheckCircle, Info, Pencil,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff,
 } from "lucide-react";
+import { supabase } from "./supabaseClient";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -363,7 +364,7 @@ const NAV_ITEMS = [
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
-const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
+const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, onSignOut }) => (
   <>
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
@@ -385,13 +386,22 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
         })}
       </nav>
       <div className="p-4 border-t border-zinc-800">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">JT</div>
+        <div className="flex items-center gap-3 px-2 mb-2">
+          {user?.user_metadata?.avatar_url ? (
+            <img src={user.user_metadata.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
+              {(user?.email || "?")[0].toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate">Jordan Trader</div>
-            <div className="text-xs text-zinc-500 truncate">Funded Trader</div>
+            <div className="text-sm font-medium text-zinc-200 truncate">{user?.user_metadata?.full_name || user?.email || "Trader"}</div>
+            <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
           </div>
         </div>
+        <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
+          <LogOut size={14} /> Sign Out
+        </button>
       </div>
     </aside>
     {mobileOpen && <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
@@ -1323,9 +1333,111 @@ const SettingsPage = ({ settings, onSave }) => {
 };
 
 /* ============================================================
+   AUTH PAGE (Google + email/password via Supabase)
+   ============================================================ */
+const AuthPage = () => {
+  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const signInWithGoogle = async () => {
+    setError(""); setLoading(true);
+    const { error: err } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (err) { setError(err.message); setLoading(false); }
+    // on success the browser redirects to Google, so no further action here
+  };
+
+  const submitEmail = async (e) => {
+    e.preventDefault();
+    setError(""); setNotice(""); setLoading(true);
+    if (!email || !password) { setError("Enter both email and password."); setLoading(false); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); setLoading(false); return; }
+
+    if (mode === "signup") {
+      const { error: err } = await supabase.auth.signUp({ email, password });
+      setLoading(false);
+      if (err) setError(err.message);
+      else setNotice("Account created — check your email to confirm, then sign in.");
+    } else {
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (err) setError(err.message);
+    }
+  };
+
+  return (
+    <div className="tj-root min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+      <GlobalStyle />
+      <div className="w-full max-w-sm">
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="w-9 h-9 rounded-lg bg-amber-400 flex items-center justify-center"><Activity size={18} className="text-zinc-950" strokeWidth={2.5} /></div>
+          <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
+        </div>
+
+        <Card className="p-6 tj-animate-in">
+          <div className="flex rounded-lg border border-zinc-800 overflow-hidden mb-5">
+            <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signin" ? "bg-amber-400 text-zinc-950" : "text-zinc-400"}`}>Sign In</button>
+            <button onClick={() => { setMode("signup"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signup" ? "bg-amber-400 text-zinc-950" : "text-zinc-400"}`}>Sign Up</button>
+          </div>
+
+          <button onClick={signInWithGoogle} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all mb-4">
+            <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.6 35 26.9 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.6 5.6C39.9 37.1 44 31 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-3 mb-4"><div className="h-px bg-zinc-800 flex-1" /><span className="text-xs text-zinc-600">or</span><div className="h-px bg-zinc-800 flex-1" /></div>
+
+          <form onSubmit={submitEmail}>
+            <Field label="Email">
+              <div className="relative">
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </Field>
+            <Field label="Password">
+              <div className="relative">
+                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input type={showPassword ? "text" : "password"} className={`${inputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </Field>
+
+            {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+            {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
+
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">
+              {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+              {mode === "signup" ? "Create Account" : "Sign In"}
+            </button>
+          </form>
+        </Card>
+        <p className="text-center text-xs text-zinc-600 mt-4">
+          {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-amber-400 hover:text-amber-300 font-medium">
+            {mode === "signin" ? "Sign up" : "Sign in"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
    ROOT APP
    ============================================================ */
 export default function App() {
+  const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [active, setActive] = useState("dashboard");
@@ -1337,6 +1449,14 @@ export default function App() {
   const [settings, setSettings] = useState({ currency: "USD", timezone: "UTC", defaultRiskPct: 1, minTradingDays: 10 });
 
   useEffect(() => { const t = setTimeout(() => setLoading(false), 650); return () => clearTimeout(t); }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => { await supabase.auth.signOut(); };
 
   const addToast = (message, type = "success") => {
     const id = Date.now() + Math.random();
@@ -1369,11 +1489,22 @@ export default function App() {
     addToast("Payout requested");
   };
 
+  if (session === undefined) {
+    return (
+      <div className="tj-root min-h-screen bg-zinc-950 flex items-center justify-center">
+        <GlobalStyle />
+        <Loader2 size={22} className="text-amber-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) return <AuthPage />;
+
   return (
     <ToastContext.Provider value={addToast}>
       <div className="tj-root min-h-screen bg-zinc-950 text-zinc-100 flex">
         <GlobalStyle />
-        <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+        <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
           <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} />
           <main className="flex-1 min-w-0">
