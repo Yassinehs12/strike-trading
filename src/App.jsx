@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -9,7 +9,7 @@ import {
   XCircle, AlertTriangle, ChevronLeft, ChevronRight, Filter,
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
-  Award, Clock, CalendarDays, Loader2, Upload, Image as ImageIcon,
+  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -361,6 +361,7 @@ const NAV_ITEMS = [
   { id: "challenges", label: "Challenges", icon: ShieldCheck },
   { id: "journal", label: "Trade Journal", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -1312,6 +1313,54 @@ const AnalyticsPage = ({ trades }) => {
 };
 
 /* ============================================================
+   ECONOMIC CALENDAR (live investing.com widget — real market events,
+   with the site's own native date-range tabs, star importance, and filters)
+   ============================================================ */
+const ECON_CALENDAR_COUNTRIES = [5, 72, 4, 35, 37, 25, 6, 12, 43, 17, 22, 10, 26];
+// 5 US, 72 Euro Zone, 4 UK, 35 Japan, 37 China, 25 Australia, 6 Canada,
+// 12 Switzerland, 43 New Zealand, 17 Germany, 22 France, 10 Italy, 26 Spain
+
+const EconomicCalendarPage = () => {
+  const src = `https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=${ECON_CALENDAR_COUNTRIES.join(",")}&calType=week&timeZone=8&lang=1`;
+
+  return (
+    <div className="p-4 md:p-6">
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <CalendarClock size={16} className="text-blue-400" />
+          <h3 className="font-bold text-zinc-100 text-sm">Economic Calendar</h3>
+        </div>
+        <p className="text-xs text-zinc-500 mb-4">
+          Live economic events — use "Show Filters" inside the calendar to narrow by country or by importance (red = high, orange = medium, white = low).
+        </p>
+
+        <div className="rounded-lg overflow-hidden bg-white">
+          <iframe
+            title="Economic Calendar"
+            src={src}
+            width="100%"
+            height="700"
+            frameBorder="0"
+            allowTransparency="true"
+            style={{ display: "block", border: "none" }}
+          />
+        </div>
+        <div className="mt-2 text-right">
+          <span className="text-[11px] text-zinc-600">
+            Economic Calendar provided by{" "}
+            <a href="https://www.investing.com/" target="_blank" rel="nofollow noopener noreferrer" className="text-blue-500 hover:text-blue-400 font-medium">
+              Investing.com
+            </a>
+            , a leading financial portal.
+          </span>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+
+/* ============================================================
    SETTINGS PAGE
    ============================================================ */
 const SettingsPage = ({ settings, onSave }) => {
@@ -1497,6 +1546,7 @@ export default function App() {
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
+    "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     settings: ["Settings", "Personalize Strike Trading"],
   };
 
@@ -1602,6 +1652,7 @@ export default function App() {
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
+                {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} />}
               </>
             )}
