@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB } from "./db";
+import LandingPage from "./LandingPage";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -1336,7 +1337,7 @@ const SettingsPage = ({ settings, onSave }) => {
 /* ============================================================
    AUTH PAGE (Google + email/password via Supabase)
    ============================================================ */
-const AuthPage = () => {
+const AuthPage = ({ onBack }) => {
   const [mode, setMode] = useState("signin"); // "signin" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1377,6 +1378,11 @@ const AuthPage = () => {
     <div className="tj-root min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
       <GlobalStyle />
       <div className="w-full max-w-sm">
+        {onBack && (
+          <button onClick={onBack} className="text-xs text-zinc-500 hover:text-zinc-300 mb-4 flex items-center gap-1 transition-colors">
+            ← Back to home
+          </button>
+        )}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-9 h-9 rounded-lg bg-amber-400 flex items-center justify-center"><Activity size={18} className="text-zinc-950" strokeWidth={2.5} /></div>
           <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
@@ -1439,6 +1445,7 @@ const AuthPage = () => {
    ============================================================ */
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+  const [showAuth, setShowAuth] = useState(false);
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [active, setActive] = useState("dashboard");
@@ -1561,7 +1568,10 @@ export default function App() {
     );
   }
 
-  if (!session) return <AuthPage />;
+  if (!session) {
+    if (!showAuth) return <LandingPage onGetStarted={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />;
+    return <AuthPage onBack={() => setShowAuth(false)} />;
+  }
 
   return (
     <ToastContext.Provider value={addToast}>
