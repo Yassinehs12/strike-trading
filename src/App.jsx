@@ -220,8 +220,7 @@ function computeChallengeStats(challenge, allTrades) {
   const tradingDaysCount = Object.keys(byDay).length;
   const minDaysMet = tradingDaysCount >= challenge.minTradingDays;
 
-  const daysElapsed = Math.floor((TODAY - new Date(challenge.startDate)) / 86400000);
-  const daysLeft = Math.max(0, challenge.durationDays - daysElapsed);
+  const daysActive = Math.floor((TODAY - new Date(challenge.startDate)) / 86400000);
 
   let status = "In Progress";
   if (totalLossBreached || dailyLossBreached) status = "Failed";
@@ -237,7 +236,7 @@ function computeChallengeStats(challenge, allTrades) {
     currentBalance, targetBalance, progressToTarget, targetReached,
     floorBalance, totalDrawdownUsed, totalLossBreached,
     dailyLossLimit, dailyLossUsed: clamp(dailyLossUsed, 0, 100), dailyLossBreached, worstDay,
-    tradingDaysCount, minDaysMet, daysLeft, status, netPnl,
+    tradingDaysCount, minDaysMet, daysActive, status, netPnl,
     availableForPayout, payoutAmount,
   };
 }
@@ -361,7 +360,6 @@ const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "challenges", label: "Challenges", icon: ShieldCheck },
   { id: "journal", label: "Trade Journal", icon: BookOpen },
-  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -472,24 +470,24 @@ const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-50
    CREATE CHALLENGE MODAL
    ============================================================ */
 const CreateChallengeModal = ({ open, onClose, onCreate }) => {
-  const [form, setForm] = useState({ firm: "", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", durationDays: "" });
+  const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = () => {
     const errs = {};
     if (!form.firm.trim()) errs.firm = "Prop firm name is required";
-    ["accountSize", "profitTargetPct", "maxDailyLossPct", "maxTotalLossPct", "durationDays"].forEach((k) => {
+    ["accountSize", "profitTargetPct", "maxDailyLossPct", "maxTotalLossPct"].forEach((k) => {
       if (!form[k] || Number(form[k]) <= 0) errs[k] = "Enter a valid positive number";
     });
     if (Object.keys(errs).length) { setErrors(errs); return; }
     onCreate({
-      id: Date.now(), firm: form.firm, phase: "Phase 1", stage: "evaluation",
+      id: Date.now(), firm: form.firm, phase: form.phase, stage: "evaluation",
       accountSize: Number(form.accountSize), profitTargetPct: Number(form.profitTargetPct),
       maxDailyLossPct: Number(form.maxDailyLossPct), maxTotalLossPct: Number(form.maxTotalLossPct),
-      durationDays: Number(form.durationDays), minTradingDays: 10, startDate: "2026-07-10",
+      minTradingDays: 10, startDate: "2026-07-10",
     });
-    setForm({ firm: "", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", durationDays: "" });
+    setForm({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
     setErrors({});
     onClose();
   };
@@ -499,12 +497,21 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
       <Field label="Prop Firm Name" error={errors.firm}>
         <input className={inputCls} placeholder="e.g. FTMO, Alpha Capital, MyFundedFX" value={form.firm} onChange={(e) => set("firm", e.target.value)} />
       </Field>
+      <Field label="Phase">
+        <div className="flex rounded-lg overflow-hidden border border-white/10">
+          {["Phase 1", "Phase 2"].map((p) => (
+            <button key={p} type="button" onClick={() => set("phase", p)}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${form.phase === p ? "bg-blue-500/20 text-blue-400" : "bg-zinc-950 text-zinc-500"}`}>
+              {p}
+            </button>
+          ))}
+        </div>
+      </Field>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Account Size ($)" error={errors.accountSize}><input type="number" className={inputCls} placeholder="100000" value={form.accountSize} onChange={(e) => set("accountSize", e.target.value)} /></Field>
         <Field label="Profit Target (%)" error={errors.profitTargetPct}><input type="number" className={inputCls} placeholder="10" value={form.profitTargetPct} onChange={(e) => set("profitTargetPct", e.target.value)} /></Field>
         <Field label="Max Daily Loss (%)" error={errors.maxDailyLossPct}><input type="number" className={inputCls} placeholder="5" value={form.maxDailyLossPct} onChange={(e) => set("maxDailyLossPct", e.target.value)} /></Field>
         <Field label="Max Total Loss (%)" error={errors.maxTotalLossPct}><input type="number" className={inputCls} placeholder="10" value={form.maxTotalLossPct} onChange={(e) => set("maxTotalLossPct", e.target.value)} /></Field>
-        <Field label="Duration (Days)" error={errors.durationDays}><input type="number" className={inputCls} placeholder="30" value={form.durationDays} onChange={(e) => set("durationDays", e.target.value)} /></Field>
       </div>
       <button onClick={submit} className="w-full mt-2 bg-blue-500 hover:bg-blue-400 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">Create Challenge</button>
     </Modal>
@@ -515,7 +522,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    LOG TRADE MODAL
    ============================================================ */
 const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
-  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: SETUPS[0], session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null };
+  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null };
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -574,7 +581,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         <Field label="Lot Size / Contracts" error={errors.lots}><input type="number" step="any" className={inputCls} value={form.lots} onChange={(e) => set("lots", e.target.value)} /></Field>
         <Field label="Fees / Commissions"><input type="number" step="any" className={inputCls} placeholder="0" value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
         <Field label="Setup / Strategy">
-          <select className={inputCls} value={form.setup} onChange={(e) => set("setup", e.target.value)}>{SETUPS.map((s) => <option key={s}>{s}</option>)}</select>
+          <input className={inputCls} placeholder="e.g. Breakout, FVG, Trend Following — your own note" value={form.setup} onChange={(e) => set("setup", e.target.value)} />
         </Field>
         <Field label="Session">
           <select className={inputCls} value={form.session} onChange={(e) => set("session", e.target.value)}>{SESSIONS.map((s) => <option key={s}>{s}</option>)}</select>
@@ -779,6 +786,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
         </Card>
       </div>
 
+      <CalendarCard trades={trades} onOpenTrade={onOpenTrade} />
+
       <Card className="p-4 md:p-5">
         <h3 className="font-bold text-zinc-100 text-sm mb-4">Recent Trades</h3>
         {recent.length ? (
@@ -851,7 +860,7 @@ const ChallengeDetailCard = ({ challenge, trades, onDelete, onMarkFunded, onRequ
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2"><h3 className="font-bold text-zinc-100">{challenge.firm}</h3><StatusPill status={s.status} /></div>
-          <p className="text-xs text-zinc-500 mt-0.5">{challenge.phase} · {fmtUSD(challenge.accountSize)} account{!isFunded ? ` · ${s.daysLeft} days left` : ""}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{challenge.phase} · {fmtUSD(challenge.accountSize)} account{!isFunded ? ` · Day ${s.daysActive + 1}` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => onExport(challenge, s)} title="Export summary" className="text-zinc-600 hover:text-blue-500 transition-colors"><Download size={16} /></button>
@@ -910,10 +919,10 @@ const ComparisonTable = ({ challenges, trades }) => {
         <table className="w-full text-sm min-w-[760px]">
           <thead>
             <tr className="text-left text-xs text-zinc-500 bg-zinc-950/60 border-b border-white/10">
-              <th className="px-4 py-3 font-medium">Firm</th><th className="px-4 py-3 font-medium">Stage</th>
+              <th className="px-4 py-3 font-medium">Firm</th><th className="px-4 py-3 font-medium">Phase</th>
               <th className="px-4 py-3 font-medium">Balance</th><th className="px-4 py-3 font-medium">Progress</th>
               <th className="px-4 py-3 font-medium">Daily Loss Used</th><th className="px-4 py-3 font-medium">Total Loss Used</th>
-              <th className="px-4 py-3 font-medium">Days Left</th><th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -925,7 +934,6 @@ const ComparisonTable = ({ challenges, trades }) => {
                 <td className="px-4 py-3 tj-mono text-zinc-300">{c.stage === "funded" ? "—" : `${s.progressToTarget.toFixed(0)}%`}</td>
                 <td className={`px-4 py-3 tj-mono ${s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? "text-blue-500 font-semibold" : "text-zinc-400"}`}>{s.dailyLossUsed.toFixed(0)}%{s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? " · tightest" : ""}</td>
                 <td className={`px-4 py-3 tj-mono ${s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? "text-blue-500 font-semibold" : "text-zinc-400"}`}>{s.totalDrawdownUsed.toFixed(0)}%{s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? " · tightest" : ""}</td>
-                <td className="px-4 py-3 tj-mono text-zinc-400">{c.stage === "funded" ? "∞" : s.daysLeft}</td>
                 <td className="px-4 py-3"><StatusPill status={s.status} /></td>
               </tr>
             ))}
@@ -995,6 +1003,11 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
   const toast = useToast();
 
+  const setupOptions = useMemo(
+    () => Array.from(new Set(trades.map((t) => t.setup).filter(Boolean))).sort(),
+    [trades]
+  );
+
   const filtered = useMemo(() => {
     let list = trades.filter((t) => {
       if (filters.asset !== "All" && t.asset !== filters.asset) return false;
@@ -1029,7 +1042,7 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
             <input placeholder="Search asset..." className="bg-transparent outline-none text-sm text-zinc-200 placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
           </div>
           <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option>{ASSETS.map((a) => <option key={a}>{a}</option>)}</select>
-          <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{SETUPS.map((s) => <option key={s}>{s}</option>)}</select>
+          <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
           <button onClick={exportCSV} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> Export CSV</button>
           <div className="flex items-center gap-1 text-xs text-zinc-500 ml-auto"><Filter size={12} /> {filtered.length} trades</div>
@@ -1095,7 +1108,7 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
 /* ============================================================
    CALENDAR PAGE (P&L heatmap)
    ============================================================ */
-const CalendarPage = ({ trades, onOpenTrade }) => {
+const CalendarCard = ({ trades, onOpenTrade }) => {
   const [cursor, setCursor] = useState(new Date(2026, 6, 1)); // July 2026
 
   const byDay = useMemo(() => {
@@ -1131,8 +1144,7 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
   const monthTotal = Object.entries(byDay).filter(([date]) => new Date(date).getMonth() === month && new Date(date).getFullYear() === year).reduce((s, [, v]) => s + v.pnl, 0);
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <Card className="p-4 md:p-5">
+    <Card className="p-4 md:p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-bold text-zinc-100">{monthLabel}</h3>
@@ -1154,7 +1166,7 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
             const info = byDay[dateStr];
             return (
               <button key={i} onClick={() => info?.trades?.[0] && onOpenTrade(info.trades[0])}
-                className={`aspect-square rounded-lg border border-white/10/60 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"}`}
+                className={`aspect-square rounded-lg border border-white/10 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"}`}
                 style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
                 <span className="text-[11px] text-zinc-300 font-medium">{d}</span>
                 {info && <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+" : ""}{Math.round(info.pnl)}</span>}
@@ -1169,7 +1181,6 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-zinc-800" /> No trades</span>
         </div>
       </Card>
-    </div>
   );
 };
 
@@ -1485,7 +1496,6 @@ export default function App() {
     dashboard: ["Dashboard", "Your trading performance at a glance"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
-    calendar: ["Calendar", "Daily P&L heatmap"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     settings: ["Settings", "Personalize Strike Trading"],
   };
@@ -1591,7 +1601,6 @@ export default function App() {
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} />}
-                {active === "calendar" && <CalendarPage trades={trades} onOpenTrade={setSelectedTrade} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} />}
               </>
