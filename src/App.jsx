@@ -409,7 +409,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, onSignOut
   </>
 );
 
-const TopBar = ({ title, subtitle, onMenu, onLogTrade }) => (
+const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade }) => (
   <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-black/80 backdrop-blur z-20">
     <div className="flex items-center gap-3">
       <button className="md:hidden text-zinc-400" onClick={onMenu}><Menu size={22} /></button>
@@ -418,9 +418,11 @@ const TopBar = ({ title, subtitle, onMenu, onLogTrade }) => (
         {subtitle && <p className="text-xs text-zinc-500 hidden sm:block">{subtitle}</p>}
       </div>
     </div>
-    <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
-      <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
-    </button>
+    {showLogTrade && (
+      <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
+        <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
+      </button>
+    )}
   </div>
 );
 
@@ -1170,7 +1172,7 @@ const CalendarCard = ({ trades, onOpenTrade }) => {
                 className={`aspect-square rounded-lg border border-white/10 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"}`}
                 style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
                 <span className="text-[11px] text-zinc-300 font-medium">{d}</span>
-                {info && <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+" : ""}{Math.round(info.pnl)}</span>}
+                {info && <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>}
               </button>
             );
           })}
@@ -1313,15 +1315,73 @@ const AnalyticsPage = ({ trades }) => {
 };
 
 /* ============================================================
-   ECONOMIC CALENDAR (live investing.com widget — real market events,
-   with the site's own native date-range tabs, star importance, and filters)
+   ECONOMIC CALENDAR (live TradingView widget — dark themed to match
+   the rest of the app; events are natively grouped by day)
    ============================================================ */
-const ECON_CALENDAR_COUNTRIES = [5, 72, 4, 35, 37, 25, 6, 12, 43, 17, 22, 10, 26];
-// 5 US, 72 Euro Zone, 4 UK, 35 Japan, 37 China, 25 Australia, 6 Canada,
-// 12 Switzerland, 43 New Zealand, 17 Germany, 22 France, 10 Italy, 26 Spain
+const IMPACT_LEVELS = [
+  { value: "1", label: "High", dot: "bg-rose-500", active: "bg-rose-500/15 border-rose-500/40 text-rose-300" },
+  { value: "0", label: "Medium", dot: "bg-orange-400", active: "bg-orange-400/15 border-orange-400/40 text-orange-300" },
+  { value: "-1", label: "Low", dot: "bg-white", active: "bg-white/15 border-white/40 text-zinc-200" },
+];
+
+const ECON_COUNTRIES = [
+  { code: "us", label: "United States" },
+  { code: "eu", label: "Euro Zone" },
+  { code: "gb", label: "United Kingdom" },
+  { code: "jp", label: "Japan" },
+  { code: "cn", label: "China" },
+  { code: "au", label: "Australia" },
+  { code: "ca", label: "Canada" },
+  { code: "ch", label: "Switzerland" },
+  { code: "nz", label: "New Zealand" },
+  { code: "de", label: "Germany" },
+  { code: "fr", label: "France" },
+];
 
 const EconomicCalendarPage = () => {
-  const src = `https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=${ECON_CALENDAR_COUNTRIES.join(",")}&calType=week&timeZone=8&lang=1`;
+  const containerRef = useRef(null);
+  const [impacts, setImpacts] = useState(() => {
+    try { const saved = JSON.parse(localStorage.getItem("econCalendar.impacts")); return Array.isArray(saved) ? saved : ["1", "0", "-1"]; }
+    catch { return ["1", "0", "-1"]; }
+  });
+  const [countries, setCountries] = useState(() => {
+    try { const saved = JSON.parse(localStorage.getItem("econCalendar.countries")); return Array.isArray(saved) ? saved : ECON_COUNTRIES.map((c) => c.code); }
+    catch { return ECON_COUNTRIES.map((c) => c.code); }
+  });
+  const [countryMenuOpen, setCountryMenuOpen] = useState(false);
+
+  const toggleImpact = (v) => setImpacts((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  const toggleCountry = (code) => setCountries((prev) => (prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code]));
+  const allCountriesSelected = countries.length === ECON_COUNTRIES.length;
+  const toggleAllCountries = () => setCountries(allCountriesSelected ? [] : ECON_COUNTRIES.map((c) => c.code));
+
+  useEffect(() => {
+    try { localStorage.setItem("econCalendar.impacts", JSON.stringify(impacts)); } catch {}
+  }, [impacts]);
+
+  useEffect(() => {
+    try { localStorage.setItem("econCalendar.countries", JSON.stringify(countries)); } catch {}
+  }, [countries]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-events.js";
+    script.type = "text/javascript";
+    script.async = true;
+    const config = {
+      colorTheme: "dark",
+      isTransparent: true,
+      width: "100%",
+      height: "680",
+      locale: "en",
+      importanceFilter: impacts.length ? impacts.join(",") : "-1,0,1",
+    };
+    if (countries.length && countries.length < ECON_COUNTRIES.length) config.countryFilter = countries.join(",");
+    script.text = JSON.stringify(config);
+    containerRef.current.appendChild(script);
+  }, [impacts, countries]);
 
   return (
     <div className="p-4 md:p-6">
@@ -1330,29 +1390,47 @@ const EconomicCalendarPage = () => {
           <CalendarClock size={16} className="text-blue-400" />
           <h3 className="font-bold text-zinc-100 text-sm">Economic Calendar</h3>
         </div>
-        <p className="text-xs text-zinc-500 mb-4">
-          Live economic events — use "Show Filters" inside the calendar to narrow by country or by importance (red = high, orange = medium, white = low).
-        </p>
+        <p className="text-xs text-zinc-500 mb-4">Live economic events, grouped by day — rate decisions, CPI, NFP, and more that can move the markets you trade.</p>
 
-        <div className="rounded-lg overflow-hidden bg-white">
-          <iframe
-            title="Economic Calendar"
-            src={src}
-            width="100%"
-            height="700"
-            frameBorder="0"
-            allowTransparency="true"
-            style={{ display: "block", border: "none" }}
-          />
+        <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-white/10">
+          {IMPACT_LEVELS.map((lvl) => {
+            const on = impacts.includes(lvl.value);
+            return (
+              <button key={lvl.value} onClick={() => toggleImpact(lvl.value)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${on ? lvl.active : "bg-zinc-950 border-white/10 text-zinc-500"}`}>
+                <Folder size={13} className={on ? lvl.dot.replace("bg-", "text-") : "text-zinc-600"} fill="currentColor" fillOpacity={on ? 1 : 0} />
+                {lvl.label}
+              </button>
+            );
+          })}
+
+          <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block" />
+
+          <div className="relative">
+            <button onClick={() => setCountryMenuOpen((o) => !o)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-zinc-950 text-xs font-medium text-zinc-300 hover:border-blue-500/40 transition-colors">
+              <Filter size={12} /> Countries {allCountriesSelected ? "(All)" : `(${countries.length})`}
+            </button>
+            {countryMenuOpen && (
+              <div className="absolute z-30 mt-2 w-56 bg-zinc-950 border border-white/10 rounded-lg shadow-2xl p-2 tj-animate-in">
+                <button onClick={toggleAllCountries} className="w-full text-left px-2 py-1.5 rounded-md text-xs font-semibold text-blue-400 hover:bg-white/5 transition-colors mb-1">
+                  {allCountriesSelected ? "Clear all" : "Select all"}
+                </button>
+                <div className="max-h-56 overflow-y-auto tj-scrollbar space-y-0.5">
+                  {ECON_COUNTRIES.map((c) => (
+                    <label key={c.code} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-zinc-300 hover:bg-white/5 cursor-pointer transition-colors">
+                      <input type="checkbox" checked={countries.includes(c.code)} onChange={() => toggleCountry(c.code)} className="accent-blue-500" />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="mt-2 text-right">
-          <span className="text-[11px] text-zinc-600">
-            Economic Calendar provided by{" "}
-            <a href="https://www.investing.com/" target="_blank" rel="nofollow noopener noreferrer" className="text-blue-500 hover:text-blue-400 font-medium">
-              Investing.com
-            </a>
-            , a leading financial portal.
-          </span>
+
+        <div className="tradingview-widget-container rounded-lg overflow-hidden" ref={containerRef}>
+          <div className="tradingview-widget-container__widget" />
         </div>
       </Card>
     </div>
@@ -1639,7 +1717,7 @@ export default function App() {
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
-          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} />
+          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} />
           {dataError && (
             <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
               <AlertTriangle size={14} /> Couldn't load your data: {dataError}
