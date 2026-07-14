@@ -65,6 +65,7 @@ const challengeToDB = (c, userId) => ({
   max_daily_loss_pct: c.maxDailyLossPct,
   max_total_loss_pct: c.maxTotalLossPct,
   min_trading_days: c.minTradingDays,
+  duration_days: 0,
   start_date: c.startDate,
   profit_split_pct: c.profitSplitPct ?? null,
   last_payout_net_profit: c.lastPayoutNetProfit ?? null,

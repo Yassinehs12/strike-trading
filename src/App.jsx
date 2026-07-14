@@ -9,7 +9,7 @@ import {
   XCircle, AlertTriangle, ChevronLeft, ChevronRight, Filter,
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
-  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder,
+  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -362,6 +362,7 @@ const NAV_ITEMS = [
   { id: "journal", label: "Trade Journal", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
+  { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -554,7 +555,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
       id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0),
-      challengeId: form.challengeId ? Number(form.challengeId) : null, notes: form.notes, screenshot: form.screenshot,
+      challengeId: form.challengeId || null, notes: form.notes, screenshot: form.screenshot,
     });
     setForm(blank);
     setErrors({});
@@ -565,7 +566,12 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
     <Modal open={open} onClose={onClose} title="Log a Trade" wide>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Date / Time"><input type="date" className={inputCls} value={form.date} onChange={(e) => set("date", e.target.value)} /></Field>
-        <Field label="Asset / Pair" error={errors.asset}><input className={inputCls} placeholder="EURUSD, BTC, NVDA" value={form.asset} onChange={(e) => set("asset", e.target.value)} /></Field>
+        <Field label="Asset / Pair" error={errors.asset}>
+          <select className={inputCls} value={form.asset} onChange={(e) => set("asset", e.target.value)}>
+            <option value="">Select a pair...</option>
+            {ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </Field>
         <Field label="Direction">
           <div className="flex rounded-lg overflow-hidden border border-white/10">
             {["Long", "Short"].map((d) => (
@@ -681,7 +687,11 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete }) => {
       ) : (
         <div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Asset"><input className={inputCls} value={form.asset} onChange={(e) => set("asset", e.target.value)} /></Field>
+            <Field label="Asset">
+              <select className={inputCls} value={form.asset} onChange={(e) => set("asset", e.target.value)}>
+                {ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </Field>
             <Field label="Direction">
               <select className={inputCls} value={form.direction} onChange={(e) => set("direction", e.target.value)}><option>Long</option><option>Short</option></select>
             </Field>
@@ -1315,6 +1325,84 @@ const AnalyticsPage = ({ trades }) => {
 };
 
 /* ============================================================
+   MARKET HEATMAPS (live TradingView widgets — Stocks + Crypto)
+   ============================================================ */
+const MarketHeatmapsPage = () => {
+  const containerRef = useRef(null);
+  const [market, setMarket] = useState("stocks"); // "stocks" | "crypto"
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.async = true;
+
+    if (market === "stocks") {
+      script.src = "https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js";
+      script.text = JSON.stringify({
+        exchanges: [],
+        dataSource: "SPX500",
+        grouping: "sector",
+        blockSize: "market_cap_basic",
+        blockColor: "change",
+        locale: "en",
+        symbolUrl: "",
+        colorTheme: "dark",
+        hasTopBar: true,
+        isDataSetEnabled: true,
+        isZoomEnabled: true,
+        hasSymbolTooltip: true,
+        isMonoSize: false,
+        width: "100%",
+        height: "600",
+      });
+    } else {
+      script.src = "https://s3.tradingview.com/external-embedding/embed-widget-crypto-coins-heatmap.js";
+      script.text = JSON.stringify({
+        dataSource: "Crypto",
+        blockSize: "market_cap_calc",
+        blockColor: "change",
+        locale: "en",
+        symbolUrl: "",
+        colorTheme: "dark",
+        hasTopBar: true,
+        isDataSetEnabled: true,
+        isZoomEnabled: true,
+        hasSymbolTooltip: true,
+        isMonoSize: false,
+        width: "100%",
+        height: "600",
+      });
+    }
+    containerRef.current.appendChild(script);
+  }, [market]);
+
+  return (
+    <div className="p-4 md:p-6">
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Grid3x3 size={16} className="text-blue-400" />
+              <h3 className="font-bold text-zinc-100 text-sm">Market Heatmap</h3>
+            </div>
+            <p className="text-xs text-zinc-500">Live performance across the market — block size by market cap, color by daily change.</p>
+          </div>
+          <div className="flex rounded-lg border border-white/10 overflow-hidden">
+            <button onClick={() => setMarket("stocks")} className={`px-4 py-2 text-sm font-medium transition-colors ${market === "stocks" ? "bg-blue-500 text-zinc-950" : "bg-zinc-950 text-zinc-400"}`}>Stocks</button>
+            <button onClick={() => setMarket("crypto")} className={`px-4 py-2 text-sm font-medium transition-colors ${market === "crypto" ? "bg-blue-500 text-zinc-950" : "bg-zinc-950 text-zinc-400"}`}>Crypto</button>
+          </div>
+        </div>
+        <div className="tradingview-widget-container rounded-lg overflow-hidden" ref={containerRef}>
+          <div className="tradingview-widget-container__widget" />
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+/* ============================================================
    ECONOMIC CALENDAR (live TradingView widget — dark themed to match
    the rest of the app; events are natively grouped by day)
    ============================================================ */
@@ -1625,6 +1713,7 @@ export default function App() {
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
+    heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     settings: ["Settings", "Personalize Strike Trading"],
   };
 
@@ -1731,6 +1820,7 @@ export default function App() {
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
+                {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} />}
               </>
             )}
