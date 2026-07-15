@@ -140,10 +140,20 @@ export async function fetchForumPosts() {
   return data;
 }
 
-export async function insertForumPost(userId, username, title, body) {
-  const { data, error } = await supabase.from("forum_posts").insert({ user_id: userId, username, title, body }).select().single();
+export async function insertForumPost(userId, username, title, body, imageUrl = null) {
+  const { data, error } = await supabase.from("forum_posts").insert({ user_id: userId, username, title, body, image_url: imageUrl }).select().single();
   if (error) throw error;
   return data;
+}
+
+// Uploads an image file to the "forum-images" storage bucket and returns its public URL.
+export async function uploadForumImage(file, userId) {
+  const ext = file.name.split(".").pop();
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("forum-images").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("forum-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function deleteForumPost(id) {
@@ -166,4 +176,38 @@ export async function insertForumReply(postId, userId, username, body) {
 export async function deleteForumReply(id) {
   const { error } = await supabase.from("forum_replies").delete().eq("id", id);
   if (error) throw error;
+}
+
+/* ---------- live chat ---------- */
+export async function fetchChatMessages() {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return data;
+}
+
+export async function insertChatMessage(userId, username, body) {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({ user_id: userId, username, body })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Subscribes to new chat messages in realtime. Returns an unsubscribe function.
+export function subscribeToChatMessages(onInsert) {
+  const channel = supabase
+    .channel("chat_messages_realtime")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "chat_messages" },
+      (payload) => onInsert(payload.new)
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 }
