@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle, MoreVertical, Ban, Flag } from "lucide-react";
 import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport } from "./db";
 import DirectMessageModal from "./DirectMessageModal";
+import AdminBadge from "./AdminBadge";
 
 export default function UserProfileModal({ userId, currentUserId, currentUsername, onClose }) {
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = not found
@@ -172,7 +173,9 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                   {(profile.username || "?")[0].toUpperCase()}
                 </div>
               )}
-              <h3 className="font-bold text-zinc-100 text-lg">{profile.username}</h3>
+              <h3 className="font-bold text-zinc-100 text-lg flex items-center justify-center gap-1.5">
+                {profile.username} {profile.is_admin && <AdminBadge size="sm" />}
+              </h3>
               {profile.bio && <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-3">

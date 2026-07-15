@@ -10,7 +10,7 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications } from "./db";
@@ -18,6 +18,8 @@ import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
+import AdminPanel from "./AdminPanel";
+import AdminBadge from "./AdminBadge";
 import { LogoFull } from "./Logo";
 
 /* ============================================================
@@ -372,6 +374,8 @@ const NAV_ITEMS = [
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
+const ADMIN_NAV_ITEM = { id: "admin", label: "Admin Panel", icon: ShieldAlert };
+
 const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => (
   <>
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-black border-r border-white/10 flex flex-col
@@ -380,7 +384,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
         <LogoFull size={30} textClass="text-base" />
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {(profile?.is_admin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS).map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (
@@ -402,7 +406,10 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
+              {profile?.is_admin && <AdminBadge />}
+            </div>
           </div>
         </button>
         <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
@@ -2133,6 +2140,7 @@ export default function App() {
     settings: ["Settings", "Personalize Strike Trading"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
+    admin: ["Admin Panel", "Manage users and moderate content"],
   };
 
   const addTrade = async (t) => {
@@ -2235,6 +2243,36 @@ export default function App() {
     return <ProfileSetup session={session} onComplete={setProfile} />;
   }
 
+  const isTimedOut = profile?.timeout_until && new Date(profile.timeout_until) > new Date();
+
+  if (profile?.is_banned || isTimedOut) {
+    return (
+      <div className="tj-root min-h-screen bg-black flex items-center justify-center p-4">
+        <GlobalStyle />
+        <div className="max-w-sm w-full text-center bg-white/[0.03] border border-white/10 rounded-2xl p-8">
+          <div className="w-14 h-14 rounded-full bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
+            <Ban size={24} className="text-rose-400" />
+          </div>
+          <h2 className="font-bold text-zinc-100 text-lg mb-2">
+            {profile?.is_banned ? "Account Suspended" : "Temporarily Restricted"}
+          </h2>
+          <p className="text-sm text-zinc-400">
+            {profile?.is_banned
+              ? "Your account has been banned by an administrator."
+              : `You've been timed out until ${new Date(profile.timeout_until).toLocaleString()}.`}
+          </p>
+          {profile?.is_banned && profile?.ban_reason && (
+            <p className="text-xs text-zinc-500 mt-2">Reason: {profile.ban_reason}</p>
+          )}
+          <button onClick={signOut}
+            className="mt-6 w-full flex items-center justify-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 font-semibold text-sm py-2.5 rounded-lg transition-all">
+            <LogOut size={14} /> Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ToastContext.Provider value={addToast}>
       <div className="tj-root min-h-screen bg-black text-zinc-100 flex">
@@ -2260,6 +2298,9 @@ export default function App() {
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
                 {active === "messages" && <MessagesPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
+                {active === "admin" && (profile?.is_admin
+                  ? <AdminPanel session={session} profile={profile} toast={addToast} />
+                  : <div className="p-6 text-sm text-zinc-500">You don't have access to this page.</div>)}
               </>
             )}
           </main>

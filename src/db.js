@@ -450,3 +450,75 @@ export function subscribeToChatMessages(onInsert) {
     .subscribe();
   return () => supabase.removeChannel(channel);
 }
+
+export async function deleteChatMessage(id) {
+  const { error } = await supabase.from("chat_messages").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ---------- admin / moderation ---------- */
+
+// IDs of every profile currently flagged as admin — used to show the admin badge next to a username.
+export async function fetchAdminUserIds() {
+  const { data, error } = await supabase.from("profiles").select("id").eq("is_admin", true);
+  if (error) throw error;
+  return data.map((r) => r.id);
+}
+
+// Full user list for the admin panel, most recently joined first.
+export async function fetchAllProfilesAdmin() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url, is_admin, is_banned, ban_reason, timeout_until, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function setUserAdmin(userId, isAdmin) {
+  const { data, error } = await supabase.from("profiles").update({ is_admin: isAdmin }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function banUser(userId, reason = "") {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ is_banned: true, ban_reason: reason || null, timeout_until: null })
+    .eq("id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function unbanUser(userId) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ is_banned: false, ban_reason: null })
+    .eq("id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// durationMs = null clears an active timeout.
+export async function timeoutUser(userId, durationMs) {
+  const timeoutUntil = durationMs ? new Date(Date.now() + durationMs).toISOString() : null;
+  const { data, error } = await supabase.from("profiles").update({ timeout_until: timeoutUntil }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminDeleteForumPost(id) {
+  return deleteForumPost(id);
+}
+
+export async function adminDeleteForumReply(id) {
+  return deleteForumReply(id);
+}
+
+export async function adminDeleteChatMessage(id) {
+  return deleteChatMessage(id);
+}
