@@ -1,39 +1,25 @@
 import React from "react";
+import { Zap } from "lucide-react";
 
-// Strike Trading mark: a bold, angular "strike" bolt inside a rounded square.
-// Reads clearly at 16px (nav) up to 40px+ (marketing) and works on light or dark fills.
-export const LogoMark = ({ size = 16, className = "" }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden="true"
+export const LogoMark = ({ size = 32, rounded = "rounded-xl" }) => (
+  <div
+    className={`relative flex items-center justify-center ${rounded} shrink-0`}
+    style={{
+      width: size,
+      height: size,
+      background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 55%, #1d4ed8 100%)",
+      boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
+    }}
   >
-    <path
-      d="M14.2 2L4.5 13.2H10.8L9.4 22L19.5 10.2H12.9L14.2 2Z"
-      fill="currentColor"
-    />
-  </svg>
-);
-
-// Full logo lockup: mark + wordmark. Used in the nav and footer.
-export const Logo = ({ size = 32, textClassName = "", showText = true }) => (
-  <div className="flex items-center gap-2">
-    <div
-      className="rounded-lg bg-blue-500 flex items-center justify-center shrink-0"
-      style={{ width: size, height: size }}
-    >
-      <LogoMark size={Math.round(size * 0.55)} className="text-black" />
-    </div>
-    {showText && (
-      <span className={`font-bold text-white tracking-tight ${textClassName}`}>
-        Strike Trading
-      </span>
-    )}
+    <Zap size={size * 0.56} className="text-zinc-950" strokeWidth={0} fill="currentColor" />
   </div>
 );
 
-export default Logo;
+export const LogoFull = ({ size = 32, textClass = "text-lg" }) => (
+  <div className="flex items-center gap-2.5">
+    <LogoMark size={size} />
+    <span className={`font-extrabold tracking-tight ${textClass}`}>
+      <span className="text-zinc-100">Strike</span><span className="text-blue-400">Trading</span>
+    </span>
+  </div>
+);
