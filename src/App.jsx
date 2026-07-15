@@ -402,7 +402,6 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
           )}
           <div className="min-w-0">
             <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
-            <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
           </div>
         </button>
         <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
