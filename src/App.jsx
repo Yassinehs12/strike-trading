@@ -17,6 +17,7 @@ import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
+import MessagesPage from "./MessagesPage";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -366,6 +367,7 @@ const NAV_ITEMS = [
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "forum", label: "Community", icon: MessagesSquare },
+  { id: "messages", label: "Messages", icon: Mail },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -1903,6 +1905,7 @@ export default function App() {
     forum: ["Community", "Connect with other traders"],
     settings: ["Settings", "Personalize Strike Trading"],
     profile: ["Profile", "How other traders see you"],
+    messages: ["Messages", "Your private conversations"],
   };
 
   const addTrade = async (t) => {
@@ -2024,6 +2027,7 @@ export default function App() {
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
+                {active === "messages" && <MessagesPage session={session} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
               </>
             )}

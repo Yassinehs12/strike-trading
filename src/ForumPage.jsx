@@ -380,7 +380,7 @@ export default function ForumPage({ session, profile }) {
           autoFocusReply={focusReply}
           onViewProfile={setViewingUserId}
         />
-        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+        <UserProfileModal userId={viewingUserId} currentUserId={currentUser.userId} onClose={() => setViewingUserId(null)} />
       </>
     );
   }
@@ -452,7 +452,7 @@ export default function ForumPage({ session, profile }) {
       )}
 
       <NewPostModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={createPost} />
-      <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+      <UserProfileModal userId={viewingUserId} currentUserId={currentUser.userId} onClose={() => setViewingUserId(null)} />
     </div>
   );
 }

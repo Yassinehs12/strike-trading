@@ -179,7 +179,87 @@ export async function fetchOwnStats(userId) {
   return { tradeCount: tradesRes.count || 0, postCount: postsRes.count || 0 };
 }
 
-/* ---------- forum ---------- */
+/* ---------- friendships ---------- */
+export async function fetchFriendship(userId, otherId) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .or(`and(requester_id.eq.${userId},addressee_id.eq.${otherId}),and(requester_id.eq.${otherId},addressee_id.eq.${userId})`)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function sendFriendRequest(userId, otherId) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .insert({ requester_id: userId, addressee_id: otherId, status: "pending" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function acceptFriendRequest(id) {
+  const { data, error } = await supabase.from("friendships").update({ status: "accepted" }).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function removeFriendship(id) {
+  const { error } = await supabase.from("friendships").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ---------- direct messages ---------- */
+export async function fetchDirectMessages(userId, otherId) {
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .select("*")
+    .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function sendDirectMessage(senderId, recipientId, body) {
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .insert({ sender_id: senderId, recipient_id: recipientId, body })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Subscribes to incoming direct messages for this user. Returns an unsubscribe function.
+export function subscribeToDirectMessages(userId, onInsert) {
+  const channel = supabase
+    .channel(`dm_inbox_${userId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "direct_messages", filter: `recipient_id=eq.${userId}` },
+      (payload) => onInsert(payload.new)
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
+// Distinct list of people this user has exchanged messages with, most recent first.
+export async function fetchConversations(userId) {
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .select("*")
+    .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const seen = new Map();
+  for (const m of data) {
+    const otherId = m.sender_id === userId ? m.recipient_id : m.sender_id;
+    if (!seen.has(otherId)) seen.set(otherId, m);
+  }
+  return Array.from(seen.entries()).map(([otherId, lastMessage]) => ({ otherId, lastMessage }));
+}
 export async function fetchForumPosts() {
   const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });
   if (error) throw error;
