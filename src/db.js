@@ -133,6 +133,12 @@ export async function createProfile(userId, username, age) {
   return data;
 }
 
+export async function updateProfileUsername(userId, username) {
+  const { data, error } = await supabase.from("profiles").update({ username }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
 /* ---------- forum ---------- */
 export async function fetchForumPosts() {
   const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });

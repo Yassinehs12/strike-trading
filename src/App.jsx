@@ -13,7 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 
@@ -1531,14 +1531,114 @@ const EconomicCalendarPage = () => {
 /* ============================================================
    SETTINGS PAGE
    ============================================================ */
-const SettingsPage = ({ settings, onSave }) => {
+const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onSignOut }) => {
   const [form, setForm] = useState(settings);
   const toast = useToast();
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const save = () => { onSave(form); toast("Preferences saved", "success"); };
 
+  const [username, setUsername] = useState(profile?.username || "");
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameLoading, setUsernameLoading] = useState(false);
+
+  const saveUsername = async () => {
+    const clean = username.trim();
+    setUsernameError("");
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(clean)) {
+      setUsernameError("Username must be 3-20 characters: letters, numbers, and underscores only.");
+      return;
+    }
+    if (clean === profile?.username) return;
+    setUsernameLoading(true);
+    try {
+      const updated = await updateProfileUsername(session.user.id, clean);
+      onProfileUpdate(updated);
+      toast("Username updated", "success");
+    } catch (err) {
+      if (err.code === "23505" || /duplicate/i.test(err.message || "")) setUsernameError("That username is already taken — try another.");
+      else setUsernameError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setUsernameLoading(false);
+    }
+  };
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const changePassword = async () => {
+    setPasswordError("");
+    if (newPassword.length < 8) { setPasswordError("New password must be at least 8 characters."); return; }
+    if (newPassword !== confirmPassword) { setPasswordError("New passwords don't match."); return; }
+    setPasswordLoading(true);
+    try {
+      // Re-authenticate with the current password before allowing the change.
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPassword,
+      });
+      if (signInErr) { setPasswordError("Current password is incorrect."); return; }
+
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateErr) { setPasswordError(updateErr.message || "Failed to update password."); return; }
+
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      toast("Password updated", "success");
+    } catch (err) {
+      setPasswordError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
-    <div className="p-4 md:p-6 max-w-xl">
+    <div className="p-4 md:p-6 max-w-xl space-y-5">
+      <Card className="p-5">
+        <h3 className="font-bold text-zinc-100 text-sm mb-1">Account</h3>
+        <p className="text-xs text-zinc-500 mb-5">Your identity on Strike Trading.</p>
+
+        <Field label="Email">
+          <input className={inputCls} value={session?.user?.email || ""} disabled />
+        </Field>
+
+        <Field label="Username" error={usernameError}>
+          <div className="flex gap-2">
+            <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} />
+            <button onClick={saveUsername} disabled={usernameLoading || username.trim() === profile?.username}
+              className="shrink-0 bg-blue-500 hover:bg-blue-400 disabled:opacity-40 text-zinc-950 font-semibold text-sm px-3.5 rounded-lg transition-all">
+              {usernameLoading ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+            </button>
+          </div>
+        </Field>
+
+        <div className="text-xs text-zinc-500 mt-1">
+          Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="font-bold text-zinc-100 text-sm mb-1">Change Password</h3>
+        <p className="text-xs text-zinc-500 mb-5">You'll need your current password to set a new one.</p>
+
+        <Field label="Current Password">
+          <input type="password" className={inputCls} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
+        </Field>
+        <Field label="New Password">
+          <input type="password" className={inputCls} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <Field label="Confirm New Password" error={passwordError}>
+          <input type="password" className={inputCls} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+        </Field>
+
+        <button onClick={changePassword} disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
+          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-40 active:scale-[0.98] text-zinc-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+          {passwordLoading ? <Loader2 size={15} className="animate-spin" /> : null}
+          Change Password
+        </button>
+      </Card>
+
       <Card className="p-5">
         <h3 className="font-bold text-zinc-100 text-sm mb-1">Preferences</h3>
         <p className="text-xs text-zinc-500 mb-5">These scaffold future personalization once connected to a database.</p>
@@ -1557,6 +1657,14 @@ const SettingsPage = ({ settings, onSave }) => {
           <input type="number" className={inputCls} value={form.minTradingDays} onChange={(e) => set("minTradingDays", e.target.value)} />
         </Field>
         <button onClick={save} className="bg-blue-500 hover:bg-blue-400 active:scale-[0.98] text-zinc-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">Save Preferences</button>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="font-bold text-zinc-100 text-sm mb-1">Sign Out</h3>
+        <p className="text-xs text-zinc-500 mb-4">End your session on this device.</p>
+        <button onClick={onSignOut} className="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+          <LogOut size={15} /> Sign Out
+        </button>
       </Card>
     </div>
   );
@@ -1914,7 +2022,7 @@ export default function App() {
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
-                {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} />}
+                {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
               </>
             )}
           </main>
