@@ -11,8 +11,8 @@ import UserProfileModal from "./UserProfileModal";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
-const Card = ({ className = "", children }) => (
-  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
+const Card = ({ className = "", children, ...rest }) => (
+  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`} {...rest}>{children}</div>
 );
 
 function timeAgo(dateStr) {

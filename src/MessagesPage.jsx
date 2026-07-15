@@ -3,8 +3,8 @@ import { Loader2, Mail } from "lucide-react";
 import { fetchConversations, fetchProfileById } from "./db";
 import DirectMessageModal from "./DirectMessageModal";
 
-const Card = ({ className = "", children }) => (
-  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
+const Card = ({ className = "", children, ...rest }) => (
+  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`} {...rest}>{children}</div>
 );
 
 function timeAgo(dateStr) {

@@ -211,6 +211,37 @@ export async function removeFriendship(id) {
   if (error) throw error;
 }
 
+// Incoming pending friend requests, with the requester's profile attached.
+export async function fetchPendingFriendRequests(userId) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .eq("addressee_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const withProfiles = await Promise.all(
+    data.map(async (r) => {
+      const { data: p } = await supabase.from("profiles").select("username, avatar_url").eq("id", r.requester_id).maybeSingle();
+      return { ...r, requester: p };
+    })
+  );
+  return withProfiles;
+}
+
+// Subscribes to new incoming friend requests for this user. Returns an unsubscribe function.
+export function subscribeToFriendRequests(userId, onInsert) {
+  const channel = supabase
+    .channel(`friend_requests_${userId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "friendships", filter: `addressee_id=eq.${userId}` },
+      (payload) => onInsert(payload.new)
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
 /* ---------- direct messages ---------- */
 export async function fetchDirectMessages(userId, otherId) {
   const { data, error } = await supabase

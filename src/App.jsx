@@ -10,10 +10,10 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -414,7 +414,91 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
   </>
 );
 
-const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade }) => (
+const NotificationBell = ({ session, onProfileUpdate, setActive }) => {
+  const [open, setOpen] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState(null);
+  const ref = useRef(null);
+
+  const load = () => {
+    setLoading(true);
+    fetchPendingFriendRequests(session.user.id)
+      .then(setRequests)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    const unsubscribe = subscribeToFriendRequests(session.user.id, () => load());
+    return unsubscribe;
+  }, [session.user.id]);
+
+  useEffect(() => {
+    const onClickOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const accept = async (id) => {
+    setAcceptingId(id);
+    try {
+      await acceptFriendRequest(id);
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // no-op, leave request visible so they can retry
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen((o) => !o)} className="relative text-zinc-400 hover:text-zinc-200 transition-colors p-1.5">
+        <Bell size={20} />
+        {requests.length > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+            {requests.length}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-72 bg-zinc-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-30">
+          <div className="px-4 py-3 border-b border-white/10">
+            <h4 className="text-sm font-bold text-zinc-100">Friend Requests</h4>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 size={16} className="text-blue-500 animate-spin" /></div>
+            ) : requests.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-8 px-4">No pending requests.</p>
+            ) : (
+              requests.map((r) => (
+                <div key={r.id} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.03]">
+                  {r.requester?.avatar_url ? (
+                    <img src={r.requester.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300 shrink-0">
+                      {(r.requester?.username || "?")[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm text-zinc-200 flex-1 truncate">{r.requester?.username || "Someone"}</span>
+                  <button onClick={() => accept(r.id)} disabled={acceptingId === r.id}
+                    className="flex items-center gap-1 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all shrink-0">
+                    {acceptingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Accept
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, setActive }) => (
   <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-black/80 backdrop-blur z-20">
     <div className="flex items-center gap-3">
       <button className="md:hidden text-zinc-400" onClick={onMenu}><Menu size={22} /></button>
@@ -423,11 +507,14 @@ const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade }) => (
         {subtitle && <p className="text-xs text-zinc-500 hidden sm:block">{subtitle}</p>}
       </div>
     </div>
-    {showLogTrade && (
-      <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
-        <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
-      </button>
-    )}
+    <div className="flex items-center gap-2 md:gap-3">
+      <NotificationBell session={session} setActive={setActive} />
+      {showLogTrade && (
+        <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
+          <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
+        </button>
+      )}
+    </div>
   </div>
 );
 
@@ -2010,7 +2097,7 @@ export default function App() {
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
-          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} />
+          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} setActive={setActive} />
           {dataError && (
             <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
               <AlertTriangle size={14} /> Couldn't load your data: {dataError}
