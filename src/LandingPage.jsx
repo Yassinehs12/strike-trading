@@ -2,6 +2,7 @@ import React from "react";
 import {
   Activity, ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, Menu, X,
+  MessagesSquare, Users, Send,
 } from "lucide-react";
 
 const LandingStyle = () => (
@@ -34,6 +35,9 @@ const FEATURES = [
   { icon: CalendarDays, title: "P&L Calendar Heatmap", desc: "See your trading patterns at a glance — every day shaded by profit or loss so you can spot your best and worst days fast." },
   { icon: BarChart3, title: "Analytics & Insights", desc: "Win rate, profit factor, R:R, streaks, and performance broken down by asset, session, and day of the week." },
   { icon: Banknote, title: "Payout Tracking", desc: "Once you're funded, track profit splits and payout history in the same place you tracked the evaluation." },
+  { icon: MessagesSquare, title: "Community & Live Chat", desc: "Post setups with screenshots, reply to other traders, and jump into a real-time live chat with the whole community." },
+  { icon: Users, title: "Trader Profiles & Friends", desc: "Every trader has a profile with an avatar, bio, and stats. Add friends and build your circle of trading peers." },
+  { icon: Send, title: "Private Messaging", desc: "Message any trader directly, and get notified instantly when someone sends you a friend request." },
 ];
 
 const STEPS = [
@@ -129,7 +133,7 @@ const Hero = ({ onGetStarted }) => (
         The trading journal built for<br className="hidden md:block" /> <span className="text-blue-400">funded traders.</span>
       </h1>
       <p className="lp-fade-up text-base md:text-lg text-zinc-400 max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
-        Journal every trade, track funding challenge rules in real time, and see the analytics that actually explain your edge — all in one place.
+        Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — all in one place.
       </p>
       <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-4" style={{ animationDelay: "0.15s" }}>
         <button onClick={onGetStarted} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-black font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center">
@@ -149,7 +153,7 @@ const Features = () => (
     <div className="max-w-6xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-14">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything you need to trade with discipline</h2>
-        <p className="text-zinc-400">From your first evaluation trade to a fully funded, payout-eligible account.</p>
+        <p className="text-zinc-400">From your first evaluation trade to a fully funded, payout-eligible account — plus a community to trade alongside.</p>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map((f, i) => {
