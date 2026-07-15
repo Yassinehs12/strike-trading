@@ -139,6 +139,46 @@ export async function updateProfileUsername(userId, username) {
   return data;
 }
 
+export async function fetchProfileById(userId) {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfileDetails(userId, { bio, avatarUrl }) {
+  const patch = {};
+  if (bio !== undefined) patch.bio = bio;
+  if (avatarUrl !== undefined) patch.avatar_url = avatarUrl;
+  const { data, error } = await supabase.from("profiles").update(patch).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function uploadAvatar(file, userId) {
+  const ext = file.name.split(".").pop();
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function fetchPublicPostCount(userId) {
+  const { count, error } = await supabase.from("forum_posts").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  if (error) throw error;
+  return count || 0;
+}
+
+export async function fetchOwnStats(userId) {
+  const [tradesRes, postsRes] = await Promise.all([
+    supabase.from("trades").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("forum_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+  if (tradesRes.error) throw tradesRes.error;
+  if (postsRes.error) throw postsRes.error;
+  return { tradeCount: tradesRes.count || 0, postCount: postsRes.count || 0 };
+}
+
 /* ---------- forum ---------- */
 export async function fetchForumPosts() {
   const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });

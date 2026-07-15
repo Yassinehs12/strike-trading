@@ -7,6 +7,7 @@ import {
   fetchForumReplies, insertForumReply, deleteForumReply,
   fetchChatMessages, insertChatMessage, subscribeToChatMessages,
 } from "./db";
+import UserProfileModal from "./UserProfileModal";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -119,7 +120,7 @@ const NewPostModal = ({ open, onClose, onSubmit }) => {
   );
 };
 
-const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply }) => {
+const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply, onViewProfile }) => {
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
@@ -172,7 +173,9 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply 
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-500 mb-4">
-          <User size={12} /> {post.username} <span className="text-zinc-700">·</span> <Clock size={12} /> {timeAgo(post.created_at)}
+          <User size={12} />
+          <button onClick={() => onViewProfile(post.user_id)} className="hover:text-blue-400 hover:underline transition-colors">{post.username}</button>
+          <span className="text-zinc-700">·</span> <Clock size={12} /> {timeAgo(post.created_at)}
         </div>
         <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{post.body}</p>
         {post.image_url && (
@@ -190,7 +193,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply 
               <Card key={r.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
-                    <User size={11} /> <span className="font-medium text-zinc-300">{r.username}</span> <span className="text-zinc-700">·</span> {timeAgo(r.created_at)}
+                    <User size={11} /> <button onClick={() => onViewProfile(r.user_id)} className="font-medium text-zinc-300 hover:text-blue-400 hover:underline transition-colors">{r.username}</button> <span className="text-zinc-700">·</span> {timeAgo(r.created_at)}
                   </div>
                   {r.user_id === currentUserId.userId && (
                     <button onClick={() => removeReply(r.id)} className="text-zinc-600 hover:text-rose-400 transition-colors shrink-0"><Trash2 size={13} /></button>
@@ -216,7 +219,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply 
   );
 };
 
-const LiveChat = ({ currentUser }) => {
+const LiveChat = ({ currentUser, onViewProfile }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -296,7 +299,12 @@ const LiveChat = ({ currentUser }) => {
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.06] text-zinc-200"}`}>
-                  {!mine && <div className="text-xs font-semibold text-zinc-400 mb-0.5">{m.username}</div>}
+                  <button
+                    onClick={() => !mine && onViewProfile(m.user_id)}
+                    className={`text-xs font-semibold mb-0.5 block ${mine ? "text-zinc-950/70 cursor-default" : "text-zinc-400 hover:text-blue-400 hover:underline transition-colors"}`}
+                  >
+                    {mine ? "You" : m.username}
+                  </button>
                   <p className="text-sm whitespace-pre-wrap leading-snug">{m.body}</p>
                   <div className={`text-[10px] mt-1 ${mine ? "text-zinc-950/60" : "text-zinc-500"}`}>{timeAgo(m.created_at)}</div>
                 </div>
@@ -327,6 +335,7 @@ export default function ForumPage({ session, profile }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [activePost, setActivePost] = useState(null);
   const [focusReply, setFocusReply] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   const currentUser = { userId: session?.user?.id, username: profile?.username || session?.user?.email || "Trader" };
 
@@ -362,13 +371,17 @@ export default function ForumPage({ session, profile }) {
 
   if (activePost) {
     return (
-      <ThreadView
-        post={activePost}
-        currentUserId={currentUser}
-        onBack={() => setActivePost(null)}
-        onDeletePost={removePost}
-        autoFocusReply={focusReply}
-      />
+      <>
+        <ThreadView
+          post={activePost}
+          currentUserId={currentUser}
+          onBack={() => setActivePost(null)}
+          onDeletePost={removePost}
+          autoFocusReply={focusReply}
+          onViewProfile={setViewingUserId}
+        />
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+      </>
     );
   }
 
@@ -396,7 +409,7 @@ export default function ForumPage({ session, profile }) {
       </div>
 
       {tab === "chat" ? (
-        <LiveChat currentUser={currentUser} />
+        <LiveChat currentUser={currentUser} onViewProfile={setViewingUserId} />
       ) : (
         <>
           {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5">{error}</div>}
@@ -416,11 +429,13 @@ export default function ForumPage({ session, profile }) {
                   <h3 className="font-semibold text-zinc-100 mb-1">{p.title}</h3>
                   <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{p.body}</p>
                   {p.image_url && (
-                    <img src={p.image_url} alt="" className="mb-2 w-full max-h-48 object-cover rounded-lg border border-white/10" />
+                    <img src={p.image_url} alt="" className="mb-2 w-40 h-28 object-cover rounded-lg border border-white/10" />
                   )}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 text-xs text-zinc-500">
-                      <User size={11} /> {p.username} <span className="text-zinc-700">·</span> <Clock size={11} /> {timeAgo(p.created_at)}
+                      <User size={11} />
+                      <button onClick={(e) => { e.stopPropagation(); setViewingUserId(p.user_id); }} className="hover:text-blue-400 hover:underline transition-colors">{p.username}</button>
+                      <span className="text-zinc-700">·</span> <Clock size={11} /> {timeAgo(p.created_at)}
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); openThread(p, { focusReplyBox: true }); }}
@@ -437,6 +452,7 @@ export default function ForumPage({ session, profile }) {
       )}
 
       <NewPostModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={createPost} />
+      <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
     </div>
   );
 }

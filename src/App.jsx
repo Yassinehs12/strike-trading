@@ -16,6 +16,7 @@ import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
+import ProfilePage from "./ProfilePage";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -365,6 +366,7 @@ const NAV_ITEMS = [
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "forum", label: "Community", icon: MessagesSquare },
+  { id: "profile", label: "Profile", icon: UserCircle },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -390,9 +392,9 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
         })}
       </nav>
       <div className="p-4 border-t border-white/10">
-        <div className="flex items-center gap-3 px-2 mb-2">
-          {user?.user_metadata?.avatar_url ? (
-            <img src={user.user_metadata.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+        <button onClick={() => setActive("profile")} className="w-full flex items-center gap-3 px-2 mb-2 rounded-lg hover:bg-zinc-900 py-1.5 transition-colors text-left">
+          {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
+            <img src={profile?.avatar_url || user.user_metadata.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
           ) : (
             <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
               {(profile?.username || user?.email || "?")[0].toUpperCase()}
@@ -402,7 +404,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
             <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
             <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
           </div>
-        </div>
+        </button>
         <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
           <LogOut size={14} /> Sign Out
         </button>
@@ -1902,6 +1904,7 @@ export default function App() {
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     forum: ["Community", "Connect with other traders"],
     settings: ["Settings", "Personalize Strike Trading"],
+    profile: ["Profile", "How other traders see you"],
   };
 
   const addTrade = async (t) => {
@@ -2022,6 +2025,7 @@ export default function App() {
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
+                {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
               </>
             )}
