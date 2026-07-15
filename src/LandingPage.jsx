@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, Menu, X,
-  MessagesSquare, Users, Send,
+  MessagesSquare, Users, Send, Quote, Sparkles,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
+import { fetchLandingStats } from "./db";
 
 const LandingStyle = () => (
   <style>{`
@@ -46,6 +47,12 @@ const STEPS = [
   { n: "02", title: "Set up your account", desc: "Trading a prop firm challenge? Enter its rules once and let the app track compliance. Trading your own capital? Skip straight to journaling." },
   { n: "03", title: "Log trades as you go", desc: "Every trade you journal updates your equity curve, analytics, and challenge status in real time." },
 ];
+
+// Real testimonials only — add a quote here once you have genuine feedback
+// from actual users. The section below only renders if this array is
+// non-empty, so it's safe to leave blank until you have real quotes.
+// Shape: { quote: "...", name: "First L.", role: "Funded trader" }
+const TESTIMONIALS = [];
 
 const NavBar = ({ onSignIn, onGetStarted }) => {
   const [open, setOpen] = React.useState(false);
@@ -149,6 +156,73 @@ const Hero = ({ onGetStarted }) => (
   </section>
 );
 
+const SocialProof = () => {
+  const [stats, setStats] = useState(null); // null = loading/unavailable
+
+  useEffect(() => {
+    fetchLandingStats().then(setStats).catch(() => setStats({ traders: null, trades: null, posts: null }));
+  }, []);
+
+  const fmt = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : String(n));
+
+  const items = stats
+    ? [
+        { label: "Traders", value: stats.traders },
+        { label: "Trades logged", value: stats.trades },
+        { label: "Community posts", value: stats.posts },
+      ].filter((i) => typeof i.value === "number" && i.value > 0)
+    : [];
+
+  // Don't show a stats bar with fake/placeholder numbers. Once real usage
+  // exists it appears automatically; until then, show an honest early-access
+  // framing instead of a hollow "0 traders" row.
+  if (items.length === 0) {
+    return (
+      <section className="px-4 -mt-6 md:-mt-8 relative">
+        <div className="max-w-xl mx-auto flex items-center justify-center gap-2 text-xs text-zinc-500 border border-white/10 rounded-full px-4 py-2 w-fit mx-auto bg-white/[0.02]">
+          <Sparkles size={13} className="text-blue-400" /> Early access — be one of the first traders on the platform
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="px-4 -mt-6 md:-mt-8 relative">
+      <div className="max-w-2xl mx-auto grid grid-cols-3 gap-3 md:gap-6">
+        {items.map((i) => (
+          <div key={i.label} className="text-center border border-white/10 rounded-xl bg-white/[0.02] py-4">
+            <div className="lp-mono text-2xl md:text-3xl font-bold text-white">{fmt(i.value)}+</div>
+            <div className="text-[11px] md:text-xs text-zinc-500 mt-1">{i.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const Testimonials = () => {
+  if (TESTIMONIALS.length === 0) return null;
+  return (
+    <section className="py-20 md:py-28 px-4 border-t border-white/5">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center max-w-xl mx-auto mb-14">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">What traders are saying</h2>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {TESTIMONIALS.map((t, i) => (
+            <div key={i} className="rounded-2xl border border-white/10 p-6">
+              <Quote size={18} className="text-blue-400/60 mb-3" />
+              <p className="text-sm text-zinc-300 leading-relaxed mb-4">{t.quote}</p>
+              <div className="text-sm font-semibold text-white">{t.name}</div>
+              {t.role && <div className="text-xs text-zinc-500">{t.role}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Features = () => (
   <section id="features" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-6xl mx-auto">
@@ -224,7 +298,9 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
       <LandingStyle />
       <NavBar onSignIn={onSignIn} onGetStarted={onGetStarted} />
       <Hero onGetStarted={onGetStarted} />
+      <SocialProof />
       <Features />
+      <Testimonials />
       <HowItWorks />
       <FinalCTA onGetStarted={onGetStarted} />
       <Footer />

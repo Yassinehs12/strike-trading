@@ -6,10 +6,20 @@ import {
   fetchForumPosts, insertForumPost, deleteForumPost, uploadForumImage, updateForumPost,
   fetchForumReplies, insertForumReply, deleteForumReply, updateForumReply,
   fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage,
-  fetchBlockedUserIds, fetchAdminUserIds,
+  fetchBlockedUserIds, fetchAdminUserIds, notifyMentions,
 } from "./db";
 import UserProfileModal from "./UserProfileModal";
 import AdminBadge from "./AdminBadge";
+
+// Renders text with @username mentions highlighted.
+function renderWithMentions(text) {
+  const parts = (text || "").split(/(@[a-zA-Z0-9_]{3,20})/g);
+  return parts.map((part, i) =>
+    /^@[a-zA-Z0-9_]{3,20}$/.test(part)
+      ? <span key={i} className="text-blue-400 font-medium">{part}</span>
+      : <React.Fragment key={i}>{part}</React.Fragment>
+  );
+}
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -170,6 +180,13 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
     try {
       const saved = await insertForumReply(post.id, currentUserId.userId, currentUserId.username, replyText.trim(), post.user_id);
       setReplies((prev) => [...prev, saved]);
+      notifyMentions({
+        text: replyText.trim(),
+        fromUserId: currentUserId.userId,
+        fromUsername: currentUserId.username,
+        postId: post.id,
+        excludeUserIds: [post.user_id],
+      }).catch(() => {});
       setReplyText("");
     } catch (err) {
       // no-op — keep text so user can retry
@@ -222,7 +239,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
         </div>
         {!editingPost && (
           <>
-            <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{post.body}</p>
+            <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{renderWithMentions(post.body)}</p>
             {post.image_url && (
               <img src={post.image_url} alt="" className="mt-3 w-full max-h-96 object-contain rounded-lg border border-white/10" />
             )}
@@ -263,7 +280,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{r.body}</p>
+                  <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{renderWithMentions(r.body)}</p>
                 )}
               </Card>
             ))}
@@ -442,6 +459,7 @@ export default function ForumPage({ session, profile }) {
     }
     const saved = await insertForumPost(currentUser.userId, currentUser.username, title, body, imageUrl);
     setPosts((prev) => [saved, ...prev]);
+    notifyMentions({ text: body, fromUserId: currentUser.userId, fromUsername: currentUser.username, postId: saved.id }).catch(() => {});
   };
 
   const removePost = async (id) => {

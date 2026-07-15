@@ -469,6 +469,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
     setOpen(false);
     if (n.type === "message") setActive("messages");
     else if (n.type === "reply") setActive("forum");
+    else if (n.type === "mention") setActive("forum");
   };
 
   const unreadActivity = activity.filter((n) => !n.read).length;
@@ -478,6 +479,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
     if (n.type === "reply") return `${n.from_username} replied to your post`;
     if (n.type === "message") return `${n.from_username} sent you a message`;
     if (n.type === "friend_accepted") return `${n.from_username} accepted your friend request`;
+    if (n.type === "mention") return `${n.from_username} mentioned you`;
     return "New activity";
   };
 

@@ -522,3 +522,56 @@ export async function adminDeleteForumReply(id) {
 export async function adminDeleteChatMessage(id) {
   return deleteChatMessage(id);
 }
+
+/* ---------- mentions ---------- */
+const MENTION_REGEX = /@([a-zA-Z0-9_]{3,20})/g;
+
+// Distinct @usernames referenced in a piece of text (order of first appearance).
+export function extractMentions(text) {
+  const matches = (text || "").match(MENTION_REGEX) || [];
+  return [...new Set(matches.map((m) => m.slice(1)))];
+}
+
+export async function fetchProfilesByUsernames(usernames) {
+  if (!usernames.length) return [];
+  const { data, error } = await supabase.from("profiles").select("id, username").in("username", usernames);
+  if (error) throw error;
+  return data;
+}
+
+// Looks for @username mentions in `text` and creates a "mention" notification
+// for each matching, real user — skipping the author and anyone in excludeUserIds
+// (e.g. the post owner, who already gets a separate "reply" notification).
+export async function notifyMentions({ text, fromUserId, fromUsername, postId, excludeUserIds = [] }) {
+  const usernames = extractMentions(text);
+  if (!usernames.length) return;
+  const matches = await fetchProfilesByUsernames(usernames).catch(() => []);
+  const targets = matches.filter((p) => p.id !== fromUserId && !excludeUserIds.includes(p.id));
+  await Promise.all(
+    targets.map((p) =>
+      createNotification(p.id, "mention", fromUserId, fromUsername, { postId: postId || null, body: (text || "").slice(0, 140) }).catch(() => {})
+    )
+  );
+}
+
+/* ---------- landing page stats ---------- */
+// Best-effort public counts for the landing page's social-proof section.
+// Each count is fetched independently so one failing (e.g. RLS blocking an
+// anonymous read) doesn't break the others.
+export async function fetchLandingStats() {
+  const safeCount = async (table) => {
+    try {
+      const { count, error } = await supabase.from(table).select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count || 0;
+    } catch {
+      return null;
+    }
+  };
+  const [traders, trades, posts] = await Promise.all([
+    safeCount("profiles"),
+    safeCount("trades"),
+    safeCount("forum_posts"),
+  ]);
+  return { traders, trades, posts };
+}
