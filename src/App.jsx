@@ -10,11 +10,12 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile } from "./db";
 import LandingPage from "./LandingPage";
+import ForumPage from "./ForumPage";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -363,10 +364,11 @@ const NAV_ITEMS = [
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
+  { id: "forum", label: "Community", icon: MessagesSquare },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
-const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, onSignOut }) => (
+const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => (
   <>
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-black border-r border-white/10 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
@@ -393,11 +395,11 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, onSignOut
             <img src={user.user_metadata.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
           ) : (
             <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
-              {(user?.email || "?")[0].toUpperCase()}
+              {(profile?.username || user?.email || "?")[0].toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate">{user?.user_metadata?.full_name || user?.email || "Trader"}</div>
+            <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
             <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
           </div>
         </div>
@@ -1561,6 +1563,74 @@ const SettingsPage = ({ settings, onSave }) => {
 };
 
 /* ============================================================
+   PROFILE SETUP (mandatory username + age, once per account)
+   ============================================================ */
+const ProfileSetup = ({ session, onComplete }) => {
+  const [username, setUsername] = useState("");
+  const [age, setAge] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    const cleanUsername = username.trim();
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
+      setError("Username must be 3-20 characters: letters, numbers, and underscores only.");
+      return;
+    }
+    const ageNum = Number(age);
+    if (!age || !Number.isInteger(ageNum) || ageNum < 18 || ageNum > 120) {
+      setError("You must enter a valid age, 18 or older, to use Strike Trading.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const profile = await createProfile(session.user.id, cleanUsername, ageNum);
+      onComplete(profile);
+    } catch (err) {
+      if (err.code === "23505" || /duplicate/i.test(err.message || "")) setError("That username is already taken — try another.");
+      else setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="tj-root min-h-screen bg-black text-zinc-100 flex items-center justify-center p-4">
+      <GlobalStyle />
+      <div className="w-full max-w-sm">
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><Activity size={18} className="text-black" strokeWidth={2.5} /></div>
+          <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
+        </div>
+        <Card className="p-6 tj-animate-in">
+          <div className="flex items-center gap-2 mb-1">
+            <UserCircle size={18} className="text-blue-400" />
+            <h2 className="font-bold text-zinc-100">Complete your profile</h2>
+          </div>
+          <p className="text-xs text-zinc-500 mb-5">One last step before you get started — this is how other traders will see you on the forum.</p>
+          <form onSubmit={submit}>
+            <Field label="Username">
+              <input className={inputCls} placeholder="e.g. edgehunter_23" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </Field>
+            <Field label="Age">
+              <input type="number" className={inputCls} placeholder="18+" value={age} onChange={(e) => setAge(e.target.value)} />
+            </Field>
+            {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">
+              {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+              Continue
+            </button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
    AUTH PAGE (Google + email/password via Supabase)
    ============================================================ */
 const AuthPage = ({ onBack }) => {
@@ -1671,6 +1741,7 @@ const AuthPage = ({ onBack }) => {
    ============================================================ */
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+  const [profile, setProfile] = useState(undefined); // undefined = checking, null = needs onboarding
   const [showAuth, setShowAuth] = useState(false);
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
@@ -1694,6 +1765,13 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
+    if (!session?.user) { setProfile(session === null ? null : undefined); return; }
+    fetchProfile(session.user.id)
+      .then(setProfile)
+      .catch(() => setProfile(null));
+  }, [session]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
     return () => listener.subscription.unsubscribe();
@@ -1714,6 +1792,7 @@ export default function App() {
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
+    forum: ["Community", "Connect with other traders"],
     settings: ["Settings", "Personalize Strike Trading"],
   };
 
@@ -1800,11 +1879,24 @@ export default function App() {
     return <AuthPage onBack={() => setShowAuth(false)} />;
   }
 
+  if (profile === undefined) {
+    return (
+      <div className="tj-root min-h-screen bg-black flex items-center justify-center">
+        <GlobalStyle />
+        <Loader2 size={22} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (profile === null) {
+    return <ProfileSetup session={session} onComplete={setProfile} />;
+  }
+
   return (
     <ToastContext.Provider value={addToast}>
       <div className="tj-root min-h-screen bg-black text-zinc-100 flex">
         <GlobalStyle />
-        <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} onSignOut={signOut} />
+        <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
           <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} />
           {dataError && (
@@ -1821,6 +1913,7 @@ export default function App() {
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
+                {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} />}
               </>
             )}

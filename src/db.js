@@ -119,3 +119,51 @@ export async function deleteChallengeDB(id) {
   const { error } = await supabase.from("challenges").delete().eq("id", id);
   if (error) throw error;
 }
+
+/* ---------- profile (username + age, set once during onboarding) ---------- */
+export async function fetchProfile(userId) {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) throw error;
+  return data; // null if no profile yet -> triggers onboarding
+}
+
+export async function createProfile(userId, username, age) {
+  const { data, error } = await supabase.from("profiles").insert({ id: userId, username, age }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/* ---------- forum ---------- */
+export async function fetchForumPosts() {
+  const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function insertForumPost(userId, username, title, body) {
+  const { data, error } = await supabase.from("forum_posts").insert({ user_id: userId, username, title, body }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteForumPost(id) {
+  const { error } = await supabase.from("forum_posts").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function fetchForumReplies(postId) {
+  const { data, error } = await supabase.from("forum_replies").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function insertForumReply(postId, userId, username, body) {
+  const { data, error } = await supabase.from("forum_replies").insert({ post_id: postId, user_id: userId, username, body }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteForumReply(id) {
+  const { error } = await supabase.from("forum_replies").delete().eq("id", id);
+  if (error) throw error;
+}
