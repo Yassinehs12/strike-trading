@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Send, Loader2, MessageCircle, Trash2 } from "lucide-react";
-import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages, deleteDirectMessage } from "./db";
+import { X, Send, Loader2, MessageCircle } from "lucide-react";
+import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages } from "./db";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -14,7 +14,7 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export default function DirectMessageModal({ currentUserId, otherUser, onClose, isAdmin }) {
+export default function DirectMessageModal({ currentUserId, currentUsername, otherUser, onClose }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -53,22 +53,13 @@ export default function DirectMessageModal({ currentUserId, otherUser, onClose, 
 
   if (!otherUser) return null;
 
-  const removeMessage = async (id) => {
-    try {
-      await deleteDirectMessage(id);
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-    } catch {
-      setError("Failed to delete message.");
-    }
-  };
-
   const send = async () => {
     const body = text.trim();
     if (!body) return;
     setSending(true);
     setText("");
     try {
-      const saved = await sendDirectMessage(currentUserId, otherUser.id, body);
+      const saved = await sendDirectMessage(currentUserId, otherUser.id, body, currentUsername);
       if (!seenIds.current.has(saved.id)) {
         seenIds.current.add(saved.id);
         setMessages((prev) => [...prev, saved]);
@@ -113,21 +104,11 @@ export default function DirectMessageModal({ currentUserId, otherUser, onClose, 
           ) : (
             messages.map((m) => {
               const mine = m.sender_id === currentUserId;
-              const canDelete = mine || isAdmin;
               return (
-                <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"} group`}>
-                  <div className={`relative max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.06] text-zinc-200"}`}>
+                <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.06] text-zinc-200"}`}>
                     <p className="text-sm whitespace-pre-wrap leading-snug">{m.body}</p>
                     <div className={`text-[10px] mt-1 ${mine ? "text-zinc-950/60" : "text-zinc-500"}`}>{timeAgo(m.created_at)}</div>
-                    {canDelete && (
-                      <button
-                        onClick={() => removeMessage(m.id)}
-                        title="Delete message"
-                        className={`absolute -top-2 ${mine ? "-left-2" : "-right-2"} opacity-0 group-hover:opacity-100 bg-zinc-900 border border-white/10 text-zinc-400 hover:text-rose-400 rounded-full p-1 transition-opacity`}
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    )}
                   </div>
                 </div>
               );

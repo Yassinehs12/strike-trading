@@ -154,19 +154,6 @@ export async function updateProfileDetails(userId, { bio, avatarUrl }) {
   return data;
 }
 
-/* ---------- admin ---------- */
-export async function fetchAllProfiles() {
-  const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function updateUserRole(userId, role) {
-  const { data, error } = await supabase.from("profiles").update({ role }).eq("id", userId).select().single();
-  if (error) throw error;
-  return data;
-}
-
 export async function uploadAvatar(file, userId) {
   const ext = file.name.split(".").pop();
   const path = `${userId}/${Date.now()}.${ext}`;
@@ -213,9 +200,12 @@ export async function sendFriendRequest(userId, otherId) {
   return data;
 }
 
-export async function acceptFriendRequest(id) {
+export async function acceptFriendRequest(id, accepterUsername) {
   const { data, error } = await supabase.from("friendships").update({ status: "accepted" }).eq("id", id).select().single();
   if (error) throw error;
+  if (accepterUsername) {
+    createNotification(data.requester_id, "friend_accepted", data.addressee_id, accepterUsername, {}).catch(() => {});
+  }
   return data;
 }
 
@@ -266,13 +256,16 @@ export async function fetchDirectMessages(userId, otherId) {
   return data;
 }
 
-export async function sendDirectMessage(senderId, recipientId, body) {
+export async function sendDirectMessage(senderId, recipientId, body, senderUsername) {
   const { data, error } = await supabase
     .from("direct_messages")
     .insert({ sender_id: senderId, recipient_id: recipientId, body })
     .select()
     .single();
   if (error) throw error;
+  if (senderUsername) {
+    createNotification(recipientId, "message", senderId, senderUsername, { body: body.slice(0, 140) }).catch(() => {});
+  }
   return data;
 }
 
@@ -331,14 +324,29 @@ export async function deleteForumPost(id) {
   if (error) throw error;
 }
 
+export async function updateForumPost(id, title, body) {
+  const { data, error } = await supabase.from("forum_posts").update({ title, body, edited_at: new Date().toISOString() }).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchForumReplies(postId) {
   const { data, error } = await supabase.from("forum_replies").select("*").eq("post_id", postId).order("created_at", { ascending: true });
   if (error) throw error;
   return data;
 }
 
-export async function insertForumReply(postId, userId, username, body) {
+export async function insertForumReply(postId, userId, username, body, postOwnerId) {
   const { data, error } = await supabase.from("forum_replies").insert({ post_id: postId, user_id: userId, username, body }).select().single();
+  if (error) throw error;
+  if (postOwnerId && postOwnerId !== userId) {
+    createNotification(postOwnerId, "reply", userId, username, { postId, body: body.slice(0, 140) }).catch(() => {});
+  }
+  return data;
+}
+
+export async function updateForumReply(id, body) {
+  const { data, error } = await supabase.from("forum_replies").update({ body, edited_at: new Date().toISOString() }).eq("id", id).select().single();
   if (error) throw error;
   return data;
 }
@@ -346,6 +354,67 @@ export async function insertForumReply(postId, userId, username, body) {
 export async function deleteForumReply(id) {
   const { error } = await supabase.from("forum_replies").delete().eq("id", id);
   if (error) throw error;
+}
+
+/* ---------- blocking & reporting ---------- */
+export async function fetchBlockedUserIds(userId) {
+  const { data, error } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", userId);
+  if (error) throw error;
+  return data.map((r) => r.blocked_id);
+}
+
+export async function blockUser(blockerId, blockedId) {
+  const { error } = await supabase.from("blocks").insert({ blocker_id: blockerId, blocked_id: blockedId });
+  if (error) throw error;
+}
+
+export async function unblockUser(blockerId, blockedId) {
+  const { error } = await supabase.from("blocks").delete().eq("blocker_id", blockerId).eq("blocked_id", blockedId);
+  if (error) throw error;
+}
+
+export async function isUserBlocked(blockerId, blockedId) {
+  const { data, error } = await supabase.from("blocks").select("blocker_id").eq("blocker_id", blockerId).eq("blocked_id", blockedId).maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
+export async function submitReport(reporterId, targetType, targetId, reason) {
+  const { error } = await supabase.from("reports").insert({ reporter_id: reporterId, target_type: targetType, target_id: targetId, reason });
+  if (error) throw error;
+}
+
+/* ---------- notifications (replies & messages) ---------- */
+export async function createNotification(userId, type, fromUserId, fromUsername, extra = {}) {
+  const { error } = await supabase.from("notifications").insert({
+    user_id: userId, type, from_user_id: fromUserId, from_username: fromUsername,
+    post_id: extra.postId || null, body: extra.body || null,
+  });
+  if (error) throw error;
+}
+
+export async function fetchNotifications(userId) {
+  const { data, error } = await supabase.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(30);
+  if (error) throw error;
+  return data;
+}
+
+export async function markNotificationRead(id) {
+  const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead(userId) {
+  const { error } = await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
+  if (error) throw error;
+}
+
+export function subscribeToNotifications(userId, onInsert) {
+  const channel = supabase
+    .channel(`notifications_${userId}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => onInsert(payload.new))
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 }
 
 /* ---------- live chat ---------- */
@@ -369,18 +438,8 @@ export async function insertChatMessage(userId, username, body) {
   return data;
 }
 
-export async function deleteChatMessage(id) {
-  const { error } = await supabase.from("chat_messages").delete().eq("id", id);
-  if (error) throw error;
-}
-
-export async function deleteDirectMessage(id) {
-  const { error } = await supabase.from("direct_messages").delete().eq("id", id);
-  if (error) throw error;
-}
-
-// Subscribes to new + deleted chat messages in realtime. Returns an unsubscribe function.
-export function subscribeToChatMessages(onInsert, onDelete) {
+// Subscribes to new chat messages in realtime. Returns an unsubscribe function.
+export function subscribeToChatMessages(onInsert) {
   const channel = supabase
     .channel("chat_messages_realtime")
     .on(
@@ -388,19 +447,6 @@ export function subscribeToChatMessages(onInsert, onDelete) {
       { event: "INSERT", schema: "public", table: "chat_messages" },
       (payload) => onInsert(payload.new)
     )
-    .on(
-      "postgres_changes",
-      { event: "DELETE", schema: "public", table: "chat_messages" },
-      (payload) => onDelete && onDelete(payload.old)
-    )
     .subscribe();
   return () => supabase.removeChannel(channel);
-}
-
-/* ---------- admin badges ---------- */
-// Set of user IDs with the "admin" role — used to render an admin badge next to usernames.
-export async function fetchAdminIds() {
-  const { data, error } = await supabase.from("profiles").select("id").eq("role", "admin");
-  if (error) return [];
-  return (data || []).map((r) => r.id);
 }

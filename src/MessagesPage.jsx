@@ -24,7 +24,6 @@ export default function MessagesPage({ session, profile }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeUser, setActiveUser] = useState(null);
-  const isAdmin = profile?.role === "admin";
 
   const load = useCallback(() => {
     setLoading(true);
@@ -82,7 +81,7 @@ export default function MessagesPage({ session, profile }) {
       )}
 
       {activeUser && (
-        <DirectMessageModal currentUserId={session.user.id} otherUser={activeUser} onClose={() => { setActiveUser(null); load(); }} isAdmin={isAdmin} />
+        <DirectMessageModal currentUserId={session.user.id} currentUsername={profile?.username || "Trader"} otherUser={activeUser} onClose={() => { setActiveUser(null); load(); }} />
       )}
     </div>
   );

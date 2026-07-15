@@ -10,15 +10,15 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { LogoMark } from "./Logo";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchAllProfiles, updateUserRole } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
+import { LogoFull } from "./Logo";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -370,7 +370,6 @@ const NAV_ITEMS = [
   { id: "forum", label: "Community", icon: MessagesSquare },
   { id: "messages", label: "Messages", icon: Mail },
   { id: "settings", label: "Settings", icon: SettingsIcon },
-  { id: "admin", label: "Admin", icon: ShieldAlert, adminOnly: true },
 ];
 
 const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => (
@@ -378,11 +377,10 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-black border-r border-white/10 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
       <div className="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={17} className="text-zinc-950" /></div>
-        <span className="font-bold text-zinc-100 text-lg tracking-tight">Strike Trading</span>
+        <LogoFull size={30} textClass="text-base" />
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.filter((item) => !item.adminOnly || profile?.role === "admin").map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (
@@ -404,14 +402,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate flex items-center gap-1.5">
-              {profile?.username || user?.email || "Trader"}
-              {profile?.role === "admin" && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-1.5 py-0.5 shrink-0">
-                  <ShieldAlert size={8} /> Admin
-                </span>
-              )}
-            </div>
+            <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
           </div>
         </button>
         <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
@@ -423,25 +414,28 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
   </>
 );
 
-const NotificationBell = ({ session, onProfileUpdate, setActive }) => {
+const NotificationBell = ({ session, profile, setActive }) => {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState("requests"); // "requests" | "activity"
   const [requests, setRequests] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
   const ref = useRef(null);
 
   const load = () => {
     setLoading(true);
-    fetchPendingFriendRequests(session.user.id)
-      .then(setRequests)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetchPendingFriendRequests(session.user.id).catch(() => []),
+      fetchNotifications(session.user.id).catch(() => []),
+    ]).then(([reqs, notifs]) => { setRequests(reqs); setActivity(notifs); }).finally(() => setLoading(false));
   };
 
   useEffect(() => {
     load();
-    const unsubscribe = subscribeToFriendRequests(session.user.id, () => load());
-    return unsubscribe;
+    const unsub1 = subscribeToFriendRequests(session.user.id, () => load());
+    const unsub2 = subscribeToNotifications(session.user.id, () => load());
+    return () => { unsub1(); unsub2(); };
   }, [session.user.id]);
 
   useEffect(() => {
@@ -453,7 +447,7 @@ const NotificationBell = ({ session, onProfileUpdate, setActive }) => {
   const accept = async (id) => {
     setAcceptingId(id);
     try {
-      await acceptFriendRequest(id);
+      await acceptFriendRequest(id, profile?.username);
       setRequests((prev) => prev.filter((r) => r.id !== id));
     } catch {
       // no-op, leave request visible so they can retry
@@ -462,42 +456,82 @@ const NotificationBell = ({ session, onProfileUpdate, setActive }) => {
     }
   };
 
+  const openActivityItem = async (n) => {
+    if (!n.read) markNotificationRead(n.id).catch(() => {});
+    setActivity((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    setOpen(false);
+    if (n.type === "message") setActive("messages");
+    else if (n.type === "reply") setActive("forum");
+  };
+
+  const unreadActivity = activity.filter((n) => !n.read).length;
+  const totalBadge = requests.length + unreadActivity;
+
+  const activityLabel = (n) => {
+    if (n.type === "reply") return `${n.from_username} replied to your post`;
+    if (n.type === "message") return `${n.from_username} sent you a message`;
+    if (n.type === "friend_accepted") return `${n.from_username} accepted your friend request`;
+    return "New activity";
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen((o) => !o)} className="relative text-zinc-400 hover:text-zinc-200 transition-colors p-1.5">
         <Bell size={20} />
-        {requests.length > 0 && (
+        {totalBadge > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-            {requests.length}
+            {totalBadge}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-zinc-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-30">
-          <div className="px-4 py-3 border-b border-white/10">
-            <h4 className="text-sm font-bold text-zinc-100">Friend Requests</h4>
+        <div className="absolute right-0 mt-2 w-80 bg-zinc-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-30">
+          <div className="flex items-center gap-1 px-3 pt-3 border-b border-white/10">
+            <button onClick={() => setTab("requests")}
+              className={`flex-1 text-xs font-semibold px-2 py-2 rounded-t-md transition-colors ${tab === "requests" ? "text-blue-400 border-b-2 border-blue-400" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Friend Requests{requests.length > 0 ? ` (${requests.length})` : ""}
+            </button>
+            <button onClick={() => setTab("activity")}
+              className={`flex-1 text-xs font-semibold px-2 py-2 rounded-t-md transition-colors ${tab === "activity" ? "text-blue-400 border-b-2 border-blue-400" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Activity{unreadActivity > 0 ? ` (${unreadActivity})` : ""}
+            </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center py-8"><Loader2 size={16} className="text-blue-500 animate-spin" /></div>
-            ) : requests.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-8 px-4">No pending requests.</p>
+            ) : tab === "requests" ? (
+              requests.length === 0 ? (
+                <p className="text-xs text-zinc-500 text-center py-8 px-4">No pending requests.</p>
+              ) : (
+                requests.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.03]">
+                    {r.requester?.avatar_url ? (
+                      <img src={r.requester.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300 shrink-0">
+                        {(r.requester?.username || "?")[0].toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-sm text-zinc-200 flex-1 truncate">{r.requester?.username || "Someone"}</span>
+                    <button onClick={() => accept(r.id)} disabled={acceptingId === r.id}
+                      className="flex items-center gap-1 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all shrink-0">
+                      {acceptingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Accept
+                    </button>
+                  </div>
+                ))
+              )
+            ) : activity.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-8 px-4">No activity yet.</p>
             ) : (
-              requests.map((r) => (
-                <div key={r.id} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.03]">
-                  {r.requester?.avatar_url ? (
-                    <img src={r.requester.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300 shrink-0">
-                      {(r.requester?.username || "?")[0].toUpperCase()}
-                    </div>
-                  )}
-                  <span className="text-sm text-zinc-200 flex-1 truncate">{r.requester?.username || "Someone"}</span>
-                  <button onClick={() => accept(r.id)} disabled={acceptingId === r.id}
-                    className="flex items-center gap-1 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all shrink-0">
-                    {acceptingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Accept
-                  </button>
-                </div>
+              activity.map((n) => (
+                <button key={n.id} onClick={() => openActivityItem(n)}
+                  className={`w-full text-left flex items-start gap-2.5 px-4 py-2.5 hover:bg-white/[0.03] transition-colors ${!n.read ? "bg-blue-500/5" : ""}`}>
+                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />}
+                  <div className={n.read ? "pl-3.5" : ""}>
+                    <p className="text-sm text-zinc-200">{activityLabel(n)}</p>
+                    {n.body && <p className="text-xs text-zinc-500 truncate mt-0.5">{n.body}</p>}
+                  </div>
+                </button>
               ))
             )}
           </div>
@@ -507,7 +541,7 @@ const NotificationBell = ({ session, onProfileUpdate, setActive }) => {
   );
 };
 
-const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, setActive }) => (
+const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, profile, setActive }) => (
   <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-black/80 backdrop-blur z-20">
     <div className="flex items-center gap-3">
       <button className="md:hidden text-zinc-400" onClick={onMenu}><Menu size={22} /></button>
@@ -517,7 +551,7 @@ const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, se
       </div>
     </div>
     <div className="flex items-center gap-2 md:gap-3">
-      <NotificationBell session={session} setActive={setActive} />
+      <NotificationBell session={session} profile={profile} setActive={setActive} />
       {showLogTrade && (
         <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
           <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
@@ -573,23 +607,10 @@ const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-50
 /* ============================================================
    CREATE CHALLENGE MODAL
    ============================================================ */
-const FIRM_TEMPLATES = [
-  { firm: "FTMO", accountSize: 100000, profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-  { firm: "MyFundedFX", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-  { firm: "The5ers", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-  { firm: "Alpha Capital Group", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-  { firm: "FundedNext", accountSize: 100000, profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-  { firm: "Funding Pips", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
-];
-
 const CreateChallengeModal = ({ open, onClose, onCreate }) => {
   const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const applyTemplate = (t) => setForm((f) => ({
-    ...f, firm: t.firm, accountSize: String(t.accountSize), profitTargetPct: String(t.profitTargetPct),
-    maxDailyLossPct: String(t.maxDailyLossPct), maxTotalLossPct: String(t.maxTotalLossPct),
-  }));
 
   const submit = () => {
     const errs = {};
@@ -611,17 +632,6 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
   return (
     <Modal open={open} onClose={onClose} title="Create New Challenge" wide>
-      <div className="mb-4">
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quick fill from a firm's standard rules</label>
-        <div className="flex flex-wrap gap-1.5">
-          {FIRM_TEMPLATES.map((t) => (
-            <button key={t.firm} type="button" onClick={() => applyTemplate(t)}
-              className="px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-950 border border-white/10 text-zinc-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors">
-              {t.firm}
-            </button>
-          ))}
-        </div>
-      </div>
       <Field label="Prop Firm Name" error={errors.firm}>
         <input className={inputCls} placeholder="e.g. FTMO, Alpha Capital, MyFundedFX" value={form.firm} onChange={(e) => set("firm", e.target.value)} />
       </Field>
@@ -867,85 +877,6 @@ const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
   );
 };
 
-const CHECKLIST_KEY = "st_premarket_checklist";
-const CHECKLIST_ITEMS = [
-  "Checked economic calendar for high-impact news",
-  "Marked key levels (HTF highs/lows, liquidity)",
-  "Defined bias for the NY session",
-  "Max risk per trade set (position size calculated)",
-  "No revenge-trading mindset — reviewed yesterday calmly",
-];
-
-const PreMarketChecklist = () => {
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const [state, setState] = useState(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(CHECKLIST_KEY) || "{}");
-      return raw.date === todayKey ? raw.checked : Array(CHECKLIST_ITEMS.length).fill(false);
-    } catch { return Array(CHECKLIST_ITEMS.length).fill(false); }
-  });
-
-  const toggle = (i) => {
-    setState((prev) => {
-      const next = [...prev];
-      next[i] = !next[i];
-      localStorage.setItem(CHECKLIST_KEY, JSON.stringify({ date: todayKey, checked: next }));
-      return next;
-    });
-  };
-
-  const done = state.filter(Boolean).length;
-
-  return (
-    <Card className="p-4 md:p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div><h3 className="font-bold text-zinc-100 text-sm">Pre-Market Checklist</h3><p className="text-xs text-zinc-500">Resets daily · {done}/{CHECKLIST_ITEMS.length} done</p></div>
-        <CheckCircle2 size={16} className={done === CHECKLIST_ITEMS.length ? "text-emerald-400" : "text-zinc-600"} />
-      </div>
-      <div className="space-y-2">
-        {CHECKLIST_ITEMS.map((item, i) => (
-          <button
-            key={i}
-            onClick={() => toggle(i)}
-            className="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg bg-zinc-950 border border-white/5 hover:border-white/10 transition-colors"
-          >
-            <span className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${state[i] ? "bg-blue-500 border-blue-500" : "border-zinc-600"}`}>
-              {state[i] && <Check size={11} className="text-zinc-950" />}
-            </span>
-            <span className={`text-xs ${state[i] ? "text-zinc-500 line-through" : "text-zinc-300"}`}>{item}</span>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-};
-
-const DrawdownAlertBanner = ({ challenges, trades }) => {
-  const risky = useMemo(() => {
-    return challenges
-      .map((c) => ({ c, s: computeChallengeStats(c, trades) }))
-      .filter(({ s }) => !s.totalLossBreached && !s.dailyLossBreached && (s.totalDrawdownUsed >= 70 || s.dailyLossUsed >= 70));
-  }, [challenges, trades]);
-
-  if (!risky.length) return null;
-
-  return (
-    <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 flex items-start gap-3">
-      <AlertTriangle size={16} className="text-rose-400 shrink-0 mt-0.5" />
-      <div className="text-xs text-rose-200">
-        <span className="font-semibold">Drawdown warning:</span>{" "}
-        {risky.map(({ c, s }, i) => (
-          <span key={c.id}>
-            {i > 0 && ", "}
-            {c.firm} is at {Math.max(s.totalDrawdownUsed, s.dailyLossUsed).toFixed(0)}% of its loss limit
-          </span>
-        ))}
-        . Trade smaller size or sit out until the picture is clearer.
-      </div>
-    </div>
-  );
-};
-
 const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -953,8 +884,6 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <DrawdownAlertBanner challenges={challenges} trades={trades} />
-
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <KPICard icon={Wallet} label="Net Profit" value={fmtUSD2(kpis.netProfit)} accent={kpis.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} sub="all-time" />
         <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} sub={`${trades.filter(t=>t.status==='Win').length} wins`} />
@@ -1002,10 +931,6 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
             {challenges.length === 0 && <EmptyState icon={ShieldCheck} title="No challenges yet" sub="Create a funding challenge to start tracking rules." />}
           </div>
         </Card>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <PreMarketChecklist />
       </div>
 
       <CalendarCard trades={trades} onOpenTrade={onOpenTrade} />
@@ -1441,31 +1366,6 @@ const AnalyticsPage = ({ trades }) => {
     return SESSIONS.map((s) => ({ session: s, pnl: +(map[s] || 0).toFixed(2) }));
   }, [trades]);
 
-  const bySetup = useMemo(() => {
-    const map = {};
-    trades.forEach((t) => {
-      const key = (t.setup || "Untagged").trim() || "Untagged";
-      if (!map[key]) map[key] = { setup: key, wins: 0, losses: 0, be: 0, total: 0, pnl: 0 };
-      map[key].total += 1;
-      map[key].pnl += t.pnl - t.fees;
-      if (t.status === "Win") map[key].wins += 1;
-      else if (t.status === "Loss") map[key].losses += 1;
-      else map[key].be += 1;
-    });
-    return Object.values(map)
-      .map((r) => ({ ...r, winRate: r.total ? (r.wins / r.total) * 100 : 0, pnl: +r.pnl.toFixed(2) }))
-      .sort((a, b) => b.total - a.total);
-  }, [trades]);
-
-  const badges = useMemo(() => {
-    const list = [];
-    if (streaks.longestWin >= 3) list.push({ label: `${streaks.longestWin}-Win Streak`, icon: Flame, color: "text-orange-400" });
-    if (streaks.daysSinceLastLoss !== null && streaks.daysSinceLastLoss >= 5) list.push({ label: `${streaks.daysSinceLastLoss} Days Loss-Free`, icon: ShieldCheck, color: "text-emerald-400" });
-    if (kpis.winRate >= 60 && kpis.total >= 10) list.push({ label: "60%+ Win Rate", icon: Award, color: "text-blue-400" });
-    if (kpis.profitFactor >= 2) list.push({ label: "Profit Factor 2.0+", icon: TrendingUp, color: "text-emerald-400" });
-    return list;
-  }, [streaks, kpis]);
-
   if (trades.length === 0) {
     return <div className="p-4 md:p-6"><Card><EmptyState icon={BarChart3} title="No data to analyze yet" sub="Log a few trades and your analytics will appear here." /></Card></div>;
   }
@@ -1481,7 +1381,7 @@ const AnalyticsPage = ({ trades }) => {
 
       <Card className="p-4 md:p-5">
         <div className="flex items-center gap-2 mb-4"><Award size={15} className="text-blue-500" /><h3 className="font-bold text-zinc-100 text-sm">Discipline & Streaks</h3></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2.5">
             <div className="text-xs text-zinc-500">Current Streak</div>
             <div className={`tj-mono text-lg font-bold ${streaks.currentType === "Win" ? "text-emerald-400" : "text-rose-400"}`}>{streaks.currentCount} {streaks.currentType || "—"}{streaks.currentCount === 1 ? "" : "s"}</div>
@@ -1498,43 +1398,6 @@ const AnalyticsPage = ({ trades }) => {
             <div className="text-xs text-zinc-500">Days Since Last Loss</div>
             <div className="tj-mono text-lg font-bold text-zinc-200">{streaks.daysSinceLastLoss ?? "—"}</div>
           </div>
-        </div>
-        {badges.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-3 border-t border-white/10">
-            {badges.map((b, i) => (
-              <span key={i} className="flex items-center gap-1.5 bg-zinc-950 border border-white/10 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-300">
-                <b.icon size={12} className={b.color} /> {b.label}
-              </span>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card className="p-4 md:p-5">
-        <div className="flex items-center gap-2 mb-4"><Target size={15} className="text-blue-500" /><h3 className="font-bold text-zinc-100 text-sm">Win Rate by Setup</h3></div>
-        <div className="overflow-x-auto tj-scrollbar">
-          <table className="w-full text-sm min-w-[480px]">
-            <thead>
-              <tr className="text-left text-xs text-zinc-500 border-b border-white/10">
-                <th className="pb-2 font-medium">Setup</th>
-                <th className="pb-2 font-medium text-right">Trades</th>
-                <th className="pb-2 font-medium text-right">Win Rate</th>
-                <th className="pb-2 font-medium text-right">Net P&L</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {bySetup.map((r) => (
-                <tr key={r.setup}>
-                  <td className="py-2.5 text-zinc-200 font-medium">{r.setup}</td>
-                  <td className="py-2.5 text-right text-zinc-400 tj-mono">{r.total}</td>
-                  <td className="py-2.5 text-right tj-mono">
-                    <span className={r.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}>{r.winRate.toFixed(0)}%</span>
-                  </td>
-                  <td className={`py-2.5 text-right tj-mono ${r.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtUSD2(r.pnl)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </Card>
 
@@ -1940,127 +1803,6 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
 };
 
 /* ============================================================
-   ADMIN (role-gated: view members, promote/demote admins)
-   ============================================================ */
-const AdminPage = ({ currentUserId, toast }) => {
-  const [users, setUsers] = useState(null);
-  const [search, setSearch] = useState("");
-  const [busyId, setBusyId] = useState(null);
-
-  const load = () => {
-    fetchAllProfiles()
-      .then(setUsers)
-      .catch(() => toast("Couldn't load members. Check your Supabase 'profiles' table has a 'role' column.", "error"));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const toggleRole = async (u) => {
-    const nextRole = u.role === "admin" ? "user" : "admin";
-    if (u.id === currentUserId && nextRole !== "admin") {
-      if (!window.confirm("Remove your own admin access? You'll lose access to this page.")) return;
-    }
-    setBusyId(u.id);
-    try {
-      await updateUserRole(u.id, nextRole);
-      setUsers((prev) => prev.map((p) => (p.id === u.id ? { ...p, role: nextRole } : p)));
-      toast(`${u.username || "User"} is now ${nextRole === "admin" ? "an admin" : "a regular user"}`, "success");
-    } catch {
-      toast("Couldn't update role — make sure 'profiles' has a 'role' column and RLS allows it.", "error");
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const filtered = (users || []).filter((u) =>
-    !search.trim() || (u.username || "").toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="p-4 md:p-6 space-y-6">
-      <Card className="p-4 md:p-5">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <ShieldAlert size={16} className="text-blue-400" />
-            <h3 className="font-bold text-zinc-100 text-sm">Members ({users ? users.length : "…"})</h3>
-          </div>
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search username…"
-              className="bg-zinc-950 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-200 w-56 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        {users === null ? (
-          <p className="text-xs text-zinc-500">Loading members…</p>
-        ) : filtered.length === 0 ? (
-          <EmptyState icon={Users} title="No members found" sub="Try a different search." />
-        ) : (
-          <div className="overflow-x-auto tj-scrollbar">
-            <table className="w-full text-sm min-w-[520px]">
-              <thead>
-                <tr className="text-left text-xs text-zinc-500 border-b border-white/10">
-                  <th className="pb-2 font-medium">User</th>
-                  <th className="pb-2 font-medium">Joined</th>
-                  <th className="pb-2 font-medium">Role</th>
-                  <th className="pb-2 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filtered.map((u) => (
-                  <tr key={u.id}>
-                    <td className="py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        {u.avatar_url ? (
-                          <img src={u.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-300">
-                            {(u.username || "?")[0].toUpperCase()}
-                          </div>
-                        )}
-                        <span className="text-zinc-200 font-medium">{u.username || "—"}</span>
-                        {u.id === currentUserId && <span className="text-[10px] text-zinc-600">(you)</span>}
-                      </div>
-                    </td>
-                    <td className="py-2.5 text-zinc-500">{u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}</td>
-                    <td className="py-2.5">
-                      {u.role === "admin" ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-2 py-0.5">
-                          <ShieldAlert size={11} /> Admin
-                        </span>
-                      ) : (
-                        <span className="text-xs text-zinc-500">Member</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <button
-                        onClick={() => toggleRole(u)}
-                        disabled={busyId === u.id}
-                        className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 ${
-                          u.role === "admin"
-                            ? "bg-zinc-950 border border-white/10 text-zinc-300 hover:border-rose-500/50 hover:text-rose-400"
-                            : "bg-blue-500 hover:bg-blue-400 text-zinc-950"
-                        }`}
-                      >
-                        {busyId === u.id ? "…" : u.role === "admin" ? "Remove admin" : "Make admin"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-};
-
-/* ============================================================
    PROFILE SETUP (mandatory username + age, once per account)
    ============================================================ */
 const ProfileSetup = ({ session, onComplete }) => {
@@ -2098,9 +1840,8 @@ const ProfileSetup = ({ session, onComplete }) => {
     <div className="tj-root min-h-screen bg-black text-zinc-100 flex items-center justify-center p-4">
       <GlobalStyle />
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={19} className="text-black" /></div>
-          <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
+        <div className="flex items-center justify-center mb-8">
+          <LogoFull size={34} textClass="text-xl" />
         </div>
         <Card className="p-6 tj-animate-in">
           <div className="flex items-center gap-2 mb-1">
@@ -2132,7 +1873,7 @@ const ProfileSetup = ({ session, onComplete }) => {
    AUTH PAGE (Google + email/password via Supabase)
    ============================================================ */
 const AuthPage = ({ onBack }) => {
-  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -2148,6 +1889,16 @@ const AuthPage = ({ onBack }) => {
     });
     if (err) { setError(err.message); setLoading(false); }
     // on success the browser redirects to Google, so no further action here
+  };
+
+  const submitForgotPassword = async (e) => {
+    e.preventDefault();
+    setError(""); setNotice(""); setLoading(true);
+    if (!email) { setError("Enter your email address."); setLoading(false); return; }
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    setLoading(false);
+    if (err) setError(err.message);
+    else setNotice("Check your email for a password reset link.");
   };
 
   const submitEmail = async (e) => {
@@ -2177,11 +1928,34 @@ const AuthPage = ({ onBack }) => {
             ← Back to home
           </button>
         )}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={19} className="text-zinc-950" /></div>
-          <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
+        <div className="flex items-center justify-center mb-8">
+          <LogoFull size={34} textClass="text-xl" />
         </div>
 
+        {mode === "forgot" ? (
+          <Card className="p-6 tj-animate-in">
+            <h3 className="font-bold text-zinc-100 text-sm mb-1">Reset your password</h3>
+            <p className="text-xs text-zinc-500 mb-5">We'll email you a link to set a new password.</p>
+            <form onSubmit={submitForgotPassword}>
+              <Field label="Email">
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+              </Field>
+              {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+              {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
+              <button type="submit" disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">
+                {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+                Send Reset Link
+              </button>
+            </form>
+            <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className="w-full text-center text-xs text-zinc-500 hover:text-zinc-300 mt-4 transition-colors">
+              ← Back to sign in
+            </button>
+          </Card>
+        ) : (
         <Card className="p-6 tj-animate-in">
           <div className="flex rounded-lg border border-white/10 overflow-hidden mb-5">
             <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signin" ? "bg-blue-500 text-zinc-950" : "text-zinc-400"}`}>Sign In</button>
@@ -2213,6 +1987,12 @@ const AuthPage = ({ onBack }) => {
               </div>
             </Field>
 
+            {mode === "signin" && (
+              <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-blue-400 hover:text-blue-300 -mt-2 mb-4 block transition-colors">
+                Forgot password?
+              </button>
+            )}
+
             {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
             {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
 
@@ -2223,12 +2003,15 @@ const AuthPage = ({ onBack }) => {
             </button>
           </form>
         </Card>
-        <p className="text-center text-xs text-zinc-600 mt-4">
-          {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-          <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-blue-500 hover:text-blue-400 font-medium">
-            {mode === "signin" ? "Sign up" : "Sign in"}
-          </button>
-        </p>
+        )}
+        {mode !== "forgot" && (
+          <p className="text-center text-xs text-zinc-600 mt-4">
+            {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+            <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-blue-500 hover:text-blue-400 font-medium">
+              {mode === "signin" ? "Sign up" : "Sign in"}
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -2237,6 +2020,58 @@ const AuthPage = ({ onBack }) => {
 /* ============================================================
    ROOT APP
    ============================================================ */
+const ResetPasswordScreen = ({ onDone }) => {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (password !== confirmPassword) { setError("Passwords don't match."); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (err) setError(err.message);
+    else onDone();
+  };
+
+  return (
+    <div className="tj-root min-h-screen bg-black text-zinc-100 flex items-center justify-center p-4">
+      <GlobalStyle />
+      <div className="w-full max-w-sm">
+        <div className="flex items-center justify-center mb-8"><LogoFull size={34} textClass="text-xl" /></div>
+        <Card className="p-6 tj-animate-in">
+          <h3 className="font-bold text-zinc-100 text-sm mb-1">Set a new password</h3>
+          <p className="text-xs text-zinc-500 mb-5">Choose a new password for your account.</p>
+          <form onSubmit={submit}>
+            <Field label="New Password">
+              <div className="relative">
+                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input type={showPassword ? "text" : "password"} className={`${inputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </Field>
+            <Field label="Confirm New Password" error={error}>
+              <input type={showPassword ? "text" : "password"} className={inputCls} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+            </Field>
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">
+              {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+              Update Password
+            </button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [profile, setProfile] = useState(undefined); // undefined = checking, null = needs onboarding
@@ -2252,6 +2087,7 @@ export default function App() {
   const [settings, setSettings] = useState({ currency: "USD", timezone: "UTC", defaultRiskPct: 1, minTradingDays: 10 });
 
   const [dataError, setDataError] = useState("");
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!session?.user) { if (session === null) setLoading(false); return; }
@@ -2271,7 +2107,10 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      if (_event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -2294,7 +2133,6 @@ export default function App() {
     settings: ["Settings", "Personalize Strike Trading"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
-    admin: ["Admin", "Manage members and roles"],
   };
 
   const addTrade = async (t) => {
@@ -2375,6 +2213,10 @@ export default function App() {
     );
   }
 
+  if (passwordRecovery) {
+    return <ResetPasswordScreen onDone={() => { setPasswordRecovery(false); addToast("Password updated"); }} />;
+  }
+
   if (!session) {
     if (!showAuth) return <LandingPage onGetStarted={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />;
     return <AuthPage onBack={() => setShowAuth(false)} />;
@@ -2399,7 +2241,7 @@ export default function App() {
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
-          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} setActive={setActive} />
+          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} profile={profile} setActive={setActive} />
           {dataError && (
             <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
               <AlertTriangle size={14} /> Couldn't load your data: {dataError}
@@ -2418,7 +2260,6 @@ export default function App() {
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
                 {active === "messages" && <MessagesPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
-                {active === "admin" && profile?.role === "admin" && <AdminPage currentUserId={session.user.id} toast={addToast} />}
               </>
             )}
           </main>
