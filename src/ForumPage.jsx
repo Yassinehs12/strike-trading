@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
-  MessagesSquare, Plus, X, Trash2, Send, Loader2, ArrowLeft, User, Clock, MessageCircle, Radio, ImagePlus,
+  MessagesSquare, Plus, X, Trash2, Send, Loader2, ArrowLeft, User, Clock, MessageCircle, Radio, ImagePlus, ShieldAlert,
 } from "lucide-react";
 import {
   fetchForumPosts, insertForumPost, deleteForumPost, uploadForumImage,
   fetchForumReplies, insertForumReply, deleteForumReply,
-  fetchChatMessages, insertChatMessage, subscribeToChatMessages,
+  fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage, fetchAdminIds,
 } from "./db";
 import UserProfileModal from "./UserProfileModal";
+
+const AdminBadge = ({ size = 10 }) => (
+  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-1.5 py-0.5 ml-1">
+    <ShieldAlert size={size} /> Admin
+  </span>
+);
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -120,7 +126,7 @@ const NewPostModal = ({ open, onClose, onSubmit }) => {
   );
 };
 
-const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply, onViewProfile }) => {
+const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply, onViewProfile, isAdmin, adminIds }) => {
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
@@ -168,13 +174,14 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
       <Card className="p-5">
         <div className="flex items-start justify-between gap-3 mb-2">
           <h2 className="text-lg font-bold text-zinc-100">{post.title}</h2>
-          {post.user_id === currentUserId.userId && (
+          {(post.user_id === currentUserId.userId || isAdmin) && (
             <button onClick={() => onDeletePost(post.id)} className="text-zinc-600 hover:text-rose-400 transition-colors shrink-0"><Trash2 size={16} /></button>
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-500 mb-4">
           <User size={12} />
           <button onClick={() => onViewProfile(post.user_id)} className="hover:text-blue-400 hover:underline transition-colors">{post.username}</button>
+          {adminIds?.has(post.user_id) && <AdminBadge />}
           <span className="text-zinc-700">·</span> <Clock size={12} /> {timeAgo(post.created_at)}
         </div>
         <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{post.body}</p>
@@ -193,9 +200,9 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
               <Card key={r.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
-                    <User size={11} /> <button onClick={() => onViewProfile(r.user_id)} className="font-medium text-zinc-300 hover:text-blue-400 hover:underline transition-colors">{r.username}</button> <span className="text-zinc-700">·</span> {timeAgo(r.created_at)}
+                    <User size={11} /> <button onClick={() => onViewProfile(r.user_id)} className="font-medium text-zinc-300 hover:text-blue-400 hover:underline transition-colors">{r.username}</button> {adminIds?.has(r.user_id) && <AdminBadge />} <span className="text-zinc-700">·</span> {timeAgo(r.created_at)}
                   </div>
-                  {r.user_id === currentUserId.userId && (
+                  {(r.user_id === currentUserId.userId || isAdmin) && (
                     <button onClick={() => removeReply(r.id)} className="text-zinc-600 hover:text-rose-400 transition-colors shrink-0"><Trash2 size={13} /></button>
                   )}
                 </div>
@@ -219,7 +226,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
   );
 };
 
-const LiveChat = ({ currentUser, onViewProfile }) => {
+const LiveChat = ({ currentUser, onViewProfile, isAdmin, adminIds }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -245,15 +252,30 @@ const LiveChat = ({ currentUser, onViewProfile }) => {
         setTimeout(() => scrollToBottom("auto"), 0);
       });
 
-    const unsubscribe = subscribeToChatMessages((msg) => {
-      if (seenIds.current.has(msg.id)) return;
-      seenIds.current.add(msg.id);
-      setMessages((prev) => [...prev, msg]);
-      setTimeout(() => scrollToBottom("smooth"), 0);
-    });
+    const unsubscribe = subscribeToChatMessages(
+      (msg) => {
+        if (seenIds.current.has(msg.id)) return;
+        seenIds.current.add(msg.id);
+        setMessages((prev) => [...prev, msg]);
+        setTimeout(() => scrollToBottom("smooth"), 0);
+      },
+      (msg) => {
+        seenIds.current.delete(msg.id);
+        setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      }
+    );
 
     return unsubscribe;
   }, []);
+
+  const removeMessage = async (id) => {
+    try {
+      await deleteChatMessage(id);
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    } catch {
+      setError("Failed to delete message.");
+    }
+  };
 
   const send = async () => {
     const body = text.trim();
@@ -296,17 +318,28 @@ const LiveChat = ({ currentUser, onViewProfile }) => {
         ) : (
           messages.map((m) => {
             const mine = m.user_id === currentUser.userId;
+            const canDelete = mine || isAdmin;
             return (
-              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.06] text-zinc-200"}`}>
+              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"} group`}>
+                <div className={`relative max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.06] text-zinc-200"}`}>
                   <button
                     onClick={() => !mine && onViewProfile(m.user_id)}
-                    className={`text-xs font-semibold mb-0.5 block ${mine ? "text-zinc-950/70 cursor-default" : "text-zinc-400 hover:text-blue-400 hover:underline transition-colors"}`}
+                    className={`text-xs font-semibold mb-0.5 flex items-center ${mine ? "text-zinc-950/70 cursor-default" : "text-zinc-400 hover:text-blue-400 hover:underline transition-colors"}`}
                   >
                     {mine ? "You" : m.username}
+                    {adminIds?.has(m.user_id) && <AdminBadge size={9} />}
                   </button>
                   <p className="text-sm whitespace-pre-wrap leading-snug">{m.body}</p>
                   <div className={`text-[10px] mt-1 ${mine ? "text-zinc-950/60" : "text-zinc-500"}`}>{timeAgo(m.created_at)}</div>
+                  {canDelete && (
+                    <button
+                      onClick={() => removeMessage(m.id)}
+                      title="Delete message"
+                      className={`absolute -top-2 ${mine ? "-left-2" : "-right-2"} opacity-0 group-hover:opacity-100 bg-zinc-900 border border-white/10 text-zinc-400 hover:text-rose-400 rounded-full p-1 transition-opacity`}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -336,8 +369,12 @@ export default function ForumPage({ session, profile }) {
   const [activePost, setActivePost] = useState(null);
   const [focusReply, setFocusReply] = useState(false);
   const [viewingUserId, setViewingUserId] = useState(null);
+  const [adminIds, setAdminIds] = useState(new Set());
 
   const currentUser = { userId: session?.user?.id, username: profile?.username || session?.user?.email || "Trader" };
+  const isAdmin = profile?.role === "admin";
+
+  useEffect(() => { fetchAdminIds().then((ids) => setAdminIds(new Set(ids))); }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -379,6 +416,8 @@ export default function ForumPage({ session, profile }) {
           onDeletePost={removePost}
           autoFocusReply={focusReply}
           onViewProfile={setViewingUserId}
+          isAdmin={isAdmin}
+          adminIds={adminIds}
         />
         <UserProfileModal userId={viewingUserId} currentUserId={currentUser.userId} onClose={() => setViewingUserId(null)} />
       </>
@@ -409,7 +448,7 @@ export default function ForumPage({ session, profile }) {
       </div>
 
       {tab === "chat" ? (
-        <LiveChat currentUser={currentUser} onViewProfile={setViewingUserId} />
+        <LiveChat currentUser={currentUser} onViewProfile={setViewingUserId} isAdmin={isAdmin} adminIds={adminIds} />
       ) : (
         <>
           {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5">{error}</div>}
@@ -426,7 +465,12 @@ export default function ForumPage({ session, profile }) {
             <div className="space-y-3">
               {posts.map((p) => (
                 <Card key={p.id} className="p-4 cursor-pointer hover:border-blue-500/30 transition-colors" onClick={() => openThread(p)}>
-                  <h3 className="font-semibold text-zinc-100 mb-1">{p.title}</h3>
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-semibold text-zinc-100 mb-1">{p.title}</h3>
+                    {isAdmin && (
+                      <button onClick={(e) => { e.stopPropagation(); removePost(p.id); }} className="text-zinc-600 hover:text-rose-400 transition-colors shrink-0"><Trash2 size={14} /></button>
+                    )}
+                  </div>
                   <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{p.body}</p>
                   {p.image_url && (
                     <img src={p.image_url} alt="" className="mb-2 w-40 h-28 object-cover rounded-lg border border-white/10" />
@@ -435,6 +479,7 @@ export default function ForumPage({ session, profile }) {
                     <div className="flex items-center gap-2 text-xs text-zinc-500">
                       <User size={11} />
                       <button onClick={(e) => { e.stopPropagation(); setViewingUserId(p.user_id); }} className="hover:text-blue-400 hover:underline transition-colors">{p.username}</button>
+                      {adminIds.has(p.user_id) && <AdminBadge />}
                       <span className="text-zinc-700">·</span> <Clock size={11} /> {timeAgo(p.created_at)}
                     </div>
                     <button

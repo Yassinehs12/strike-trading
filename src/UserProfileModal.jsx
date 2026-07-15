@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle } from "lucide-react";
+import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle, ShieldAlert } from "lucide-react";
 import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest } from "./db";
 import DirectMessageModal from "./DirectMessageModal";
 
@@ -108,7 +108,14 @@ export default function UserProfileModal({ userId, currentUserId, onClose }) {
                   {(profile.username || "?")[0].toUpperCase()}
                 </div>
               )}
-              <h3 className="font-bold text-zinc-100 text-lg">{profile.username}</h3>
+              <h3 className="font-bold text-zinc-100 text-lg flex items-center justify-center gap-1.5">
+                {profile.username}
+                {profile.role === "admin" && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-1.5 py-0.5">
+                    <ShieldAlert size={9} /> Admin
+                  </span>
+                )}
+              </h3>
               {profile.bio && <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-3">

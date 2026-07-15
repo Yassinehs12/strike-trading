@@ -19,11 +19,12 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export default function MessagesPage({ session }) {
+export default function MessagesPage({ session, profile }) {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeUser, setActiveUser] = useState(null);
+  const isAdmin = profile?.role === "admin";
 
   const load = useCallback(() => {
     setLoading(true);
@@ -81,7 +82,7 @@ export default function MessagesPage({ session }) {
       )}
 
       {activeUser && (
-        <DirectMessageModal currentUserId={session.user.id} otherUser={activeUser} onClose={() => { setActiveUser(null); load(); }} />
+        <DirectMessageModal currentUserId={session.user.id} otherUser={activeUser} onClose={() => { setActiveUser(null); load(); }} isAdmin={isAdmin} />
       )}
     </div>
   );

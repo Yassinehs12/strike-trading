@@ -154,6 +154,19 @@ export async function updateProfileDetails(userId, { bio, avatarUrl }) {
   return data;
 }
 
+/* ---------- admin ---------- */
+export async function fetchAllProfiles() {
+  const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateUserRole(userId, role) {
+  const { data, error } = await supabase.from("profiles").update({ role }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function uploadAvatar(file, userId) {
   const ext = file.name.split(".").pop();
   const path = `${userId}/${Date.now()}.${ext}`;
@@ -356,8 +369,18 @@ export async function insertChatMessage(userId, username, body) {
   return data;
 }
 
-// Subscribes to new chat messages in realtime. Returns an unsubscribe function.
-export function subscribeToChatMessages(onInsert) {
+export async function deleteChatMessage(id) {
+  const { error } = await supabase.from("chat_messages").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteDirectMessage(id) {
+  const { error } = await supabase.from("direct_messages").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// Subscribes to new + deleted chat messages in realtime. Returns an unsubscribe function.
+export function subscribeToChatMessages(onInsert, onDelete) {
   const channel = supabase
     .channel("chat_messages_realtime")
     .on(
@@ -365,6 +388,19 @@ export function subscribeToChatMessages(onInsert) {
       { event: "INSERT", schema: "public", table: "chat_messages" },
       (payload) => onInsert(payload.new)
     )
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: "chat_messages" },
+      (payload) => onDelete && onDelete(payload.old)
+    )
     .subscribe();
   return () => supabase.removeChannel(channel);
+}
+
+/* ---------- admin badges ---------- */
+// Set of user IDs with the "admin" role — used to render an admin badge next to usernames.
+export async function fetchAdminIds() {
+  const { data, error } = await supabase.from("profiles").select("id").eq("role", "admin");
+  if (error) return [];
+  return (data || []).map((r) => r.id);
 }

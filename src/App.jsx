@@ -10,11 +10,11 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { LogoMark } from "./Logo";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchAllProfiles, updateUserRole } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -370,6 +370,7 @@ const NAV_ITEMS = [
   { id: "forum", label: "Community", icon: MessagesSquare },
   { id: "messages", label: "Messages", icon: Mail },
   { id: "settings", label: "Settings", icon: SettingsIcon },
+  { id: "admin", label: "Admin", icon: ShieldAlert, adminOnly: true },
 ];
 
 const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => (
@@ -381,7 +382,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
         <span className="font-bold text-zinc-100 text-lg tracking-tight">Strike Trading</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || profile?.role === "admin").map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (
@@ -403,7 +404,14 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate">{profile?.username || user?.email || "Trader"}</div>
+            <div className="text-sm font-medium text-zinc-200 truncate flex items-center gap-1.5">
+              {profile?.username || user?.email || "Trader"}
+              {profile?.role === "admin" && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-1.5 py-0.5 shrink-0">
+                  <ShieldAlert size={8} /> Admin
+                </span>
+              )}
+            </div>
           </div>
         </button>
         <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors">
@@ -565,10 +573,23 @@ const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-50
 /* ============================================================
    CREATE CHALLENGE MODAL
    ============================================================ */
+const FIRM_TEMPLATES = [
+  { firm: "FTMO", accountSize: 100000, profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+  { firm: "MyFundedFX", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+  { firm: "The5ers", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+  { firm: "Alpha Capital Group", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+  { firm: "FundedNext", accountSize: 100000, profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+  { firm: "Funding Pips", accountSize: 100000, profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10 },
+];
+
 const CreateChallengeModal = ({ open, onClose, onCreate }) => {
   const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const applyTemplate = (t) => setForm((f) => ({
+    ...f, firm: t.firm, accountSize: String(t.accountSize), profitTargetPct: String(t.profitTargetPct),
+    maxDailyLossPct: String(t.maxDailyLossPct), maxTotalLossPct: String(t.maxTotalLossPct),
+  }));
 
   const submit = () => {
     const errs = {};
@@ -590,6 +611,17 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
   return (
     <Modal open={open} onClose={onClose} title="Create New Challenge" wide>
+      <div className="mb-4">
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quick fill from a firm's standard rules</label>
+        <div className="flex flex-wrap gap-1.5">
+          {FIRM_TEMPLATES.map((t) => (
+            <button key={t.firm} type="button" onClick={() => applyTemplate(t)}
+              className="px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-950 border border-white/10 text-zinc-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors">
+              {t.firm}
+            </button>
+          ))}
+        </div>
+      </div>
       <Field label="Prop Firm Name" error={errors.firm}>
         <input className={inputCls} placeholder="e.g. FTMO, Alpha Capital, MyFundedFX" value={form.firm} onChange={(e) => set("firm", e.target.value)} />
       </Field>
@@ -835,6 +867,85 @@ const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
   );
 };
 
+const CHECKLIST_KEY = "st_premarket_checklist";
+const CHECKLIST_ITEMS = [
+  "Checked economic calendar for high-impact news",
+  "Marked key levels (HTF highs/lows, liquidity)",
+  "Defined bias for the NY session",
+  "Max risk per trade set (position size calculated)",
+  "No revenge-trading mindset — reviewed yesterday calmly",
+];
+
+const PreMarketChecklist = () => {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const [state, setState] = useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CHECKLIST_KEY) || "{}");
+      return raw.date === todayKey ? raw.checked : Array(CHECKLIST_ITEMS.length).fill(false);
+    } catch { return Array(CHECKLIST_ITEMS.length).fill(false); }
+  });
+
+  const toggle = (i) => {
+    setState((prev) => {
+      const next = [...prev];
+      next[i] = !next[i];
+      localStorage.setItem(CHECKLIST_KEY, JSON.stringify({ date: todayKey, checked: next }));
+      return next;
+    });
+  };
+
+  const done = state.filter(Boolean).length;
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div><h3 className="font-bold text-zinc-100 text-sm">Pre-Market Checklist</h3><p className="text-xs text-zinc-500">Resets daily · {done}/{CHECKLIST_ITEMS.length} done</p></div>
+        <CheckCircle2 size={16} className={done === CHECKLIST_ITEMS.length ? "text-emerald-400" : "text-zinc-600"} />
+      </div>
+      <div className="space-y-2">
+        {CHECKLIST_ITEMS.map((item, i) => (
+          <button
+            key={i}
+            onClick={() => toggle(i)}
+            className="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg bg-zinc-950 border border-white/5 hover:border-white/10 transition-colors"
+          >
+            <span className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${state[i] ? "bg-blue-500 border-blue-500" : "border-zinc-600"}`}>
+              {state[i] && <Check size={11} className="text-zinc-950" />}
+            </span>
+            <span className={`text-xs ${state[i] ? "text-zinc-500 line-through" : "text-zinc-300"}`}>{item}</span>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+const DrawdownAlertBanner = ({ challenges, trades }) => {
+  const risky = useMemo(() => {
+    return challenges
+      .map((c) => ({ c, s: computeChallengeStats(c, trades) }))
+      .filter(({ s }) => !s.totalLossBreached && !s.dailyLossBreached && (s.totalDrawdownUsed >= 70 || s.dailyLossUsed >= 70));
+  }, [challenges, trades]);
+
+  if (!risky.length) return null;
+
+  return (
+    <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 flex items-start gap-3">
+      <AlertTriangle size={16} className="text-rose-400 shrink-0 mt-0.5" />
+      <div className="text-xs text-rose-200">
+        <span className="font-semibold">Drawdown warning:</span>{" "}
+        {risky.map(({ c, s }, i) => (
+          <span key={c.id}>
+            {i > 0 && ", "}
+            {c.firm} is at {Math.max(s.totalDrawdownUsed, s.dailyLossUsed).toFixed(0)}% of its loss limit
+          </span>
+        ))}
+        . Trade smaller size or sit out until the picture is clearer.
+      </div>
+    </div>
+  );
+};
+
 const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -842,6 +953,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <DrawdownAlertBanner challenges={challenges} trades={trades} />
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <KPICard icon={Wallet} label="Net Profit" value={fmtUSD2(kpis.netProfit)} accent={kpis.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} sub="all-time" />
         <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} sub={`${trades.filter(t=>t.status==='Win').length} wins`} />
@@ -889,6 +1002,10 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
             {challenges.length === 0 && <EmptyState icon={ShieldCheck} title="No challenges yet" sub="Create a funding challenge to start tracking rules." />}
           </div>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+        <PreMarketChecklist />
       </div>
 
       <CalendarCard trades={trades} onOpenTrade={onOpenTrade} />
@@ -1324,6 +1441,31 @@ const AnalyticsPage = ({ trades }) => {
     return SESSIONS.map((s) => ({ session: s, pnl: +(map[s] || 0).toFixed(2) }));
   }, [trades]);
 
+  const bySetup = useMemo(() => {
+    const map = {};
+    trades.forEach((t) => {
+      const key = (t.setup || "Untagged").trim() || "Untagged";
+      if (!map[key]) map[key] = { setup: key, wins: 0, losses: 0, be: 0, total: 0, pnl: 0 };
+      map[key].total += 1;
+      map[key].pnl += t.pnl - t.fees;
+      if (t.status === "Win") map[key].wins += 1;
+      else if (t.status === "Loss") map[key].losses += 1;
+      else map[key].be += 1;
+    });
+    return Object.values(map)
+      .map((r) => ({ ...r, winRate: r.total ? (r.wins / r.total) * 100 : 0, pnl: +r.pnl.toFixed(2) }))
+      .sort((a, b) => b.total - a.total);
+  }, [trades]);
+
+  const badges = useMemo(() => {
+    const list = [];
+    if (streaks.longestWin >= 3) list.push({ label: `${streaks.longestWin}-Win Streak`, icon: Flame, color: "text-orange-400" });
+    if (streaks.daysSinceLastLoss !== null && streaks.daysSinceLastLoss >= 5) list.push({ label: `${streaks.daysSinceLastLoss} Days Loss-Free`, icon: ShieldCheck, color: "text-emerald-400" });
+    if (kpis.winRate >= 60 && kpis.total >= 10) list.push({ label: "60%+ Win Rate", icon: Award, color: "text-blue-400" });
+    if (kpis.profitFactor >= 2) list.push({ label: "Profit Factor 2.0+", icon: TrendingUp, color: "text-emerald-400" });
+    return list;
+  }, [streaks, kpis]);
+
   if (trades.length === 0) {
     return <div className="p-4 md:p-6"><Card><EmptyState icon={BarChart3} title="No data to analyze yet" sub="Log a few trades and your analytics will appear here." /></Card></div>;
   }
@@ -1339,7 +1481,7 @@ const AnalyticsPage = ({ trades }) => {
 
       <Card className="p-4 md:p-5">
         <div className="flex items-center gap-2 mb-4"><Award size={15} className="text-blue-500" /><h3 className="font-bold text-zinc-100 text-sm">Discipline & Streaks</h3></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2.5">
             <div className="text-xs text-zinc-500">Current Streak</div>
             <div className={`tj-mono text-lg font-bold ${streaks.currentType === "Win" ? "text-emerald-400" : "text-rose-400"}`}>{streaks.currentCount} {streaks.currentType || "—"}{streaks.currentCount === 1 ? "" : "s"}</div>
@@ -1356,6 +1498,43 @@ const AnalyticsPage = ({ trades }) => {
             <div className="text-xs text-zinc-500">Days Since Last Loss</div>
             <div className="tj-mono text-lg font-bold text-zinc-200">{streaks.daysSinceLastLoss ?? "—"}</div>
           </div>
+        </div>
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-white/10">
+            {badges.map((b, i) => (
+              <span key={i} className="flex items-center gap-1.5 bg-zinc-950 border border-white/10 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-300">
+                <b.icon size={12} className={b.color} /> {b.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-4"><Target size={15} className="text-blue-500" /><h3 className="font-bold text-zinc-100 text-sm">Win Rate by Setup</h3></div>
+        <div className="overflow-x-auto tj-scrollbar">
+          <table className="w-full text-sm min-w-[480px]">
+            <thead>
+              <tr className="text-left text-xs text-zinc-500 border-b border-white/10">
+                <th className="pb-2 font-medium">Setup</th>
+                <th className="pb-2 font-medium text-right">Trades</th>
+                <th className="pb-2 font-medium text-right">Win Rate</th>
+                <th className="pb-2 font-medium text-right">Net P&L</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {bySetup.map((r) => (
+                <tr key={r.setup}>
+                  <td className="py-2.5 text-zinc-200 font-medium">{r.setup}</td>
+                  <td className="py-2.5 text-right text-zinc-400 tj-mono">{r.total}</td>
+                  <td className="py-2.5 text-right tj-mono">
+                    <span className={r.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}>{r.winRate.toFixed(0)}%</span>
+                  </td>
+                  <td className={`py-2.5 text-right tj-mono ${r.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtUSD2(r.pnl)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
 
@@ -1761,6 +1940,127 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
 };
 
 /* ============================================================
+   ADMIN (role-gated: view members, promote/demote admins)
+   ============================================================ */
+const AdminPage = ({ currentUserId, toast }) => {
+  const [users, setUsers] = useState(null);
+  const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState(null);
+
+  const load = () => {
+    fetchAllProfiles()
+      .then(setUsers)
+      .catch(() => toast("Couldn't load members. Check your Supabase 'profiles' table has a 'role' column.", "error"));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggleRole = async (u) => {
+    const nextRole = u.role === "admin" ? "user" : "admin";
+    if (u.id === currentUserId && nextRole !== "admin") {
+      if (!window.confirm("Remove your own admin access? You'll lose access to this page.")) return;
+    }
+    setBusyId(u.id);
+    try {
+      await updateUserRole(u.id, nextRole);
+      setUsers((prev) => prev.map((p) => (p.id === u.id ? { ...p, role: nextRole } : p)));
+      toast(`${u.username || "User"} is now ${nextRole === "admin" ? "an admin" : "a regular user"}`, "success");
+    } catch {
+      toast("Couldn't update role — make sure 'profiles' has a 'role' column and RLS allows it.", "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const filtered = (users || []).filter((u) =>
+    !search.trim() || (u.username || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={16} className="text-blue-400" />
+            <h3 className="font-bold text-zinc-100 text-sm">Members ({users ? users.length : "…"})</h3>
+          </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search username…"
+              className="bg-zinc-950 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-200 w-56 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        {users === null ? (
+          <p className="text-xs text-zinc-500">Loading members…</p>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={Users} title="No members found" sub="Try a different search." />
+        ) : (
+          <div className="overflow-x-auto tj-scrollbar">
+            <table className="w-full text-sm min-w-[520px]">
+              <thead>
+                <tr className="text-left text-xs text-zinc-500 border-b border-white/10">
+                  <th className="pb-2 font-medium">User</th>
+                  <th className="pb-2 font-medium">Joined</th>
+                  <th className="pb-2 font-medium">Role</th>
+                  <th className="pb-2 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filtered.map((u) => (
+                  <tr key={u.id}>
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        {u.avatar_url ? (
+                          <img src={u.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-300">
+                            {(u.username || "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-zinc-200 font-medium">{u.username || "—"}</span>
+                        {u.id === currentUserId && <span className="text-[10px] text-zinc-600">(you)</span>}
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-zinc-500">{u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}</td>
+                    <td className="py-2.5">
+                      {u.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-full px-2 py-0.5">
+                          <ShieldAlert size={11} /> Admin
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-500">Member</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <button
+                        onClick={() => toggleRole(u)}
+                        disabled={busyId === u.id}
+                        className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 ${
+                          u.role === "admin"
+                            ? "bg-zinc-950 border border-white/10 text-zinc-300 hover:border-rose-500/50 hover:text-rose-400"
+                            : "bg-blue-500 hover:bg-blue-400 text-zinc-950"
+                        }`}
+                      >
+                        {busyId === u.id ? "…" : u.role === "admin" ? "Remove admin" : "Make admin"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+/* ============================================================
    PROFILE SETUP (mandatory username + age, once per account)
    ============================================================ */
 const ProfileSetup = ({ session, onComplete }) => {
@@ -1994,6 +2294,7 @@ export default function App() {
     settings: ["Settings", "Personalize Strike Trading"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
+    admin: ["Admin", "Manage members and roles"],
   };
 
   const addTrade = async (t) => {
@@ -2115,8 +2416,9 @@ export default function App() {
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
-                {active === "messages" && <MessagesPage session={session} />}
+                {active === "messages" && <MessagesPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
+                {active === "admin" && profile?.role === "admin" && <AdminPage currentUserId={session.user.id} toast={addToast} />}
               </>
             )}
           </main>
