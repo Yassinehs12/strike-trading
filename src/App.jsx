@@ -366,7 +366,6 @@ const NAV_ITEMS = [
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "forum", label: "Community", icon: MessagesSquare },
-  { id: "profile", label: "Profile", icon: UserCircle },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
