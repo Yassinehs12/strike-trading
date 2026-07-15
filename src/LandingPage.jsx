@@ -1,9 +1,10 @@
 import React from "react";
 import {
-  Activity, ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
+  ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, Menu, X,
   MessagesSquare, Users, Send,
 } from "lucide-react";
+import { LogoMark } from "./Logo";
 
 const LandingStyle = () => (
   <style>{`
@@ -30,7 +31,7 @@ const NAV_LINKS = [
 
 const FEATURES = [
   { icon: BookOpen, title: "Trade Journal", desc: "Log every trade with entry/exit, setup tags, session, and psychology notes — plus chart screenshots attached right to the trade." },
-  { icon: ShieldCheck, title: "Funding Challenge Tracker", desc: "Live rule compliance for every prop firm evaluation — daily loss limits, max drawdown, and profit targets monitored automatically." },
+  { icon: ShieldCheck, title: "Funding Challenge Tracker", desc: "Live rule compliance for prop firm evaluations — daily loss limits, max drawdown, and profit targets monitored automatically. Optional for retail and self-funded traders." },
   { icon: Gauge, title: "Risk Gauges", desc: "Instrument-style gauges show exactly how close you are to breaching a daily or total loss limit, before it happens." },
   { icon: CalendarDays, title: "P&L Calendar Heatmap", desc: "See your trading patterns at a glance — every day shaded by profit or loss so you can spot your best and worst days fast." },
   { icon: BarChart3, title: "Analytics & Insights", desc: "Win rate, profit factor, R:R, streaks, and performance broken down by asset, session, and day of the week." },
@@ -42,7 +43,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Create your account", desc: "Sign up free with email or Google — no credit card required." },
-  { n: "02", title: "Add your challenge", desc: "Enter your prop firm's rules once — profit target, loss limits, duration — and let the app track compliance for you." },
+  { n: "02", title: "Set up your account", desc: "Trading a prop firm challenge? Enter its rules once and let the app track compliance. Trading your own capital? Skip straight to journaling." },
   { n: "03", title: "Log trades as you go", desc: "Every trade you journal updates your equity curve, analytics, and challenge status in real time." },
 ];
 
@@ -52,7 +53,7 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
     <header className="sticky top-0 z-50 backdrop-blur-md bg-black/70 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><Activity size={16} className="text-black" strokeWidth={2.5} /></div>
+          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={17} className="text-black" /></div>
           <span className="font-bold text-white text-lg tracking-tight">Strike Trading</span>
         </div>
         <nav className="hidden md:flex items-center gap-8">
@@ -127,13 +128,13 @@ const Hero = ({ onGetStarted }) => (
     <div className="absolute inset-0 lp-glow pointer-events-none" />
     <div className="relative max-w-4xl mx-auto text-center">
       <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-zinc-400 mb-6">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Built for prop firm traders
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Built for every kind of trader
       </div>
       <h1 className="lp-fade-up text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] mb-5" style={{ animationDelay: "0.05s" }}>
-        The trading journal built for<br className="hidden md:block" /> <span className="text-blue-400">funded traders.</span>
+        The trading journal built for<br className="hidden md:block" /> <span className="text-blue-400">all types of traders.</span>
       </h1>
       <p className="lp-fade-up text-base md:text-lg text-zinc-400 max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
-        Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — all in one place.
+        Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — whether you're funded, self-funded, or just getting started.
       </p>
       <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-4" style={{ animationDelay: "0.15s" }}>
         <button onClick={onGetStarted} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-black font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center">
@@ -209,7 +210,7 @@ const Footer = () => (
   <footer className="border-t border-white/5 py-10 px-4">
     <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center"><Activity size={13} className="text-black" strokeWidth={2.5} /></div>
+        <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center"><LogoMark size={14} className="text-black" /></div>
         <span className="font-bold text-white text-sm">Strike Trading</span>
       </div>
       <p className="text-xs text-zinc-600">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>

@@ -13,6 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
+import { LogoMark } from "./Logo";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
@@ -376,7 +377,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-black border-r border-white/10 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
       <div className="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><Activity size={16} className="text-zinc-950" strokeWidth={2.5} /></div>
+        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={17} className="text-zinc-950" /></div>
         <span className="font-bold text-zinc-100 text-lg tracking-tight">Strike Trading</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
@@ -1798,7 +1799,7 @@ const ProfileSetup = ({ session, onComplete }) => {
       <GlobalStyle />
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><Activity size={18} className="text-black" strokeWidth={2.5} /></div>
+          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={19} className="text-black" /></div>
           <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
         </div>
         <Card className="p-6 tj-animate-in">
@@ -1877,7 +1878,7 @@ const AuthPage = ({ onBack }) => {
           </button>
         )}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><Activity size={18} className="text-zinc-950" strokeWidth={2.5} /></div>
+          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={19} className="text-zinc-950" /></div>
           <span className="font-bold text-zinc-100 text-xl tracking-tight">Strike Trading</span>
         </div>
 

@@ -12,6 +12,7 @@ import {
   Award, Clock, CalendarDays, Loader2, Upload, Image as ImageIcon,
   ArrowUpDown, CheckCircle, Info, Pencil,
 } from "lucide-react";
+import { LogoMark } from "./Logo";
 
 /* ============================================================
    FONTS + BASE STYLE
@@ -368,7 +369,7 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
       <div className="h-16 flex items-center gap-2 px-5 border-b border-zinc-800">
-        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><Activity size={16} className="text-zinc-950" strokeWidth={2.5} /></div>
+        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><LogoMark size={17} className="text-zinc-950" /></div>
         <span className="font-bold text-zinc-100 text-lg tracking-tight">Strike Trading</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
