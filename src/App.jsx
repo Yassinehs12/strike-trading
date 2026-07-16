@@ -9,7 +9,7 @@ import {
   XCircle, AlertTriangle, ChevronLeft, ChevronRight, Filter,
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
-  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
+  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -263,6 +263,105 @@ function tradesToCSV(trades) {
   const headers = ["Date", "Asset", "Direction", "Entry", "Exit", "Lots", "Fees", "Setup", "Session", "Status", "PnL", "Notes"];
   const rows = trades.map((t) => [t.date, t.asset, t.direction, t.entry, t.exit, t.lots, t.fees, t.setup, t.session, t.status, t.pnl, `"${(t.notes || "").replace(/"/g, "'")}"`]);
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+}
+
+async function tradesToPDF(trades, meta = {}) {
+  const { jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  doc.setFontSize(16);
+  doc.text("Strike Trading — Trade Journal Export", 14, 16);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`${meta.username || ""}  ·  Exported ${new Date().toLocaleString()}  ·  ${trades.length} trades`, 14, 22);
+
+  const wins = trades.filter((t) => t.status === "Win").length;
+  const losses = trades.filter((t) => t.status === "Loss").length;
+  const netPnl = trades.reduce((s, t) => s + (Number(t.pnl) || 0), 0);
+  doc.text(`Win rate: ${trades.length ? Math.round((wins / trades.length) * 100) : 0}%  ·  Wins: ${wins}  ·  Losses: ${losses}  ·  Net PnL: ${netPnl.toFixed(2)}`, 14, 27);
+
+  autoTable(doc, {
+    startY: 33,
+    head: [["Date", "Asset", "Dir", "Entry", "Exit", "Lots", "Fees", "Setup", "Session", "Status", "PnL", "Notes"]],
+    body: trades.map((t) => [
+      t.date, t.asset, t.direction, t.entry, t.exit, t.lots, t.fees, t.setup || "", t.session || "", t.status,
+      Number(t.pnl).toFixed(2), (t.notes || "").slice(0, 60),
+    ]),
+    styles: { fontSize: 7, cellPadding: 1.5 },
+    headStyles: { fillColor: [30, 30, 33] },
+    didParseCell: (data) => {
+      if (data.section === "body" && data.column.index === 10) {
+        const val = Number(trades[data.row.index]?.pnl);
+        if (val > 0) data.cell.styles.textColor = [16, 150, 90];
+        else if (val < 0) data.cell.styles.textColor = [220, 38, 38];
+      }
+    },
+  });
+
+  doc.save("trade_journal_export.pdf");
+}
+
+// Parses a CSV export (from this app, or MT4/MT5/prop-firm exports using the
+// same header names) back into trade objects ready for insertTrade().
+// This is a manual-import "broker sync" — no live API connection to a broker.
+function csvToTrades(csvText) {
+  const lines = csvText.trim().split(/\r?\n/);
+  if (lines.length < 2) return { trades: [], errors: ["File has no data rows."] };
+
+  const splitRow = (line) => {
+    const cells = [];
+    let cur = "", inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') inQuotes = !inQuotes;
+      else if (c === "," && !inQuotes) { cells.push(cur); cur = ""; }
+      else cur += c;
+    }
+    cells.push(cur);
+    return cells.map((c) => c.trim());
+  };
+
+  const headerMap = { date: "date", asset: "asset", symbol: "asset", direction: "direction", type: "direction",
+    entry: "entry", "entry price": "entry", exit: "exit", "exit price": "exit", lots: "lots", size: "lots",
+    fees: "fees", commission: "fees", setup: "setup", session: "session", status: "status", outcome: "status",
+    pnl: "pnl", profit: "pnl", notes: "notes", comment: "notes" };
+
+  const headers = splitRow(lines[0]).map((h) => headerMap[h.toLowerCase()] || null);
+  const trades = [];
+  const errors = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cells = splitRow(lines[i]);
+    const row = {};
+    headers.forEach((key, idx) => { if (key) row[key] = cells[idx]; });
+
+    if (!row.date || !row.asset || row.entry == null || row.exit == null) {
+      errors.push(`Row ${i + 1}: missing required fields (date, asset, entry, exit) — skipped.`);
+      continue;
+    }
+
+    trades.push({
+      date: row.date,
+      asset: row.asset,
+      direction: /short|sell/i.test(row.direction || "") ? "Short" : "Long",
+      entry: Number(row.entry) || 0,
+      exit: Number(row.exit) || 0,
+      lots: Number(row.lots) || 0,
+      fees: Number(row.fees) || 0,
+      setup: row.setup || "Imported",
+      session: row.session || "",
+      status: row.status || (Number(row.pnl) > 0 ? "Win" : Number(row.pnl) < 0 ? "Loss" : "BE"),
+      pnl: Number(row.pnl) || 0,
+      holdingMinutes: 0,
+      challengeId: null,
+      screenshot: null,
+      notes: row.notes || "",
+    });
+  }
+
+  return { trades, errors };
 }
 
 /* ============================================================
@@ -1181,10 +1280,13 @@ const SortHeader = ({ label, sortKey, sortConfig, onSort }) => (
   </th>
 );
 
-const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
+const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile }) => {
   const [filters, setFilters] = useState({ asset: "All", setup: "All", outcome: "All", search: "" });
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
+  const [importing, setImporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const importInputRef = useRef(null);
   const toast = useToast();
 
   const setupOptions = useMemo(
@@ -1217,6 +1319,39 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
 
   const exportCSV = () => { downloadBlob(tradesToCSV(filtered), "trade_journal_export.csv"); toast(`Exported ${filtered.length} trades to CSV`, "info"); };
 
+  const exportPDF = async () => {
+    setExportingPdf(true);
+    try {
+      await tradesToPDF(filtered, { username: profile?.username });
+      toast(`Exported ${filtered.length} trades to PDF`, "info");
+    } catch (err) {
+      toast(err.message || "Failed to export PDF", "error");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const { trades: parsed, errors } = csvToTrades(text);
+      if (!parsed.length) {
+        toast(errors[0] || "No valid rows found in that file.", "error");
+        return;
+      }
+      await onImportTrades(parsed);
+      toast(`Imported ${parsed.length} trade${parsed.length === 1 ? "" : "s"}${errors.length ? ` (${errors.length} row${errors.length === 1 ? "" : "s"} skipped)` : ""}`, "success");
+    } catch (err) {
+      toast(err.message || "Failed to import file.", "error");
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       <Card className="p-3 md:p-4">
@@ -1228,7 +1363,16 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
           <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option>{ASSETS.map((a) => <option key={a}>{a}</option>)}</select>
           <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
-          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> Export CSV</button>
+          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> CSV</button>
+          <button onClick={exportPDF} disabled={exportingPdf} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+            {exportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />} PDF
+          </button>
+          <input ref={importInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
+          <button onClick={() => importInputRef.current?.click()} disabled={importing}
+            title="Import trades from a CSV file (e.g. exported from MT4/MT5 or a prop firm)"
+            className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+            {importing ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Import CSV
+          </button>
           <div className="flex items-center gap-1 text-xs text-zinc-500 ml-auto"><Filter size={12} /> {filtered.length} trades</div>
         </div>
       </Card>
@@ -2212,6 +2356,21 @@ export default function App() {
     } catch (err) { addToast(err.message || "Failed to save trade", "error"); }
   };
 
+  const bulkImportTrades = async (parsedTrades) => {
+    const saved = [];
+    for (const t of parsedTrades) {
+      try {
+        saved.push(await insertTrade(t, session.user.id));
+      } catch {
+        // skip rows that fail to insert; the toast in JournalPage already reports a count
+      }
+    }
+    if (saved.length) setTrades((prev) => [...saved, ...prev]);
+    if (saved.length < parsedTrades.length) {
+      addToast(`${parsedTrades.length - saved.length} row(s) failed to import`, "error");
+    }
+  };
+
   const updateTrade = async (t) => {
     try {
       const saved = await updateTradeDB(t, session.user.id);
@@ -2351,7 +2510,7 @@ export default function App() {
               <>
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
-                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} />}
+                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
