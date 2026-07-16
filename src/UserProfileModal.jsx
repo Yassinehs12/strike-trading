@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle, MoreVertical, Ban, Flag } from "lucide-react";
-import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport } from "./db";
+import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport, fetchPublicBadgeStats } from "./db";
 import DirectMessageModal from "./DirectMessageModal";
 import AdminBadge from "./AdminBadge";
+import Badges, { computeBadges } from "./Badges";
 
 export default function UserProfileModal({ userId, currentUserId, currentUsername, onClose }) {
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = not found
@@ -16,6 +17,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [badgeStats, setBadgeStats] = useState(null);
 
   const isOwnProfile = userId === currentUserId;
 
@@ -29,6 +31,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
     setMenuOpen(false);
     setReportOpen(false);
     setReportSubmitted(false);
+    setBadgeStats(null);
     const calls = [fetchProfileById(userId), fetchPublicPostCount(userId)];
     if (!isOwnProfile) calls.push(fetchFriendship(currentUserId, userId), isUserBlocked(currentUserId, userId));
     Promise.all(calls)
@@ -37,6 +40,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
         if (!isOwnProfile) { setFriendship(fs || null); setBlocked(!!isBlocked); }
       })
       .catch((err) => setError(err.message || "Failed to load profile."));
+    fetchPublicBadgeStats(userId).then(setBadgeStats).catch(() => {});
   }, [userId]);
 
   if (!userId) return null;
@@ -177,6 +181,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                 {profile.username} {profile.is_admin && <AdminBadge size="sm" />}
               </h3>
               {profile.bio && <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
+              {badgeStats && <Badges size="sm" className="justify-center mt-3" badges={computeBadges(badgeStats)} />}
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-3">
                 <CalendarDays size={12} /> Joined {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}

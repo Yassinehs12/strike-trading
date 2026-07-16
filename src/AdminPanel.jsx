@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2,
+  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2, Star,
 } from "lucide-react";
 import {
   fetchAllProfilesAdmin, setUserAdmin, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
+  fetchPendingSpotlights, approveSpotlight, rejectSpotlight,
 } from "./db";
 import AdminBadge from "./AdminBadge";
 
@@ -132,6 +133,9 @@ export default function AdminPanel({ session, profile, toast }) {
   const [contentLoading, setContentLoading] = useState(true);
   const [contentQuery, setContentQuery] = useState("");
 
+  const [spotlights, setSpotlights] = useState([]);
+  const [spotlightsLoading, setSpotlightsLoading] = useState(true);
+
   const notify = (msg, type) => (toast ? toast(msg, type) : undefined);
 
   const loadUsers = useCallback(() => {
@@ -150,8 +154,17 @@ export default function AdminPanel({ session, profile, toast }) {
       .finally(() => setContentLoading(false));
   }, []);
 
+  const loadSpotlights = useCallback(() => {
+    setSpotlightsLoading(true);
+    fetchPendingSpotlights()
+      .then(setSpotlights)
+      .catch((err) => setError(err.message || "Failed to load spotlight submissions."))
+      .finally(() => setSpotlightsLoading(false));
+  }, []);
+
   useEffect(() => { loadUsers(); }, [loadUsers]);
   useEffect(() => { if (tab === "content") loadContent(); }, [tab, loadContent]);
+  useEffect(() => { if (tab === "spotlight") loadSpotlights(); }, [tab, loadSpotlights]);
 
   const withBusy = async (id, fn) => {
     setBusyId(id);
@@ -215,6 +228,20 @@ export default function AdminPanel({ session, profile, toast }) {
       notify("Message deleted");
     });
 
+  const handleApproveSpotlight = (s) =>
+    withBusy(`spotlight-${s.id}`, async () => {
+      await approveSpotlight(s.id, session.user.id);
+      setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
+      notify(`Pinned ${s.username}'s trade as Trade of the Week`);
+    });
+
+  const handleRejectSpotlight = (s) =>
+    withBusy(`spotlight-${s.id}`, async () => {
+      await rejectSpotlight(s.id, session.user.id);
+      setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
+      notify("Submission rejected");
+    });
+
   const filteredUsers = users.filter((u) => (u.username || "").toLowerCase().includes(query.trim().toLowerCase()));
   const filteredPosts = posts.filter((p) => {
     if (!contentQuery.trim()) return true;
@@ -240,11 +267,15 @@ export default function AdminPanel({ session, profile, toast }) {
           className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "content" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
           <MessagesSquare size={14} /> Content
         </button>
+        <button onClick={() => setTab("spotlight")}
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "spotlight" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          <Star size={14} /> Spotlight{spotlights.length > 0 ? ` (${spotlights.length})` : ""}
+        </button>
       </div>
 
       {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5">{error}</div>}
 
-      {tab === "users" ? (
+      {tab === "users" && (
         <div className="space-y-3">
           <div className="relative w-full sm:w-72">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -264,7 +295,9 @@ export default function AdminPanel({ session, profile, toast }) {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {tab === "content" && (
         <div className="space-y-5">
           <div className="relative w-full sm:w-72">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -320,6 +353,50 @@ export default function AdminPanel({ session, profile, toast }) {
                 )}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {tab === "spotlight" && (
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-500">Traders submit journaled trades from their Trade Journal. Approving one pins it to the top of the Community forum, replacing any currently active spotlight.</p>
+          {spotlightsLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+          ) : spotlights.length === 0 ? (
+            <Card className="p-12 text-center text-sm text-zinc-500">No pending submissions.</Card>
+          ) : (
+            <div className="space-y-2">
+              {spotlights.map((s) => (
+                <Card key={s.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm text-zinc-100">
+                        <span className="font-semibold">{s.username}</span>
+                        <span className="text-zinc-600">·</span>
+                        <span>{s.asset}</span>
+                        <span className={s.direction === "Long" ? "text-emerald-400" : "text-rose-400"}>{s.direction}</span>
+                      </div>
+                      {s.notes && <p className="text-sm text-zinc-400 mt-1">{s.notes}</p>}
+                      <div className="text-xs text-zinc-500 mt-1">Submitted {timeAgo(s.submitted_at)}</div>
+                    </div>
+                    <span className={`text-sm font-bold ${s.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {s.pnl >= 0 ? "+" : ""}{Number(s.pnl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  {s.screenshot && <img src={s.screenshot} alt="" className="mt-3 w-full max-h-56 object-contain rounded-lg border border-white/10" />}
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleApproveSpotlight(s)} disabled={busyId === `spotlight-${s.id}`}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 transition-colors disabled:opacity-40">
+                      <CheckCircle2 size={12} /> Pin as Trade of the Week
+                    </button>
+                    <button onClick={() => handleRejectSpotlight(s)} disabled={busyId === `spotlight-${s.id}`}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 transition-colors disabled:opacity-40">
+                      <X size={12} /> Reject
+                    </button>
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       )}

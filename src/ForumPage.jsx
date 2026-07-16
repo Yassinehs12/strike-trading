@@ -1,15 +1,44 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
-  MessagesSquare, Plus, X, Trash2, Send, Loader2, ArrowLeft, User, Clock, MessageCircle, Radio, ImagePlus, Search, Pencil, Check,
+  MessagesSquare, Plus, X, Trash2, Send, Loader2, ArrowLeft, User, Clock, MessageCircle, Radio, ImagePlus, Search, Pencil, Check, Star,
 } from "lucide-react";
 import {
   fetchForumPosts, insertForumPost, deleteForumPost, uploadForumImage, updateForumPost,
   fetchForumReplies, insertForumReply, deleteForumReply, updateForumReply,
   fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage,
   fetchBlockedUserIds, fetchAdminUserIds, notifyMentions,
+  fetchReactions, toggleReaction, fetchActiveSpotlight,
 } from "./db";
 import UserProfileModal from "./UserProfileModal";
 import AdminBadge from "./AdminBadge";
+
+const REACTION_EMOJIS = ["👍", "🔥"];
+
+// Lightweight reaction bar — 👍/🔥 toggle buttons with live counts.
+// `reactions` is the flat array of { emoji, user_id } rows for this one target.
+function ReactionBar({ reactions = [], currentUserId, onToggle, size = "sm" }) {
+  const counts = REACTION_EMOJIS.map((emoji) => ({
+    emoji,
+    count: reactions.filter((r) => r.emoji === emoji).length,
+    mine: reactions.some((r) => r.emoji === emoji && r.user_id === currentUserId),
+  }));
+  const pad = size === "sm" ? "px-2 py-0.5 text-xs" : "px-1.5 py-0.5 text-[11px]";
+  return (
+    <div className="flex items-center gap-1.5">
+      {counts.map(({ emoji, count, mine }) => (
+        <button
+          key={emoji}
+          onClick={(e) => { e.stopPropagation(); onToggle(emoji); }}
+          className={`flex items-center gap-1 rounded-full border transition-colors ${pad} ${
+            mine ? "bg-blue-500/15 border-blue-500/40 text-blue-300" : "bg-white/[0.03] border-white/10 text-zinc-400 hover:border-white/20"
+          }`}
+        >
+          <span>{emoji}</span>{count > 0 && <span className="tabular-nums">{count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // Renders text with @username mentions highlighted.
 function renderWithMentions(text) {
@@ -138,6 +167,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const replyInputRef = useRef(null);
+  const [reactions, setReactions] = useState([]);
 
   const [editingPost, setEditingPost] = useState(false);
   const [editTitle, setEditTitle] = useState(post.title);
@@ -147,10 +177,34 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
 
   const load = useCallback(() => {
     setLoading(true);
-    fetchForumReplies(post.id).then(setReplies).catch(() => {}).finally(() => setLoading(false));
+    fetchForumReplies(post.id)
+      .then((r) => {
+        setReplies(r);
+        fetchReactions({ postIds: [post.id], replyIds: r.map((x) => x.id) }).then(setReactions).catch(() => {});
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [post.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  const reactionsFor = (targetId, isReply) =>
+    reactions.filter((r) => (isReply ? r.reply_id === targetId : r.post_id === targetId));
+
+  const toggle = async (emoji, { postId = null, replyId = null }) => {
+    const already = reactions.find((r) => r.user_id === currentUserId.userId && r.emoji === emoji && (postId ? r.post_id === postId : r.reply_id === replyId));
+    // optimistic update
+    setReactions((prev) =>
+      already
+        ? prev.filter((r) => r !== already)
+        : [...prev, { post_id: postId, reply_id: replyId, user_id: currentUserId.userId, emoji }]
+    );
+    try {
+      await toggleReaction({ postId, replyId, userId: currentUserId.userId, emoji });
+    } catch {
+      load(); // reconcile on failure
+    }
+  };
 
   useEffect(() => {
     if (autoFocusReply && !loading) {
@@ -243,6 +297,9 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
             {post.image_url && (
               <img src={post.image_url} alt="" className="mt-3 w-full max-h-96 object-contain rounded-lg border border-white/10" />
             )}
+            <div className="mt-3">
+              <ReactionBar reactions={reactionsFor(post.id, false)} currentUserId={currentUserId.userId} onToggle={(emoji) => toggle(emoji, { postId: post.id })} />
+            </div>
           </>
         )}
       </Card>
@@ -280,7 +337,12 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{renderWithMentions(r.body)}</p>
+                  <>
+                    <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{renderWithMentions(r.body)}</p>
+                    <div className="mt-2">
+                      <ReactionBar reactions={reactionsFor(r.id, true)} currentUserId={currentUserId.userId} onToggle={(emoji) => toggle(emoji, { replyId: r.id })} size="xs" />
+                    </div>
+                  </>
                 )}
               </Card>
             ))}
@@ -438,6 +500,8 @@ export default function ForumPage({ session, profile }) {
   const [blockedIds, setBlockedIds] = useState([]);
   const [query, setQuery] = useState("");
   const [adminIds, setAdminIds] = useState([]);
+  const [postReactions, setPostReactions] = useState([]);
+  const [spotlight, setSpotlight] = useState(null);
 
   const currentUser = { userId: session?.user?.id, username: profile?.username || session?.user?.email || "Trader" };
   const isAdmin = !!profile?.is_admin;
@@ -445,12 +509,26 @@ export default function ForumPage({ session, profile }) {
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([fetchForumPosts(), fetchBlockedUserIds(currentUser.userId).catch(() => []), fetchAdminUserIds().catch(() => [])])
-      .then(([p, blocked, admins]) => { setPosts(p); setBlockedIds(blocked); setAdminIds(admins); })
+      .then(([p, blocked, admins]) => {
+        setPosts(p); setBlockedIds(blocked); setAdminIds(admins);
+        if (p.length) fetchReactions({ postIds: p.map((x) => x.id) }).then(setPostReactions).catch(() => {});
+      })
       .catch((err) => setError(err.message || "Failed to load the forum."))
       .finally(() => setLoading(false));
+    fetchActiveSpotlight().then(setSpotlight).catch(() => {});
   }, [currentUser.userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const togglePostReaction = async (postId, emoji) => {
+    const already = postReactions.find((r) => r.user_id === currentUser.userId && r.emoji === emoji && r.post_id === postId);
+    setPostReactions((prev) => (already ? prev.filter((r) => r !== already) : [...prev, { post_id: postId, user_id: currentUser.userId, emoji }]));
+    try {
+      await toggleReaction({ postId, userId: currentUser.userId, emoji });
+    } catch {
+      fetchReactions({ postIds: posts.map((p) => p.id) }).then(setPostReactions).catch(() => {});
+    }
+  };
 
   const createPost = async (title, body, imageFile) => {
     let imageUrl = null;
@@ -534,6 +612,29 @@ export default function ForumPage({ session, profile }) {
         )}
       </div>
 
+      {tab === "posts" && spotlight && (
+        <Card className="p-4 border-amber-500/30 bg-gradient-to-br from-amber-500/[0.06] to-transparent">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 mb-2">
+            <Star size={13} fill="currentColor" /> Trade of the Week
+          </div>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 text-sm text-zinc-200">
+                <span className="font-semibold">{spotlight.username}</span>
+                <span className="text-zinc-600">·</span>
+                <span>{spotlight.asset}</span>
+                <span className={spotlight.direction === "Long" ? "text-emerald-400" : "text-rose-400"}>{spotlight.direction}</span>
+              </div>
+              {spotlight.notes && <p className="text-sm text-zinc-400 mt-1 line-clamp-2">{spotlight.notes}</p>}
+            </div>
+            <span className={`tj-mono text-lg font-bold ${spotlight.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              {spotlight.pnl >= 0 ? "+" : ""}{Number(spotlight.pnl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+            </span>
+          </div>
+          {spotlight.screenshot && <img src={spotlight.screenshot} alt="" className="mt-3 w-full max-h-64 object-contain rounded-lg border border-white/10" />}
+        </Card>
+      )}
+
       {tab === "chat" ? (
         <LiveChat currentUser={currentUser} onViewProfile={setViewingUserId} blockedIds={blockedIds} isAdmin={isAdmin} adminIds={adminIds} />
       ) : (
@@ -564,7 +665,8 @@ export default function ForumPage({ session, profile }) {
                       {adminIds.includes(p.user_id) && <AdminBadge />}
                       <span className="text-zinc-700">·</span> <Clock size={11} /> {timeAgo(p.created_at)}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <ReactionBar reactions={postReactions.filter((r) => r.post_id === p.id)} currentUserId={currentUser.userId} onToggle={(emoji) => togglePostReaction(p.id, emoji)} size="xs" />
                       {isAdmin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); removePost(p.id); }}

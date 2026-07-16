@@ -554,6 +554,108 @@ export async function notifyMentions({ text, fromUserId, fromUsername, postId, e
   );
 }
 
+/* ---------- leaderboard (opt-in) ---------- */
+export async function fetchLeaderboard(period = "week") {
+  const { data, error } = await supabase.rpc("get_leaderboard", { period });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function setLeaderboardOptIn(userId, optIn) {
+  const { data, error } = await supabase.from("profiles").update({ leaderboard_opt_in: optIn }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/* ---------- reactions (👍 / 🔥 on posts & replies) ---------- */
+export async function fetchReactions({ postIds = [], replyIds = [] }) {
+  if (!postIds.length && !replyIds.length) return [];
+  const clauses = [];
+  if (postIds.length) clauses.push(`post_id.in.(${postIds.join(",")})`);
+  if (replyIds.length) clauses.push(`reply_id.in.(${replyIds.join(",")})`);
+  const { data, error } = await supabase.from("reactions").select("*").or(clauses.join(","));
+  if (error) throw error;
+  return data;
+}
+
+// Toggles the given emoji reaction for this user on a post or reply. Returns { action: "added" | "removed" }.
+export async function toggleReaction({ postId = null, replyId = null, userId, emoji }) {
+  let existingQuery = supabase.from("reactions").select("id").eq("user_id", userId).eq("emoji", emoji);
+  existingQuery = postId ? existingQuery.eq("post_id", postId) : existingQuery.eq("reply_id", replyId);
+  const { data: found, error: findErr } = await existingQuery.maybeSingle();
+  if (findErr) throw findErr;
+  if (found) {
+    const { error } = await supabase.from("reactions").delete().eq("id", found.id);
+    if (error) throw error;
+    return { action: "removed" };
+  }
+  const { error } = await supabase.from("reactions").insert({ post_id: postId, reply_id: replyId, user_id: userId, emoji });
+  if (error) throw error;
+  return { action: "added" };
+}
+
+/* ---------- trade of the week spotlight ---------- */
+export async function submitTradeSpotlight(trade, userId, username) {
+  const { data, error } = await supabase.from("trade_spotlights").insert({
+    user_id: userId,
+    username,
+    asset: trade.asset,
+    direction: trade.direction,
+    entry: trade.entry,
+    exit: trade.exit,
+    pnl: trade.pnl,
+    notes: trade.notes || "",
+    screenshot: trade.screenshot || null,
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchActiveSpotlight() {
+  const { data, error } = await supabase
+    .from("trade_spotlights")
+    .select("*")
+    .eq("is_active", true)
+    .eq("status", "approved")
+    .order("reviewed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchPendingSpotlights() {
+  const { data, error } = await supabase.from("trade_spotlights").select("*").eq("status", "pending").order("submitted_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function approveSpotlight(id, adminId) {
+  await supabase.from("trade_spotlights").update({ is_active: false }).eq("is_active", true);
+  const { data, error } = await supabase
+    .from("trade_spotlights")
+    .update({ status: "approved", is_active: true, reviewed_at: new Date().toISOString(), reviewed_by: adminId })
+    .eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function rejectSpotlight(id, adminId) {
+  const { data, error } = await supabase
+    .from("trade_spotlights")
+    .update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: adminId })
+    .eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/* ---------- badges (computed server-side so PnL/trade details never leave the DB) ---------- */
+export async function fetchPublicBadgeStats(userId) {
+  const { data, error } = await supabase.rpc("get_public_badges", { target_user_id: userId });
+  if (error) throw error;
+  return data?.[0] || { trade_count: 0, is_funded: false, streak_days: 0 };
+}
+
 /* ---------- landing page stats ---------- */
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an

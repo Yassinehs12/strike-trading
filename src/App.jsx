@@ -10,16 +10,18 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
 import AdminPanel from "./AdminPanel";
 import AdminBadge from "./AdminBadge";
+import LeaderboardPage from "./LeaderboardPage";
+import UserProfileModal from "./UserProfileModal";
 import { LogoFull } from "./Logo";
 
 /* ============================================================
@@ -370,6 +372,7 @@ const NAV_ITEMS = [
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "forum", label: "Community", icon: MessagesSquare },
+  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
   { id: "messages", label: "Messages", icon: Mail },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -764,12 +767,26 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
 /* ============================================================
    TRADE DETAIL / EDIT DRAWER
    ============================================================ */
-const TradeDrawer = ({ trade, onClose, onSave, onDelete }) => {
+const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addToast }) => {
   const [form, setForm] = useState(trade);
   const [editing, setEditing] = useState(false);
-  useEffect(() => { setForm(trade); setEditing(false); }, [trade]);
+  const [submittingSpotlight, setSubmittingSpotlight] = useState(false);
+  useEffect(() => { setForm(trade); setEditing(false); setSubmittingSpotlight(false); }, [trade]);
   if (!trade) return null;
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submitSpotlight = async () => {
+    if (!session?.user?.id) return;
+    setSubmittingSpotlight(true);
+    try {
+      await submitTradeSpotlight(trade, session.user.id, profile?.username || "Trader");
+      addToast?.("Submitted — an admin will review it for the weekly spotlight");
+    } catch (err) {
+      addToast?.(err.message || "Failed to submit trade", "error");
+    } finally {
+      setSubmittingSpotlight(false);
+    }
+  };
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -826,6 +843,10 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete }) => {
               <Trash2 size={14} /> Delete
             </button>
           </div>
+          <button onClick={submitSpotlight} disabled={submittingSpotlight}
+            className="w-full flex items-center justify-center gap-1.5 border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 font-semibold text-sm py-2.5 rounded-lg transition-all">
+            {submittingSpotlight ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} />} Submit for Trade of the Week
+          </button>
         </div>
       ) : (
         <div>
@@ -1709,6 +1730,20 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const toggleLeaderboardOptIn = async () => {
+    setLeaderboardLoading(true);
+    try {
+      const updated = await setLeaderboardOptIn(session.user.id, !profile?.leaderboard_opt_in);
+      onProfileUpdate(updated);
+      toast(updated.leaderboard_opt_in ? "You're on the leaderboard" : "Removed from the leaderboard", "success");
+    } catch (err) {
+      toast(err.message || "Failed to update leaderboard setting", "error");
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
+
   const changePassword = async () => {
     setPasswordError("");
     if (newPassword.length < 8) { setPasswordError("New password must be at least 8 characters."); return; }
@@ -1778,6 +1813,19 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
           {passwordLoading ? <Loader2 size={15} className="animate-spin" /> : null}
           Change Password
         </button>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-zinc-100 text-sm mb-1 flex items-center gap-1.5"><Award size={15} className="text-blue-400" /> Leaderboard</h3>
+            <p className="text-xs text-zinc-500">Show your win rate and net P&amp;L on the weekly/monthly leaderboard. Off by default — your results stay private until you opt in.</p>
+          </div>
+          <button onClick={toggleLeaderboardOptIn} disabled={leaderboardLoading}
+            className={`shrink-0 relative w-11 h-6 rounded-full transition-colors ${profile?.leaderboard_opt_in ? "bg-blue-500" : "bg-zinc-700"} disabled:opacity-50`}>
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${profile?.leaderboard_opt_in ? "translate-x-5" : ""}`} />
+          </button>
+        </div>
       </Card>
 
       <Card className="p-5">
@@ -2094,6 +2142,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [settings, setSettings] = useState({ currency: "USD", timezone: "UTC", defaultRiskPct: 1, minTradingDays: 10 });
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   const [dataError, setDataError] = useState("");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -2139,6 +2188,7 @@ export default function App() {
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     forum: ["Community", "Connect with other traders"],
+    leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Trading"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
@@ -2297,6 +2347,7 @@ export default function App() {
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
+                {active === "leaderboard" && <LeaderboardPage session={session} profile={profile} onViewProfile={setViewingUserId} onGoToSettings={() => setActive("settings")} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
                 {active === "messages" && <MessagesPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
@@ -2308,7 +2359,8 @@ export default function App() {
           </main>
         </div>
         <LogTradeModal open={logModalOpen} onClose={() => setLogModalOpen(false)} onCreate={addTrade} challenges={challenges} />
-        <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} />
+        <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
+        <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
       </div>
     </ToastContext.Provider>

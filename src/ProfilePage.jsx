@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays } from "lucide-react";
-import { updateProfileDetails, uploadAvatar, fetchOwnStats } from "./db";
+import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats } from "./db";
+import Badges, { computeBadges } from "./Badges";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -14,10 +15,12 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState(null);
+  const [badgeStats, setBadgeStats] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchOwnStats(session.user.id).then(setStats).catch(() => {});
+    fetchPublicBadgeStats(session.user.id).then(setBadgeStats).catch(() => {});
   }, [session.user.id]);
 
   const saveBio = async () => {
@@ -75,6 +78,9 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
         <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-1">
           <CalendarDays size={12} /> Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
         </div>
+        {badgeStats && (
+          <Badges size="sm" className="justify-center mt-3" badges={computeBadges(badgeStats)} />
+        )}
 
         {stats && (
           <div className="flex items-center justify-center gap-8 mt-5 pt-5 border-t border-white/10">
