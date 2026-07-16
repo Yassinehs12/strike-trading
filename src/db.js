@@ -256,16 +256,38 @@ export async function fetchDirectMessages(userId, otherId) {
   return data;
 }
 
-export async function sendDirectMessage(senderId, recipientId, body, senderUsername) {
+export async function sendDirectMessage(senderId, recipientId, body, senderUsername, imageUrl = null) {
   const { data, error } = await supabase
     .from("direct_messages")
-    .insert({ sender_id: senderId, recipient_id: recipientId, body })
+    .insert({ sender_id: senderId, recipient_id: recipientId, body: body || null, image_url: imageUrl })
     .select()
     .single();
   if (error) throw error;
   if (senderUsername) {
-    createNotification(recipientId, "message", senderId, senderUsername, { body: body.slice(0, 140) }).catch(() => {});
+    createNotification(recipientId, "message", senderId, senderUsername, { body: (body || "Sent a photo").slice(0, 140) }).catch(() => {});
   }
+  return data;
+}
+
+export async function uploadDmImage(file, senderId) {
+  const ext = file.name.split(".").pop();
+  const path = `${senderId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("dm-attachments").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("dm-attachments").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Soft-deletes a message so both sides see "Message deleted" instead of the content.
+export async function deleteDirectMessage(messageId, senderId) {
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .update({ deleted: true, body: null, image_url: null })
+    .eq("id", messageId)
+    .eq("sender_id", senderId)
+    .select()
+    .single();
+  if (error) throw error;
   return data;
 }
 
