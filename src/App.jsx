@@ -9,12 +9,13 @@ import {
   XCircle, AlertTriangle, ChevronLeft, ChevronRight, Filter,
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
-  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText,
+  Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
 import { badgeFromKey } from "./Badges";
+import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -1013,6 +1014,50 @@ const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
   );
 };
 
+const InsightsCard = ({ trades }) => {
+  const [period, setPeriod] = useState("week"); // "week" | "month"
+  const scoped = useMemo(() => filterTradesByPeriod(trades, period === "week" ? 7 : 30), [trades, period]);
+  const { insights, sampleSize, ready } = useMemo(() => computeInsights(scoped, period === "week" ? "week" : "month"), [scoped, period]);
+
+  const iconFor = (type) => {
+    if (type === "strength") return <TrendingUp size={14} className="text-emerald-400 shrink-0 mt-0.5" />;
+    if (type === "weakness") return <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />;
+    if (type === "summary") return <Sparkles size={14} className="text-blue-400 shrink-0 mt-0.5" />;
+    return <Info size={14} className="text-zinc-400 shrink-0 mt-0.5" />;
+  };
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <h3 className="font-bold text-zinc-100 text-sm">Performance Insights</h3>
+          <p className="text-xs text-zinc-500">Patterns from your own trade history — not advice, just what the data shows.</p>
+        </div>
+        <div className="flex items-center bg-zinc-950 border border-white/10 rounded-lg p-0.5 shrink-0">
+          <button onClick={() => setPeriod("week")} className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${period === "week" ? "bg-blue-500 text-zinc-950" : "text-zinc-400"}`}>Week</button>
+          <button onClick={() => setPeriod("month")} className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${period === "month" ? "bg-blue-500 text-zinc-950" : "text-zinc-400"}`}>Month</button>
+        </div>
+      </div>
+
+      {!ready ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-zinc-500">Not enough closed trades this {period} yet ({sampleSize}/5 minimum).</p>
+          <p className="text-xs text-zinc-600 mt-1">Keep logging — insights unlock once there's enough data to spot real patterns.</p>
+        </div>
+      ) : (
+        <div className="space-y-2.5 mt-3">
+          {insights.map((ins, i) => (
+            <div key={i} className={`flex items-start gap-2 text-sm ${ins.type === "summary" ? "font-semibold text-zinc-100 pb-2 border-b border-white/10" : "text-zinc-300"}`}>
+              {iconFor(ins.type)}
+              <span>{ins.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -1027,6 +1072,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
         <KPICard icon={Activity} label="Total Trades" value={kpis.total} sub="logged entries" />
         <KPICard icon={ShieldCheck} label="Active Challenges" value={challenges.length} accent="text-blue-500" sub="funding evaluations" />
       </div>
+
+      <InsightsCard trades={trades} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
