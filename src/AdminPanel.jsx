@@ -6,8 +6,10 @@ import {
   fetchAllProfilesAdmin, setUserAdmin, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
   fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification,
+  fetchMemberBadges, grantMemberBadge, revokeMemberBadge,
 } from "./db";
 import AdminBadge from "./AdminBadge";
+import { BADGE_CATALOG, badgeFromKey } from "./Badges";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -115,6 +117,93 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
             </button>
           )}
         </div>
+      )}
+    </Card>
+  );
+};
+
+const BADGE_GROUPS = [...new Set(BADGE_CATALOG.map((b) => b.group))];
+
+const BadgeManagerRow = ({ u, notify }) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [granted, setGranted] = useState(null); // Set of badge_key
+  const [busyKey, setBusyKey] = useState(null);
+
+  const load = () => {
+    setLoading(true);
+    fetchMemberBadges(u.id)
+      .then((rows) => setGranted(new Set(rows.map((r) => r.badge_key))))
+      .catch(() => setGranted(new Set()))
+      .finally(() => setLoading(false));
+  };
+
+  const toggleOpen = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && granted === null) load();
+  };
+
+  const toggleBadge = async (key) => {
+    setBusyKey(key);
+    try {
+      if (granted.has(key)) {
+        await revokeMemberBadge(u.id, key);
+        setGranted((prev) => { const n = new Set(prev); n.delete(key); return n; });
+      } else {
+        await grantMemberBadge(u.id, key);
+        setGranted((prev) => new Set(prev).add(key));
+        notify?.(`Granted "${badgeFromKey(key).label}" to ${u.username}`);
+      }
+    } catch (err) {
+      notify?.(err.message || "Failed to update badge.", "error");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return (
+    <Card className="p-3">
+      <button onClick={toggleOpen} className="w-full flex items-center justify-between text-left">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-zinc-100">{u.username}</span>
+          {u.is_admin && <AdminBadge size="sm" />}
+          {granted && granted.size > 0 && (
+            <span className="text-xs text-zinc-500">({granted.size} badge{granted.size === 1 ? "" : "s"})</span>
+          )}
+        </div>
+        <span className="text-xs text-zinc-500">{open ? "Hide" : "Manage badges"}</span>
+      </button>
+
+      {open && (
+        loading || granted === null ? (
+          <div className="flex justify-center py-6"><Loader2 size={16} className="text-blue-500 animate-spin" /></div>
+        ) : (
+          <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+            {BADGE_GROUPS.map((group) => (
+              <div key={group}>
+                <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">{group}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {BADGE_CATALOG.filter((b) => b.group === group).map((b) => {
+                    const Icon = b.icon;
+                    const isGranted = granted.has(b.id);
+                    return (
+                      <button key={b.id} onClick={() => toggleBadge(b.id)} disabled={busyKey === b.id}
+                        title={isGranted ? `Revoke ${b.label}` : `Grant ${b.label}`}
+                        className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors disabled:opacity-40 ${
+                          isGranted
+                            ? "bg-blue-500/15 text-blue-300 border-blue-500/40 hover:bg-blue-500/25"
+                            : "bg-white/[0.03] text-zinc-400 border-white/10 hover:bg-white/[0.08] hover:text-zinc-200"
+                        }`}>
+                        {busyKey === b.id ? <Loader2 size={11} className="animate-spin" /> : <Icon size={11} />} {b.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </Card>
   );
@@ -274,6 +363,10 @@ export default function AdminPanel({ session, profile, toast }) {
           className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "content" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
           <MessagesSquare size={14} /> Content
         </button>
+        <button onClick={() => setTab("badges")}
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "badges" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          <Star size={14} /> Badges
+        </button>
         <button onClick={() => setTab("spotlight")}
           className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "spotlight" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
           <Star size={14} /> Spotlight{spotlights.length > 0 ? ` (${spotlights.length})` : ""}
@@ -299,6 +392,25 @@ export default function AdminPanel({ session, profile, toast }) {
                   onPromote={handlePromote} onBan={handleBan} onUnban={handleUnban}
                   onTimeout={handleTimeout} onClearTimeout={handleClearTimeout} />
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "badges" && (
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-500">Grant or revoke badges for any member. They'll show on the member's profile and public card, and the member gets notified when granted.</p>
+          <div className="relative w-full sm:w-72">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input className={`${inputCls} pl-8`} placeholder="Search users..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
+          {usersLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+          ) : filteredUsers.length === 0 ? (
+            <Card className="p-12 text-center text-sm text-zinc-500">No users found.</Card>
+          ) : (
+            <div className="space-y-2">
+              {filteredUsers.map((u) => <BadgeManagerRow key={u.id} u={u} notify={notify} />)}
             </div>
           )}
         </div>

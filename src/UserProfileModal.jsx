@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle, MoreVertical, Ban, Flag } from "lucide-react";
-import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport, fetchPublicBadgeStats, fetchPublicTradingStats } from "./db";
+import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport, fetchPublicBadgeStats, fetchPublicTradingStats, fetchMemberBadges } from "./db";
 import { Target, Star } from "lucide-react";
 import DirectMessageModal from "./DirectMessageModal";
 import AdminBadge from "./AdminBadge";
-import Badges, { computeBadges } from "./Badges";
+import Badges, { computeBadges, mergeBadges } from "./Badges";
 
 export default function UserProfileModal({ userId, currentUserId, currentUsername, onClose }) {
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = not found
@@ -19,6 +19,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [badgeStats, setBadgeStats] = useState(null);
+  const [manualBadges, setManualBadges] = useState([]);
   const [tradingStats, setTradingStats] = useState(null);
 
   const isOwnProfile = userId === currentUserId;
@@ -44,6 +45,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
       .catch((err) => setError(err.message || "Failed to load profile."));
     fetchPublicBadgeStats(userId).then(setBadgeStats).catch(() => {});
     fetchPublicTradingStats(userId).then(setTradingStats).catch(() => setTradingStats(null));
+    fetchMemberBadges(userId).then(setManualBadges).catch(() => {});
   }, [userId]);
 
   if (!userId) return null;
@@ -184,7 +186,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                 {profile.username} {profile.is_admin && <AdminBadge size="sm" />}
               </h3>
               {profile.bio && <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
-              {badgeStats && <Badges size="sm" className="justify-center mt-3" badges={computeBadges(badgeStats)} />}
+              {badgeStats && <Badges size="sm" className="justify-center mt-3" badges={mergeBadges(computeBadges(badgeStats), manualBadges)} />}
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-3">
                 <CalendarDays size={12} /> Joined {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}

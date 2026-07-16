@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays, Target, Star, Copy, Check, Users, Eye, EyeOff } from "lucide-react";
-import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats, fetchPublicTradingStats, setShowPublicStats, fetchMyInviteInfo } from "./db";
-import Badges, { computeBadges } from "./Badges";
+import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats, fetchPublicTradingStats, setShowPublicStats, fetchMyInviteInfo, fetchMemberBadges } from "./db";
+import Badges, { computeBadges, mergeBadges } from "./Badges";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -18,6 +18,7 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
   const [badgeStats, setBadgeStats] = useState(null);
   const [tradingStats, setTradingStats] = useState(null);
   const [inviteInfo, setInviteInfo] = useState(null);
+  const [manualBadges, setManualBadges] = useState([]);
   const [showStats, setShowStats] = useState(profile?.show_public_stats !== false);
   const [statsToggleLoading, setStatsToggleLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -28,6 +29,7 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
     fetchPublicBadgeStats(session.user.id).then(setBadgeStats).catch(() => {});
     fetchPublicTradingStats(session.user.id).then(setTradingStats).catch(() => {});
     fetchMyInviteInfo(session.user.id).then(setInviteInfo).catch(() => {});
+    fetchMemberBadges(session.user.id).then(setManualBadges).catch(() => {});
   }, [session.user.id]);
 
   const toggleShowStats = async () => {
@@ -108,7 +110,7 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
           <CalendarDays size={12} /> Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
         </div>
         {badgeStats && (
-          <Badges size="sm" className="justify-center mt-3" badges={computeBadges(badgeStats)} />
+          <Badges size="sm" className="justify-center mt-3" badges={mergeBadges(computeBadges(badgeStats), manualBadges)} />
         )}
 
         {stats && (

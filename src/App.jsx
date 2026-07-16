@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
+import { badgeFromKey } from "./Badges";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -475,6 +476,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
     else if (n.type === "mention") setActive("forum");
     else if (n.type === "spotlight") setActive("forum");
     else if (n.type === "leaderboard_reset") setActive("leaderboard");
+    else if (n.type === "badge_granted") setActive("profile");
   };
 
   const unreadActivity = activity.filter((n) => !n.read).length;
@@ -487,6 +489,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
     if (n.type === "mention") return `${n.from_username} mentioned you`;
     if (n.type === "spotlight") return `New Trade of the Week: ${n.from_username}`;
     if (n.type === "leaderboard_reset") return "The leaderboard has reset — new week, fresh start";
+    if (n.type === "badge_granted") return `You earned the "${badgeFromKey(n.body).label}" badge`;
     return "New activity";
   };
 

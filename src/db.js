@@ -688,6 +688,23 @@ export async function broadcastNotification(type, fromUsername, extra = {}) {
   if (error) throw error;
 }
 
+/* ---------- admin-assignable member badges ---------- */
+export async function fetchMemberBadges(userId) {
+  const { data, error } = await supabase.rpc("get_member_badges", { target_user_id: userId });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function grantMemberBadge(userId, badgeKey) {
+  const { error } = await supabase.rpc("grant_member_badge", { target_user_id: userId, key: badgeKey });
+  if (error) throw error;
+}
+
+export async function revokeMemberBadge(userId, badgeKey) {
+  const { error } = await supabase.rpc("revoke_member_badge", { target_user_id: userId, key: badgeKey });
+  if (error) throw error;
+}
+
 /* ---------- landing page stats ---------- */
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an
