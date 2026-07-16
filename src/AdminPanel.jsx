@@ -5,7 +5,7 @@ import {
 import {
   fetchAllProfilesAdmin, setUserAdmin, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
-  fetchPendingSpotlights, approveSpotlight, rejectSpotlight,
+  fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification,
 } from "./db";
 import AdminBadge from "./AdminBadge";
 
@@ -232,6 +232,7 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(`spotlight-${s.id}`, async () => {
       await approveSpotlight(s.id, session.user.id);
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
+      broadcastNotification("spotlight", s.username, { assetLabel: s.asset }).catch(() => {});
       notify(`Pinned ${s.username}'s trade as Trade of the Week`);
     });
 
@@ -240,6 +241,12 @@ export default function AdminPanel({ session, profile, toast }) {
       await rejectSpotlight(s.id, session.user.id);
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
       notify("Submission rejected");
+    });
+
+  const handleBroadcastLeaderboardReset = () =>
+    withBusy("leaderboard-reset", async () => {
+      await broadcastNotification("leaderboard_reset", "Strike Trading", {});
+      notify("Members notified of leaderboard reset");
     });
 
   const filteredUsers = users.filter((u) => (u.username || "").toLowerCase().includes(query.trim().toLowerCase()));
@@ -359,7 +366,13 @@ export default function AdminPanel({ session, profile, toast }) {
 
       {tab === "spotlight" && (
         <div className="space-y-3">
-          <p className="text-xs text-zinc-500">Traders submit journaled trades from their Trade Journal. Approving one pins it to the top of the Community forum, replacing any currently active spotlight.</p>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs text-zinc-500 flex-1">Traders submit journaled trades from their Trade Journal. Approving one pins it to the top of the Community forum, replacing any currently active spotlight.</p>
+            <button onClick={handleBroadcastLeaderboardReset} disabled={busyId === "leaderboard-reset"}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-zinc-300 hover:text-zinc-100 bg-white/[0.06] hover:bg-white/[0.1] transition-colors disabled:opacity-40 whitespace-nowrap">
+              {busyId === "leaderboard-reset" ? <Loader2 size={12} className="animate-spin" /> : <Radio size={12} />} Notify: Leaderboard Reset
+            </button>
+          </div>
           {spotlightsLoading ? (
             <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
           ) : spotlights.length === 0 ? (

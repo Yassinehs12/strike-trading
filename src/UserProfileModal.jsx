@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2, CalendarDays, MessagesSquare, UserPlus, Check, Clock, MessageCircle, MoreVertical, Ban, Flag } from "lucide-react";
-import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport, fetchPublicBadgeStats } from "./db";
+import { fetchProfileById, fetchPublicPostCount, fetchFriendship, sendFriendRequest, acceptFriendRequest, isUserBlocked, blockUser, unblockUser, submitReport, fetchPublicBadgeStats, fetchPublicTradingStats } from "./db";
+import { Target, Star } from "lucide-react";
 import DirectMessageModal from "./DirectMessageModal";
 import AdminBadge from "./AdminBadge";
 import Badges, { computeBadges } from "./Badges";
@@ -18,6 +19,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [badgeStats, setBadgeStats] = useState(null);
+  const [tradingStats, setTradingStats] = useState(null);
 
   const isOwnProfile = userId === currentUserId;
 
@@ -41,6 +43,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
       })
       .catch((err) => setError(err.message || "Failed to load profile."));
     fetchPublicBadgeStats(userId).then(setBadgeStats).catch(() => {});
+    fetchPublicTradingStats(userId).then(setTradingStats).catch(() => setTradingStats(null));
   }, [userId]);
 
   if (!userId) return null;
@@ -193,6 +196,18 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                     <div className="text-lg font-bold text-zinc-100">{postCount}</div>
                     <div className="flex items-center gap-1 text-xs text-zinc-500"><MessagesSquare size={11} /> Posts</div>
                   </div>
+                  {tradingStats && tradingStats.total_closed_trades > 0 && (
+                    <>
+                      <div>
+                        <div className="text-lg font-bold text-zinc-100">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
+                        <div className="flex items-center gap-1 text-xs text-zinc-500"><Target size={11} /> Win Rate</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-zinc-100">{tradingStats.favorite_asset || "—"}</div>
+                        <div className="flex items-center gap-1 text-xs text-zinc-500"><Star size={11} /> Top Pair</div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

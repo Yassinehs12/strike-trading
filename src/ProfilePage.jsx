@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays } from "lucide-react";
-import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats } from "./db";
+import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays, Target, Star, Copy, Check, Users, Eye, EyeOff } from "lucide-react";
+import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats, fetchPublicTradingStats, setShowPublicStats, fetchMyInviteInfo } from "./db";
 import Badges, { computeBadges } from "./Badges";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
@@ -16,12 +16,41 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
   const [error, setError] = useState("");
   const [stats, setStats] = useState(null);
   const [badgeStats, setBadgeStats] = useState(null);
+  const [tradingStats, setTradingStats] = useState(null);
+  const [inviteInfo, setInviteInfo] = useState(null);
+  const [showStats, setShowStats] = useState(profile?.show_public_stats !== false);
+  const [statsToggleLoading, setStatsToggleLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchOwnStats(session.user.id).then(setStats).catch(() => {});
     fetchPublicBadgeStats(session.user.id).then(setBadgeStats).catch(() => {});
+    fetchPublicTradingStats(session.user.id).then(setTradingStats).catch(() => {});
+    fetchMyInviteInfo(session.user.id).then(setInviteInfo).catch(() => {});
   }, [session.user.id]);
+
+  const toggleShowStats = async () => {
+    const next = !showStats;
+    setStatsToggleLoading(true);
+    try {
+      const updated = await setShowPublicStats(session.user.id, next);
+      setShowStats(next);
+      onProfileUpdate(updated);
+    } catch (err) {
+      toast?.(err.message || "Failed to update privacy setting.", "error");
+    } finally {
+      setStatsToggleLoading(false);
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (!inviteInfo?.invite_code) return;
+    const link = `${window.location.origin}?ref=${inviteInfo.invite_code}`;
+    navigator.clipboard?.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const saveBio = async () => {
     setSaving(true);
@@ -94,6 +123,48 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
             </div>
           </div>
         )}
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-zinc-100 text-sm">Trading Resume</h3>
+          <button onClick={toggleShowStats} disabled={statsToggleLoading}
+            className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 disabled:opacity-40 transition-colors">
+            {showStats ? <Eye size={12} /> : <EyeOff size={12} />} {showStats ? "Visible to others" : "Hidden from others"}
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500 mb-4">Aggregate stats shown on your public profile. Individual trades and PnL are never shared.</p>
+        {tradingStats && tradingStats.total_closed_trades > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-zinc-950 border border-white/10 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1"><Target size={12} /> Win Rate</div>
+              <div className="text-lg font-bold text-zinc-100">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
+            </div>
+            <div className="bg-zinc-950 border border-white/10 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1"><Star size={12} /> Favorite Pair</div>
+              <div className="text-lg font-bold text-zinc-100">{tradingStats.favorite_asset || "—"}</div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-600">Log some closed trades to build your public trading resume.</p>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="font-bold text-zinc-100 text-sm mb-1 flex items-center gap-1.5"><Users size={14} /> Invite Friends</h3>
+        <p className="text-xs text-zinc-500 mb-4">Share your link — friends who join through it count toward your referrals.</p>
+        <div className="flex items-center gap-2 mb-3">
+          <code className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-300 truncate">
+            {inviteInfo?.invite_code ? `${window.location.origin}?ref=${inviteInfo.invite_code}` : "Loading..."}
+          </code>
+          <button onClick={copyInviteLink} disabled={!inviteInfo?.invite_code}
+            className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-zinc-200 font-semibold text-xs px-3 py-2 rounded-lg transition-all">
+            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <div className="text-xs text-zinc-500">
+          <span className="font-bold text-zinc-200">{inviteInfo?.referral_count ?? 0}</span> trader{(inviteInfo?.referral_count ?? 0) === 1 ? "" : "s"} joined using your link
+        </div>
       </Card>
 
       <Card className="p-5">

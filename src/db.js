@@ -656,6 +656,38 @@ export async function fetchPublicBadgeStats(userId) {
   return data?.[0] || { trade_count: 0, is_funded: false, streak_days: 0 };
 }
 
+/* ---------- public trading resume (win rate, favorite asset) ---------- */
+export async function fetchPublicTradingStats(userId) {
+  const { data, error } = await supabase.rpc("get_public_trading_stats", { target_user_id: userId });
+  if (error) throw error;
+  return data?.[0] || { win_rate: null, total_closed_trades: 0, favorite_asset: null };
+}
+
+export async function setShowPublicStats(userId, show) {
+  const { data, error } = await supabase.from("profiles").update({ show_public_stats: show }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/* ---------- referral tracking ---------- */
+export async function fetchMyInviteInfo(userId) {
+  const { data, error } = await supabase.from("profiles").select("invite_code, referral_count").eq("id", userId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function applyReferralCode(newUserId, code) {
+  if (!code) return;
+  const { error } = await supabase.rpc("apply_referral_code", { new_user_id: newUserId, code });
+  if (error) throw error;
+}
+
+/* ---------- admin broadcast notifications ---------- */
+export async function broadcastNotification(type, fromUsername, extra = {}) {
+  const { error } = await supabase.rpc("notify_all_members", { notif_type: type, from_username: fromUsername, extra });
+  if (error) throw error;
+}
+
 /* ---------- landing page stats ---------- */
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an

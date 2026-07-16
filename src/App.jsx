@@ -13,7 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
 import LandingPage from "./LandingPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -473,6 +473,8 @@ const NotificationBell = ({ session, profile, setActive }) => {
     if (n.type === "message") setActive("messages");
     else if (n.type === "reply") setActive("forum");
     else if (n.type === "mention") setActive("forum");
+    else if (n.type === "spotlight") setActive("forum");
+    else if (n.type === "leaderboard_reset") setActive("leaderboard");
   };
 
   const unreadActivity = activity.filter((n) => !n.read).length;
@@ -483,6 +485,8 @@ const NotificationBell = ({ session, profile, setActive }) => {
     if (n.type === "message") return `${n.from_username} sent you a message`;
     if (n.type === "friend_accepted") return `${n.from_username} accepted your friend request`;
     if (n.type === "mention") return `${n.from_username} mentioned you`;
+    if (n.type === "spotlight") return `New Trade of the Week: ${n.from_username}`;
+    if (n.type === "leaderboard_reset") return "The leaderboard has reset — new week, fresh start";
     return "New activity";
   };
 
@@ -1884,6 +1888,8 @@ const ProfileSetup = ({ session, onComplete }) => {
     setLoading(true);
     try {
       const profile = await createProfile(session.user.id, cleanUsername, ageNum);
+      const refCode = new URLSearchParams(window.location.search).get("ref");
+      if (refCode) applyReferralCode(session.user.id, refCode).catch(() => {});
       onComplete(profile);
     } catch (err) {
       if (err.code === "23505" || /duplicate/i.test(err.message || "")) setError("That username is already taken — try another.");
