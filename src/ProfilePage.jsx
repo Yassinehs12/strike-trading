@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays, Target, Star, Copy, Check, Users, Eye, EyeOff } from "lucide-react";
+import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays, Target, Star, Copy, Check, Users, Eye, EyeOff, ImageDown } from "lucide-react";
 import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats, fetchPublicTradingStats, setShowPublicStats, fetchMyInviteInfo, fetchMemberBadges } from "./db";
 import Badges, { computeBadges, mergeBadges } from "./Badges";
+import { downloadShareCard } from "./ShareCard";
 
 const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
 
@@ -22,7 +23,24 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
   const [showStats, setShowStats] = useState(profile?.show_public_stats !== false);
   const [statsToggleLoading, setStatsToggleLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [generatingCard, setGeneratingCard] = useState(false);
   const fileInputRef = useRef(null);
+
+  const shareCard = async () => {
+    setGeneratingCard(true);
+    try {
+      await downloadShareCard({
+        profile,
+        badges: mergeBadges(computeBadges(badgeStats), manualBadges),
+        tradingStats,
+      });
+      toast?.("Card downloaded — share it anywhere", "success");
+    } catch (err) {
+      toast?.("Failed to generate card.", "error");
+    } finally {
+      setGeneratingCard(false);
+    }
+  };
 
   useEffect(() => {
     fetchOwnStats(session.user.id).then(setStats).catch(() => {});
@@ -125,6 +143,12 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
             </div>
           </div>
         )}
+
+        <button onClick={shareCard} disabled={generatingCard}
+          className="flex items-center justify-center gap-2 w-full mt-5 bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-40 text-blue-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+          {generatingCard ? <Loader2 size={15} className="animate-spin" /> : <ImageDown size={15} />}
+          {generatingCard ? "Generating..." : "Download Share Card"}
+        </button>
       </Card>
 
       <Card className="p-5">
