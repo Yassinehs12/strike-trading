@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2, Star,
+  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2, Star, ScrollText,
 } from "lucide-react";
 import {
   fetchAllProfilesAdmin, setUserAdmin, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
   fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification,
   fetchMemberBadges, grantMemberBadge, revokeMemberBadge,
+  logAuditEvent, fetchAuditLog,
 } from "./db";
 import AdminBadge from "./AdminBadge";
 import { BADGE_CATALOG, badgeFromKey } from "./Badges";
@@ -225,7 +226,15 @@ export default function AdminPanel({ session, profile, toast }) {
   const [spotlights, setSpotlights] = useState([]);
   const [spotlightsLoading, setSpotlightsLoading] = useState(true);
 
+  const [auditLog, setAuditLog] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+
   const notify = (msg, type) => (toast ? toast(msg, type) : undefined);
+
+  // Fire-and-forget audit trail entry — never blocks or fails the action it's logging.
+  const logAction = (action, targetType, targetId, details = {}) => {
+    logAuditEvent(session.user.id, profile?.username || session.user.email, action, targetType, targetId, details).catch(() => {});
+  };
 
   const loadUsers = useCallback(() => {
     setUsersLoading(true);
@@ -251,9 +260,18 @@ export default function AdminPanel({ session, profile, toast }) {
       .finally(() => setSpotlightsLoading(false));
   }, []);
 
+  const loadAuditLog = useCallback(() => {
+    setAuditLoading(true);
+    fetchAuditLog({ limit: 200 })
+      .then(setAuditLog)
+      .catch((err) => setError(err.message || "Failed to load audit log."))
+      .finally(() => setAuditLoading(false));
+  }, []);
+
   useEffect(() => { loadUsers(); }, [loadUsers]);
   useEffect(() => { if (tab === "content") loadContent(); }, [tab, loadContent]);
   useEffect(() => { if (tab === "spotlight") loadSpotlights(); }, [tab, loadSpotlights]);
+  useEffect(() => { if (tab === "audit") loadAuditLog(); }, [tab, loadAuditLog]);
 
   const withBusy = async (id, fn) => {
     setBusyId(id);
@@ -272,6 +290,7 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(u.id, async () => {
       const updated = await setUserAdmin(u.id, !u.is_admin);
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction(updated.is_admin ? "grant_admin" : "revoke_admin", "user", u.id, { username: u.username });
       notify(updated.is_admin ? `${u.username} is now an admin` : `${u.username} is no longer an admin`);
     });
 
@@ -279,6 +298,7 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(u.id, async () => {
       const updated = await banUser(u.id, "Banned via admin panel");
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction("ban_user", "user", u.id, { username: u.username, reason: "Banned via admin panel" });
       notify(`${u.username} banned`);
     });
 
@@ -286,6 +306,7 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(u.id, async () => {
       const updated = await unbanUser(u.id);
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction("unban_user", "user", u.id, { username: u.username });
       notify(`${u.username} unbanned`);
     });
 
@@ -293,6 +314,7 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(u.id, async () => {
       const updated = await timeoutUser(u.id, ms);
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction("timeout_user", "user", u.id, { username: u.username, durationMs: ms, until: updated.timeout_until });
       notify(`${u.username} timed out`);
     });
 
@@ -300,20 +322,25 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(u.id, async () => {
       const updated = await timeoutUser(u.id, null);
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction("clear_timeout", "user", u.id, { username: u.username });
       notify(`Timeout cleared for ${u.username}`);
     });
 
   const handleDeletePost = (id) =>
     withBusy(`post-${id}`, async () => {
+      const post = posts.find((p) => p.id === id);
       await adminDeleteForumPost(id);
       setPosts((prev) => prev.filter((p) => p.id !== id));
+      logAction("delete_forum_post", "forum_post", id, { author: post?.username, title: post?.title });
       notify("Post deleted");
     });
 
   const handleDeleteChatMsg = (id) =>
     withBusy(`chat-${id}`, async () => {
+      const msg = chatMessages.find((m) => m.id === id);
       await adminDeleteChatMessage(id);
       setChatMessages((prev) => prev.filter((m) => m.id !== id));
+      logAction("delete_chat_message", "chat_message", id, { author: msg?.username });
       notify("Message deleted");
     });
 
@@ -322,6 +349,7 @@ export default function AdminPanel({ session, profile, toast }) {
       await approveSpotlight(s.id, session.user.id);
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
       broadcastNotification("spotlight", s.username, { assetLabel: s.asset }).catch(() => {});
+      logAction("approve_spotlight", "trade_spotlight", s.id, { username: s.username, asset: s.asset });
       notify(`Pinned ${s.username}'s trade as Trade of the Week`);
     });
 
@@ -329,12 +357,14 @@ export default function AdminPanel({ session, profile, toast }) {
     withBusy(`spotlight-${s.id}`, async () => {
       await rejectSpotlight(s.id, session.user.id);
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
+      logAction("reject_spotlight", "trade_spotlight", s.id, { username: s.username, asset: s.asset });
       notify("Submission rejected");
     });
 
   const handleBroadcastLeaderboardReset = () =>
     withBusy("leaderboard-reset", async () => {
       await broadcastNotification("leaderboard_reset", "Strike Trading", {});
+      logAction("broadcast_leaderboard_reset", null, null, {});
       notify("Members notified of leaderboard reset");
     });
 
@@ -370,6 +400,10 @@ export default function AdminPanel({ session, profile, toast }) {
         <button onClick={() => setTab("spotlight")}
           className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "spotlight" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
           <Star size={14} /> Spotlight{spotlights.length > 0 ? ` (${spotlights.length})` : ""}
+        </button>
+        <button onClick={() => setTab("audit")}
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "audit" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          <ScrollText size={14} /> Audit Log
         </button>
       </div>
 
@@ -518,6 +552,40 @@ export default function AdminPanel({ session, profile, toast }) {
                       className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 transition-colors disabled:opacity-40">
                       <X size={12} /> Reject
                     </button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "audit" && (
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-500">Every ban, timeout, admin grant, deletion, and broadcast performed from this panel, most recent first.</p>
+          {auditLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+          ) : auditLog.length === 0 ? (
+            <Card className="p-12 text-center text-sm text-zinc-500">No actions logged yet.</Card>
+          ) : (
+            <div className="space-y-2 max-h-[560px] overflow-y-auto tj-scrollbar">
+              {auditLog.map((entry) => (
+                <Card key={entry.id} className="p-3 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <ScrollText size={13} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-zinc-200">
+                      <span className="font-semibold">{entry.actor_username || "Unknown admin"}</span>{" "}
+                      <span className="text-zinc-400">{(entry.action || "").replace(/_/g, " ")}</span>
+                      {entry.target_type ? <span className="text-zinc-500"> · {entry.target_type.replace(/_/g, " ")}</span> : null}
+                    </div>
+                    {entry.details && Object.keys(entry.details).length > 0 && (
+                      <div className="text-xs text-zinc-500 mt-0.5 truncate">
+                        {Object.entries(entry.details).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                      </div>
+                    )}
+                    <div className="text-[11px] text-zinc-600 mt-1">{timeAgo(entry.created_at)}</div>
                   </div>
                 </Card>
               ))}

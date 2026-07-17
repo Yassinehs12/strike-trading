@@ -23,6 +23,7 @@ import MessagesPage from "./MessagesPage";
 import AdminPanel from "./AdminPanel";
 import AdminBadge from "./AdminBadge";
 import LeaderboardPage from "./LeaderboardPage";
+import GoalsPage from "./GoalsPage";
 import UserProfileModal from "./UserProfileModal";
 import { LogoFull } from "./Logo";
 
@@ -470,6 +471,7 @@ const NAV_ITEMS = [
   { id: "challenges", label: "Challenges", icon: ShieldCheck },
   { id: "journal", label: "Trade Journal", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "goals", label: "Goals", icon: Target },
   { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
   { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
   { id: "forum", label: "Community", icon: MessagesSquare },
@@ -2385,6 +2387,7 @@ export default function App() {
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
+    goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     forum: ["Community", "Connect with other traders"],
@@ -2559,6 +2562,7 @@ export default function App() {
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
+                {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}

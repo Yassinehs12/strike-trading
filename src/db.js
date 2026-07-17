@@ -727,6 +727,77 @@ export async function revokeMemberBadge(userId, badgeKey) {
   if (error) throw error;
 }
 
+/* ---------- personal goals ---------- */
+const goalFromDB = (r) => ({
+  id: r.id,
+  title: r.title,
+  metric: r.metric, // "profit" | "win_rate" | "trade_count" | "custom"
+  targetValue: r.target_value != null ? Number(r.target_value) : null,
+  startDate: r.start_date,
+  endDate: r.end_date,
+  notes: r.notes ?? "",
+  status: r.status, // "active" | "completed" | "abandoned"
+  createdAt: r.created_at,
+});
+
+const goalToDB = (g, userId) => ({
+  user_id: userId,
+  title: g.title,
+  metric: g.metric,
+  target_value: g.targetValue ?? null,
+  start_date: g.startDate,
+  end_date: g.endDate || null,
+  notes: g.notes || "",
+  status: g.status || "active",
+});
+
+export async function fetchGoals(userId) {
+  const { data, error } = await supabase.from("goals").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map(goalFromDB);
+}
+
+export async function insertGoal(goal, userId) {
+  const { data, error } = await supabase.from("goals").insert(goalToDB(goal, userId)).select().single();
+  if (error) throw error;
+  return goalFromDB(data);
+}
+
+export async function updateGoalDB(goal, userId) {
+  const { data, error } = await supabase.from("goals").update(goalToDB(goal, userId)).eq("id", goal.id).select().single();
+  if (error) throw error;
+  return goalFromDB(data);
+}
+
+export async function deleteGoalDB(id) {
+  const { error } = await supabase.from("goals").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ---------- audit log (admin/moderation actions) ----------
+   Best-effort: callers should .catch(() => {}) so a logging hiccup
+   never blocks the underlying admin action from completing. */
+export async function logAuditEvent(actorId, actorUsername, action, targetType = null, targetId = null, details = {}) {
+  const { error } = await supabase.from("audit_log").insert({
+    actor_id: actorId,
+    actor_username: actorUsername,
+    action,
+    target_type: targetType,
+    target_id: targetId != null ? String(targetId) : null,
+    details,
+  });
+  if (error) throw error;
+}
+
+export async function fetchAuditLog({ limit = 200, action = null, actorId = null } = {}) {
+  let query = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(limit);
+  if (action) query = query.eq("action", action);
+  if (actorId) query = query.eq("actor_id", actorId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 /* ---------- landing page stats ---------- */
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an
