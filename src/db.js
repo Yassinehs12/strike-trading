@@ -554,6 +554,18 @@ export function extractMentions(text) {
   return [...new Set(matches.map((m) => m.slice(1)))];
 }
 
+export async function searchProfilesByUsername(query, limit = 8) {
+  const q = (query || "").trim();
+  if (!q) return [];
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .ilike("username", `%${q}%`)
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchProfilesByUsernames(usernames) {
   if (!usernames.length) return [];
   const { data, error } = await supabase.from("profiles").select("id, username").in("username", usernames);
