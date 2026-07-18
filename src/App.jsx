@@ -1518,6 +1518,16 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile })
    ============================================================ */
 const CalendarCard = ({ trades, onOpenTrade }) => {
   const [cursor, setCursor] = useState(new Date(2026, 6, 1)); // July 2026
+  const [now, setNow] = useState(new Date());
+
+  // Keep "today" accurate in real time (e.g. across a midnight rollover
+  // while the dashboard is left open) without requiring a page refresh.
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const byDay = useMemo(() => {
     const map = {};
@@ -1572,21 +1582,31 @@ const CalendarCard = ({ trades, onOpenTrade }) => {
             if (d === null) return <div key={i} />;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
             const info = byDay[dateStr];
+            const isToday = dateStr === todayStr;
             return (
               <button key={i} onClick={() => info?.trades?.[0] && onOpenTrade(info.trades[0])}
-                className={`aspect-square rounded-lg border border-white/10 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"}`}
+                className={`relative aspect-square rounded-lg border flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"} ${isToday ? "border-blue-500 ring-1 ring-blue-500/60" : "border-white/10"}`}
                 style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
-                <span className="text-[11px] text-zinc-300 font-medium">{d}</span>
-                {info && <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>}
+                {isToday && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />}
+                <span className={`text-[11px] font-medium ${isToday ? "text-blue-300" : "text-zinc-300"}`}>{d}</span>
+                {info ? (
+                  <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
+                ) : (
+                  <>
+                    <span className="text-[9px] tj-mono text-zinc-600 leading-tight">0 Trade</span>
+                    <span className="text-[10px] tj-mono text-zinc-600 font-medium leading-tight">$0</span>
+                  </>
+                )}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-4 mt-5 text-xs text-zinc-500">
+        <div className="flex items-center gap-4 mt-5 text-xs text-zinc-500 flex-wrap">
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500" /> Profitable day</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-rose-500" /> Losing day</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-zinc-800" /> No trades</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border border-blue-500 ring-1 ring-blue-500/60" /> Today</span>
         </div>
       </Card>
   );
