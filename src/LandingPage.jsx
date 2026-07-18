@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, Menu, X,
-  MessagesSquare, Users, Send, Quote, Sparkles,
+  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -29,6 +29,7 @@ const LandingStyle = () => (
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "How it works", href: "#how-it-works" },
+  { label: "FAQ", href: "#faq" },
 ];
 
 const FEATURES = [
@@ -44,7 +45,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "01", title: "Create your account", desc: "Sign up free with email or Google — no credit card required." },
+  { n: "01", title: "Create your account", desc: "Sign up free with your email — no credit card required." },
   { n: "02", title: "Set up your account", desc: "Trading a prop firm challenge? Enter its rules once and let the app track compliance. Trading your own capital? Skip straight to journaling." },
   { n: "03", title: "Log trades as you go", desc: "Every trade you journal updates your equity curve, analytics, and challenge status in real time." },
 ];
@@ -54,6 +55,40 @@ const STEPS = [
 // non-empty, so it's safe to leave blank until you have real quotes.
 // Shape: { quote: "...", name: "First L.", role: "Funded trader" }
 const TESTIMONIALS = [];
+
+const FAQS = [
+  { q: "Is Strike Trading free to use?", a: "Yes — journaling, analytics, and the community are free to start. No credit card is required to sign up." },
+  { q: "Do I need to be in a prop firm challenge to use this?", a: "No. The funding challenge tracker is optional. If you trade your own capital, you can skip it entirely and just use the journal, analytics, and risk gauges." },
+  { q: "Which prop firms does the challenge tracker work with?", a: "You enter your firm's rules once — daily loss limit, max drawdown, profit target, and minimum trading days — and the app tracks compliance against those numbers in real time, so it works with any firm's rule set." },
+  { q: "Is my trading data private?", a: "Your individual trades and P&L are private by default. You control what's public on your profile, including whether your stats appear on the leaderboard — that's off unless you opt in." },
+  { q: "Can I use this on my phone?", a: "Yes, the app is fully responsive and works in any mobile browser. Log trades, check your gauges, and catch up on the community from your phone." },
+];
+
+const FAQItem = ({ q, a }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-white/10 py-5">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between gap-4 text-left">
+        <span className="text-sm md:text-base font-semibold text-[var(--text-primary)]">{q}</span>
+        <ChevronDown size={16} className={`shrink-0 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <p className="text-sm text-[var(--text-tertiary)] leading-relaxed mt-3 pr-8">{a}</p>}
+    </div>
+  );
+};
+
+const FAQ = () => (
+  <section id="faq" className="py-20 md:py-28 px-4 border-t border-white/5">
+    <div className="max-w-2xl mx-auto">
+      <div className="text-center mb-10">
+        <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Frequently asked questions</h2>
+      </div>
+      <div>
+        {FAQS.map((f, i) => <FAQItem key={i} {...f} />)}
+      </div>
+    </div>
+  </section>
+);
 
 const NavBar = ({ onSignIn, onGetStarted }) => {
   const [open, setOpen] = React.useState(false);
@@ -153,7 +188,11 @@ const Hero = ({ onGetStarted }) => (
           Start Free <ArrowRight size={16} />
         </button>
       </div>
-      <p className="lp-fade-up text-xs text-[var(--text-faint)]" style={{ animationDelay: "0.2s" }}>No credit card required</p>
+      <div className="lp-fade-up flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-2 text-xs text-[var(--text-tertiary)]" style={{ animationDelay: "0.22s" }}>
+        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Free to start</span>
+        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> No credit card</span>
+        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Cancel anytime</span>
+      </div>
     </div>
     <div className="relative mt-14 md:mt-16 px-2 lp-fade-up" style={{ animationDelay: "0.25s" }}>
       <DashboardMock />
@@ -286,13 +325,26 @@ const FinalCTA = ({ onGetStarted }) => (
 );
 
 const Footer = () => (
-  <footer className="border-t border-white/5 py-10 px-4">
-    <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} className="text-[var(--text-inverse)]" /></div>
-        <span className="font-bold text-[var(--text-primary)] text-sm">Strike Trading</span>
+  <footer className="border-t border-white/5 py-12 px-4">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 mb-8">
+        <div className="text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+            <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} className="text-[var(--text-inverse)]" /></div>
+            <span className="font-bold text-[var(--text-primary)] text-sm">Strike Trading</span>
+          </div>
+          <p className="text-xs text-[var(--text-faint)] max-w-xs">A trading journal and funding challenge tracker for traders who take their edge seriously.</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
+          {NAV_LINKS.map((l) => (
+            <a key={l.href} href={l.href} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">{l.label}</a>
+          ))}
+        </div>
       </div>
-      <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
+        <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
+        <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]"><Lock size={12} /> Your trade data stays private by default</span>
+      </div>
     </div>
   </footer>
 );
@@ -307,6 +359,7 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
       <Features />
       <Testimonials />
       <HowItWorks />
+      <FAQ />
       <FinalCTA onGetStarted={onGetStarted} />
       <Footer />
     </div>

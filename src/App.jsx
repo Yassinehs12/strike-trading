@@ -2629,13 +2629,14 @@ export default function App() {
 
   // Keep the URL hash in sync with the active tab, so refreshing (or sharing
   // a link) lands back on the same page instead of resetting to dashboard.
-  // Skip this while the hash still holds a Supabase auth token (password
-  // reset / magic link) so we don't clobber it before Supabase reads it.
+  // Only applies once signed in — on the logged-out landing page, the hash
+  // is used for anchor links (#features, #faq, etc.) instead.
   useEffect(() => {
+    if (!session) return;
     if (/access_token|type=recovery|error=/.test(window.location.hash)) return;
     const target = `#/${active}`;
     if (window.location.hash !== target) window.history.pushState(null, "", target);
-  }, [active]);
+  }, [active, session]);
 
   // Support the browser's back/forward buttons switching tabs too.
   useEffect(() => {
