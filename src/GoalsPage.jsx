@@ -325,7 +325,7 @@ export default function GoalsPage({ session, trades, toast }) {
             <Target size={20} className="text-[var(--text-muted)]" />
           </div>
           <p className="text-sm font-semibold text-[var(--text-secondary)]">No goals here yet</p>
-          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs mx-auto">Set a profit, win-rate, or trade-count target and Strike Trading will track it against your journal automatically.</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs mx-auto">Set a profit, win-rate, or trade-count target and Strike Journal will track it against your journal automatically.</p>
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">

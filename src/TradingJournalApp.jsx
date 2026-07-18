@@ -369,8 +369,8 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-[var(--bg-primary)] border-r border-[var(--border-primary)] flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
       <div className="h-16 flex items-center gap-2 px-5 border-b border-[var(--border-primary)]">
-        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><LogoMark size={17} className="text-[var(--text-inverse)]" /></div>
-        <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Trading</span>
+        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><LogoMark size={17} bare className="text-[var(--text-inverse)]" /></div>
+        <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Journal</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map((item) => {
@@ -1351,7 +1351,7 @@ export default function App() {
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     calendar: ["Calendar", "Daily P&L heatmap"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
-    settings: ["Settings", "Personalize Strike Trading"],
+    settings: ["Settings", "Personalize Strike Journal"],
   };
 
   const addTrade = (t) => { setTrades((prev) => [t, ...prev]); addToast("Trade logged successfully"); };

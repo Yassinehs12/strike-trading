@@ -57,7 +57,7 @@ const STEPS = [
 const TESTIMONIALS = [];
 
 const FAQS = [
-  { q: "Is Strike Trading free to use?", a: "Yes — journaling, analytics, and the community are free to start. No credit card is required to sign up." },
+  { q: "Is Strike Journal free to use?", a: "Yes — journaling, analytics, and the community are free to start. No credit card is required to sign up." },
   { q: "Do I need to be in a prop firm challenge to use this?", a: "No. The funding challenge tracker is optional. If you trade your own capital, you can skip it entirely and just use the journal, analytics, and risk gauges." },
   { q: "Which prop firms does the challenge tracker work with?", a: "You enter your firm's rules once — daily loss limit, max drawdown, profit target, and minimum trading days — and the app tracks compliance against those numbers in real time, so it works with any firm's rule set." },
   { q: "Is my trading data private?", a: "Your individual trades and P&L are private by default. You control what's public on your profile, including whether your stats appear on the leaderboard — that's off unless you opt in." },
@@ -96,8 +96,8 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={17} className="text-[var(--text-inverse)]" /></div>
-          <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Trading</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={17} bare className="text-[var(--text-inverse)]" /></div>
+          <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Journal</span>
         </div>
         <nav className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((l) => (
@@ -330,8 +330,8 @@ const Footer = () => (
       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 mb-8">
         <div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-            <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} className="text-[var(--text-inverse)]" /></div>
-            <span className="font-bold text-[var(--text-primary)] text-sm">Strike Trading</span>
+            <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} bare className="text-[var(--text-inverse)]" /></div>
+            <span className="font-bold text-[var(--text-primary)] text-sm">Strike Journal</span>
           </div>
           <p className="text-xs text-[var(--text-faint)] max-w-xs">A trading journal and funding challenge tracker for traders who take their edge seriously.</p>
         </div>
@@ -342,7 +342,7 @@ const Footer = () => (
         </div>
       </div>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
-        <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
+        <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Journal. All rights reserved.</p>
         <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]"><Lock size={12} /> Your trade data stays private by default</span>
       </div>
     </div>

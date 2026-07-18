@@ -386,7 +386,7 @@ export default function AdminPanel({ session, profile, toast }) {
 
   const handleBroadcastLeaderboardReset = () =>
     withBusy("leaderboard-reset", async () => {
-      await broadcastNotification("leaderboard_reset", "Strike Trading", {});
+      await broadcastNotification("leaderboard_reset", "Strike Journal", {});
       logAction("broadcast_leaderboard_reset", null, null, {});
       notify("Members notified of leaderboard reset");
     });

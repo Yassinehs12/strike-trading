@@ -1,4 +1,4 @@
-# Strike Trading
+# Strike Journal
 
 Trading Journal & Prop Firm Funding Challenge Tracker.
 

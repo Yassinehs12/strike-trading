@@ -283,7 +283,7 @@ async function tradesToPDF(trades, meta = {}) {
   const doc = new jsPDF({ orientation: "landscape" });
 
   doc.setFontSize(16);
-  doc.text("Strike Trading — Trade Journal Export", 14, 16);
+  doc.text("Strike Journal — Trade Journal Export", 14, 16);
   doc.setFontSize(9);
   doc.setTextColor(120);
   doc.text(`${meta.username || ""}  ·  Exported ${new Date().toLocaleString()}  ·  ${trades.length} trades`, 14, 22);
@@ -2213,7 +2213,7 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
           {tab === "account" && (
             <>
               <Card className="p-5 md:p-6">
-                <SectionHeader title="Account" subtitle="Your identity on Strike Trading." />
+                <SectionHeader title="Account" subtitle="Your identity on Strike Journal." />
                 <Field label="Email">
                   <input className={inputCls} value={session?.user?.email || ""} disabled />
                 </Field>
@@ -2363,7 +2363,7 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
 
               <Card className="p-5 md:p-6 border-rose-900/50">
                 <SectionHeader title="Delete Account" icon={<AlertTriangle size={14} className="text-rose-400" />} subtitle="Permanently delete your account, trades, and journal entries. This can't be undone." />
-                <a href={`mailto:support@striketrading.app?subject=Account%20deletion%20request&body=Please%20delete%20my%20account%20(${encodeURIComponent(session?.user?.email || "")}).`}
+                <a href={`mailto:support@strikejournal.app?subject=Account%20deletion%20request&body=Please%20delete%20my%20account%20(${encodeURIComponent(session?.user?.email || "")}).`}
                   className="inline-flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
                   <Ban size={15} /> Request Account Deletion
                 </a>
@@ -2395,7 +2395,7 @@ const ProfileSetup = ({ session, onComplete }) => {
     }
     const ageNum = Number(age);
     if (!age || !Number.isInteger(ageNum) || ageNum < 18 || ageNum > 120) {
-      setError("You must enter a valid age, 18 or older, to use Strike Trading.");
+      setError("You must enter a valid age, 18 or older, to use Strike Journal.");
       return;
     }
     setLoading(true);
@@ -2721,7 +2721,7 @@ export default function App() {
     calculator: ["Pips Calculator", "Know what a pip is worth before you're in the trade"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
-    settings: ["Settings", "Personalize Strike Trading"],
+    settings: ["Settings", "Personalize Strike Journal"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
     admin: ["Admin Panel", "Manage users and moderate content"],
