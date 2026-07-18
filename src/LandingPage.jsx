@@ -57,33 +57,33 @@ const TESTIMONIALS = [];
 const NavBar = ({ onSignIn, onGetStarted }) => {
   const [open, setOpen] = React.useState(false);
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-black/70 border-b border-white/10">
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center"><LogoMark size={17} className="text-black" /></div>
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={17} className="text-[var(--text-inverse)]" /></div>
           <span className="font-bold text-white text-lg tracking-tight">Strike Trading</span>
         </div>
         <nav className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{l.label}</a>
+            <a key={l.href} href={l.href} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-white transition-colors">{l.label}</a>
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-3">
-          <button onClick={onSignIn} className="text-sm font-medium text-zinc-300 hover:text-white transition-colors px-3 py-2">Sign In</button>
-          <button onClick={onGetStarted} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 text-black font-semibold text-sm px-4 py-2 rounded-lg transition-all active:scale-95">
+          <button onClick={onSignIn} className="text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors px-3 py-2">Sign In</button>
+          <button onClick={onGetStarted} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2 rounded-lg transition-all active:scale-95">
             Get Started <ArrowRight size={14} />
           </button>
         </div>
         <button className="md:hidden text-white" onClick={() => setOpen((o) => !o)}>{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
       {open && (
-        <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3 bg-black">
+        <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3 bg-[var(--bg-primary)]">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-zinc-400">{l.label}</a>
+            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-[var(--text-tertiary)]">{l.label}</a>
           ))}
           <div className="flex flex-col gap-2 pt-2">
-            <button onClick={onSignIn} className="w-full text-sm font-medium text-zinc-300 border border-white/10 rounded-lg py-2">Sign In</button>
-            <button onClick={onGetStarted} className="w-full bg-blue-500 text-black font-semibold text-sm py-2 rounded-lg">Get Started</button>
+            <button onClick={onSignIn} className="w-full text-sm font-medium text-[var(--text-secondary)] border border-white/10 rounded-lg py-2">Sign In</button>
+            <button onClick={onGetStarted} className="w-full bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm py-2 rounded-lg">Get Started</button>
           </div>
         </div>
       )}
@@ -93,14 +93,14 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
 
 // Stylized illustrative dashboard preview (not a literal screenshot)
 const DashboardMock = () => (
-  <div className="lp-float rounded-2xl border border-white/10 bg-zinc-950/80 shadow-2xl shadow-blue-500/10 p-4 md:p-6 max-w-3xl mx-auto">
+  <div className="lp-float rounded-2xl border border-white/10 bg-[var(--bg-primary)]/80 shadow-2xl shadow-blue-500/10 p-4 md:p-6 max-w-3xl mx-auto">
     <div className="flex items-center gap-1.5 mb-4">
-      <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" /><span className="w-2.5 h-2.5 rounded-full bg-zinc-700" /><span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+      <span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" />
     </div>
     <div className="grid grid-cols-3 gap-3 mb-4">
       {[["Net Profit", "$7,069.50", "text-emerald-400"], ["Win Rate", "49.0%", "text-white"], ["Profit Factor", "1.94", "text-white"]].map(([label, val, color], i) => (
         <div key={i} className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1">{label}</div>
+          <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1">{label}</div>
           <div className={`lp-mono text-sm md:text-base font-bold ${color}`}>{val}</div>
         </div>
       ))}
@@ -119,11 +119,11 @@ const DashboardMock = () => (
     </div>
     <div className="grid grid-cols-2 gap-3 mt-3">
       <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wide mb-2">FTMO — Daily Loss</div>
-        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full w-1/3 bg-blue-500 rounded-full" /></div>
+        <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-2">FTMO — Daily Loss</div>
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full w-1/3 bg-[var(--accent)] rounded-full" /></div>
       </div>
       <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wide mb-2">Progress to Target</div>
+        <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-2">Progress to Target</div>
         <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full w-4/5 bg-emerald-500 rounded-full" /></div>
       </div>
     </div>
@@ -134,21 +134,21 @@ const Hero = ({ onGetStarted }) => (
   <section className="relative overflow-hidden pt-16 md:pt-24 pb-20 md:pb-28 px-4">
     <div className="absolute inset-0 lp-glow pointer-events-none" />
     <div className="relative max-w-4xl mx-auto text-center">
-      <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-zinc-400 mb-6">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Built for every kind of trader
+      <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-[var(--text-tertiary)] mb-6">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> Built for every kind of trader
       </div>
       <h1 className="lp-fade-up text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] mb-5" style={{ animationDelay: "0.05s" }}>
-        The trading journal built for<br className="hidden md:block" /> <span className="text-blue-400">all types of traders.</span>
+        The trading journal built for<br className="hidden md:block" /> <span className="text-[var(--accent)]">all types of traders.</span>
       </h1>
-      <p className="lp-fade-up text-base md:text-lg text-zinc-400 max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
+      <p className="lp-fade-up text-base md:text-lg text-[var(--text-tertiary)] max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
         Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — whether you're funded, self-funded, or just getting started.
       </p>
       <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-4" style={{ animationDelay: "0.15s" }}>
-        <button onClick={onGetStarted} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-black font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center">
+        <button onClick={onGetStarted} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center">
           Start Free <ArrowRight size={16} />
         </button>
       </div>
-      <p className="lp-fade-up text-xs text-zinc-600" style={{ animationDelay: "0.2s" }}>No credit card required</p>
+      <p className="lp-fade-up text-xs text-[var(--text-faint)]" style={{ animationDelay: "0.2s" }}>No credit card required</p>
     </div>
     <div className="relative mt-14 md:mt-16 px-2 lp-fade-up" style={{ animationDelay: "0.25s" }}>
       <DashboardMock />
@@ -179,8 +179,8 @@ const SocialProof = () => {
   if (items.length === 0) {
     return (
       <section className="px-4 -mt-6 md:-mt-8 relative">
-        <div className="max-w-xl mx-auto flex items-center justify-center gap-2 text-xs text-zinc-500 border border-white/10 rounded-full px-4 py-2 w-fit mx-auto bg-white/[0.02]">
-          <Sparkles size={13} className="text-blue-400" /> Early access — be one of the first traders on the platform
+        <div className="max-w-xl mx-auto flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] border border-white/10 rounded-full px-4 py-2 w-fit mx-auto bg-white/[0.02]">
+          <Sparkles size={13} className="text-[var(--accent)]" /> Early access — be one of the first traders on the platform
         </div>
       </section>
     );
@@ -192,7 +192,7 @@ const SocialProof = () => {
         {items.map((i) => (
           <div key={i.label} className="text-center border border-white/10 rounded-xl bg-white/[0.02] py-4">
             <div className="lp-mono text-2xl md:text-3xl font-bold text-white">{fmt(i.value)}+</div>
-            <div className="text-[11px] md:text-xs text-zinc-500 mt-1">{i.label}</div>
+            <div className="text-[11px] md:text-xs text-[var(--text-muted)] mt-1">{i.label}</div>
           </div>
         ))}
       </div>
@@ -211,10 +211,10 @@ const Testimonials = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TESTIMONIALS.map((t, i) => (
             <div key={i} className="rounded-2xl border border-white/10 p-6">
-              <Quote size={18} className="text-blue-400/60 mb-3" />
-              <p className="text-sm text-zinc-300 leading-relaxed mb-4">{t.quote}</p>
+              <Quote size={18} className="text-[var(--accent)]/60 mb-3" />
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">{t.quote}</p>
               <div className="text-sm font-semibold text-white">{t.name}</div>
-              {t.role && <div className="text-xs text-zinc-500">{t.role}</div>}
+              {t.role && <div className="text-xs text-[var(--text-muted)]">{t.role}</div>}
             </div>
           ))}
         </div>
@@ -228,18 +228,18 @@ const Features = () => (
     <div className="max-w-6xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-14">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything you need to trade with discipline</h2>
-        <p className="text-zinc-400">From your first evaluation trade to a fully funded, payout-eligible account — plus a community to trade alongside.</p>
+        <p className="text-[var(--text-tertiary)]">From your first evaluation trade to a fully funded, payout-eligible account — plus a community to trade alongside.</p>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map((f, i) => {
           const Icon = f.icon;
           return (
-            <div key={i} className="lp-card-glow relative rounded-2xl border border-white/10 p-6 hover:border-blue-500/30 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-                <Icon size={18} className="text-blue-400" />
+            <div key={i} className="lp-card-glow relative rounded-2xl border border-white/10 p-6 hover:border-[var(--accent)]/30 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center mb-4">
+                <Icon size={18} className="text-[var(--accent)]" />
               </div>
               <h3 className="text-white font-semibold mb-2">{f.title}</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
+              <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{f.desc}</p>
             </div>
           );
         })}
@@ -257,9 +257,9 @@ const HowItWorks = () => (
       <div className="grid md:grid-cols-3 gap-8">
         {STEPS.map((s, i) => (
           <div key={i} className="relative">
-            <div className="lp-mono text-5xl font-bold text-blue-500/20 mb-3">{s.n}</div>
-            <h3 className="text-white font-semibold mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-400" /> {s.title}</h3>
-            <p className="text-sm text-zinc-400 leading-relaxed">{s.desc}</p>
+            <div className="lp-mono text-5xl font-bold text-[var(--accent)]/20 mb-3">{s.n}</div>
+            <h3 className="text-white font-semibold mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--accent)]" /> {s.title}</h3>
+            <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{s.desc}</p>
           </div>
         ))}
       </div>
@@ -270,10 +270,10 @@ const HowItWorks = () => (
 const FinalCTA = ({ onGetStarted }) => (
   <section className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="relative max-w-3xl mx-auto text-center rounded-3xl border border-white/10 lp-card-glow p-10 md:p-14 overflow-hidden">
-      <TrendingUp size={28} className="text-blue-400 mx-auto mb-5" />
+      <TrendingUp size={28} className="text-[var(--accent)] mx-auto mb-5" />
       <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Start journaling your next challenge today</h2>
-      <p className="text-zinc-400 mb-8 max-w-md mx-auto">Free to start. Your trades, your rules monitor, your analytics — all in one dashboard.</p>
-      <button onClick={onGetStarted} className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-black font-semibold px-6 py-3 rounded-xl transition-all active:scale-95">
+      <p className="text-[var(--text-tertiary)] mb-8 max-w-md mx-auto">Free to start. Your trades, your rules monitor, your analytics — all in one dashboard.</p>
+      <button onClick={onGetStarted} className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95">
         Get Started Free <ArrowRight size={16} />
       </button>
     </div>
@@ -284,17 +284,17 @@ const Footer = () => (
   <footer className="border-t border-white/5 py-10 px-4">
     <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center"><LogoMark size={14} className="text-black" /></div>
+        <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} className="text-[var(--text-inverse)]" /></div>
         <span className="font-bold text-white text-sm">Strike Trading</span>
       </div>
-      <p className="text-xs text-zinc-600">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
+      <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
     </div>
   </footer>
 );
 
 export default function LandingPage({ onGetStarted, onSignIn }) {
   return (
-    <div className="lp-root min-h-screen bg-black text-white">
+    <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-white">
       <LandingStyle />
       <NavBar onSignIn={onSignIn} onGetStarted={onGetStarted} />
       <Hero onGetStarted={onGetStarted} />

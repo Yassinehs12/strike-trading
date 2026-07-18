@@ -17,7 +17,7 @@ const Avatar = ({ profile, size = 44 }) => (
   profile?.avatar_url ? (
     <img src={profile.avatar_url} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />
   ) : (
-    <div className="rounded-full bg-zinc-800 flex items-center justify-center font-bold text-zinc-300 shrink-0" style={{ width: size, height: size, fontSize: size * 0.36 }}>
+    <div className="rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center font-bold text-[var(--text-secondary)] shrink-0" style={{ width: size, height: size, fontSize: size * 0.36 }}>
       {(profile?.username || "?")[0].toUpperCase()}
     </div>
   )
@@ -46,28 +46,28 @@ const NewMessagePopover = ({ onClose, onPick }) => {
   }, [query]);
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-72 bg-[var(--bg-secondary)] border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden">
       <div className="p-3 border-b border-white/10">
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search traders by username..."
-            className="w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 outline-none rounded-lg pl-8 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600" />
+            className="w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 outline-none rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600" />
         </div>
       </div>
       <div className="max-h-64 overflow-y-auto tj-scrollbar">
         {searching ? (
-          <div className="flex justify-center py-6"><Loader2 size={16} className="text-blue-500 animate-spin" /></div>
+          <div className="flex justify-center py-6"><Loader2 size={16} className="text-[var(--accent)] animate-spin" /></div>
         ) : !query.trim() ? (
-          <p className="text-xs text-zinc-500 text-center py-6 px-4">Start typing to find someone to message.</p>
+          <p className="text-xs text-[var(--text-muted)] text-center py-6 px-4">Start typing to find someone to message.</p>
         ) : results.length === 0 ? (
-          <p className="text-xs text-zinc-500 text-center py-6 px-4">No traders found for "{query}".</p>
+          <p className="text-xs text-[var(--text-muted)] text-center py-6 px-4">No traders found for "{query}".</p>
         ) : (
           results.map((p) => (
             <button key={p.id} onClick={() => onPick(p)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.06] transition-colors text-left">
               <Avatar profile={p} size={32} />
-              <span className="text-sm font-medium text-zinc-200 truncate">{p.username}</span>
+              <span className="text-sm font-medium text-[var(--text-primary)] truncate">{p.username}</span>
             </button>
           ))
         )}
@@ -122,10 +122,10 @@ export default function MessagesPage({ session, profile }) {
       <div className={`w-full sm:w-[340px] shrink-0 border-r border-white/10 flex flex-col ${activeUser ? "hidden sm:flex" : "flex"}`}>
         <div className="p-4 border-b border-white/10 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-100">Messages</h2>
+            <h2 className="text-sm font-bold text-[var(--text-primary)]">Messages</h2>
             <div className="relative">
               <button onClick={() => setNewMsgOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors">
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors">
                 <SquarePen size={13} /> New
               </button>
               {newMsgOpen && (
@@ -137,9 +137,9 @@ export default function MessagesPage({ session, profile }) {
             </div>
           </div>
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search conversations..."
-              className="w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 outline-none rounded-lg pl-8 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors" />
+              className="w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 outline-none rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors" />
           </div>
         </div>
 
@@ -147,12 +147,12 @@ export default function MessagesPage({ session, profile }) {
 
         <div className="flex-1 overflow-y-auto tj-scrollbar">
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-14 px-4">
-              <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3"><Mail size={18} className="text-zinc-500" /></div>
-              <p className="text-sm font-semibold text-zinc-300">{conversations.length === 0 ? "No conversations yet" : "No matches"}</p>
-              <p className="text-xs text-zinc-500 mt-1">{conversations.length === 0 ? "Search for a trader above to start one." : "Try a different search."}</p>
+              <div className="w-11 h-11 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto mb-3"><Mail size={18} className="text-[var(--text-muted)]" /></div>
+              <p className="text-sm font-semibold text-[var(--text-secondary)]">{conversations.length === 0 ? "No conversations yet" : "No matches"}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">{conversations.length === 0 ? "Search for a trader above to start one." : "Try a different search."}</p>
             </div>
           ) : (
             filtered.map((c) => {
@@ -160,15 +160,15 @@ export default function MessagesPage({ session, profile }) {
               return (
                 <button key={c.otherId} onClick={() => openConversation(c.profile)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left border-l-2 transition-colors ${
-                    isActive ? "bg-blue-500/[0.08] border-blue-500" : "border-transparent hover:bg-white/[0.04]"
+                    isActive ? "bg-[var(--accent)]/[0.08] border-[var(--accent)]" : "border-transparent hover:bg-white/[0.04]"
                   }`}>
                   <Avatar profile={c.profile} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-zinc-100 truncate">{c.profile.username}</span>
-                      <span className="text-[11px] text-zinc-500 shrink-0">{timeShort(c.lastMessage.created_at)}</span>
+                      <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{c.profile.username}</span>
+                      <span className="text-[11px] text-[var(--text-muted)] shrink-0">{timeShort(c.lastMessage.created_at)}</span>
                     </div>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">
+                    <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
                       {c.lastMessage.deleted ? <span className="italic">Message deleted</span> : (
                         <>{c.lastMessage.sender_id === session.user.id ? "You: " : ""}{c.lastMessage.image_url && !c.lastMessage.body ? "📷 Photo" : c.lastMessage.body}</>
                       )}
@@ -193,11 +193,11 @@ export default function MessagesPage({ session, profile }) {
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <div className="w-14 h-14 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mb-4">
-              <MessageCircle size={22} className="text-zinc-600" />
+            <div className="w-14 h-14 rounded-full bg-[var(--bg-secondary)] border border-white/10 flex items-center justify-center mb-4">
+              <MessageCircle size={22} className="text-[var(--text-faint)]" />
             </div>
-            <p className="text-sm font-semibold text-zinc-300">Your messages</p>
-            <p className="text-xs text-zinc-500 mt-1 max-w-xs">Select a conversation, or start a new one to message another trader directly.</p>
+            <p className="text-sm font-semibold text-[var(--text-secondary)]">Your messages</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs">Select a conversation, or start a new one to message another trader directly.</p>
           </div>
         )}
       </div>

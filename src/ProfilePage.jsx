@@ -4,7 +4,7 @@ import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStat
 import Badges, { computeBadges, mergeBadges } from "./Badges";
 import { downloadShareCard } from "./ShareCard";
 
-const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
 const Card = ({ className = "", children, ...rest }) => (
   <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`} {...rest}>{children}</div>
@@ -113,18 +113,18 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="w-24 h-24 rounded-full object-cover border border-white/10" />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center text-2xl font-bold text-zinc-300">
+            <div className="w-24 h-24 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-2xl font-bold text-[var(--text-secondary)]">
               {(profile?.username || "?")[0].toUpperCase()}
             </div>
           )}
           <button onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar}
-            className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-400 text-zinc-950 rounded-full p-1.5 border-2 border-zinc-900 transition-colors">
+            className="absolute bottom-0 right-0 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] rounded-full p-1.5 border-2 border-[var(--border-primary)] transition-colors">
             {uploadingAvatar ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarSelect} className="hidden" />
         </div>
-        <h2 className="font-bold text-zinc-100 text-lg">{profile?.username}</h2>
-        <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-1">
+        <h2 className="font-bold text-[var(--text-primary)] text-lg">{profile?.username}</h2>
+        <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] mt-1">
           <CalendarDays size={12} /> Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
         </div>
         {badgeStats && (
@@ -134,18 +134,18 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
         {stats && (
           <div className="flex items-center justify-center gap-8 mt-5 pt-5 border-t border-white/10">
             <div>
-              <div className="text-lg font-bold text-zinc-100">{stats.tradeCount}</div>
-              <div className="flex items-center gap-1 text-xs text-zinc-500"><LineChart size={11} /> Trades</div>
+              <div className="text-lg font-bold text-[var(--text-primary)]">{stats.tradeCount}</div>
+              <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><LineChart size={11} /> Trades</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-zinc-100">{stats.postCount}</div>
-              <div className="flex items-center gap-1 text-xs text-zinc-500"><MessagesSquare size={11} /> Posts</div>
+              <div className="text-lg font-bold text-[var(--text-primary)]">{stats.postCount}</div>
+              <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><MessagesSquare size={11} /> Posts</div>
             </div>
           </div>
         )}
 
         <button onClick={shareCard} disabled={generatingCard}
-          className="flex items-center justify-center gap-2 w-full mt-5 bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-40 text-blue-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+          className="flex items-center justify-center gap-2 w-full mt-5 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 disabled:opacity-40 text-[var(--accent)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
           {generatingCard ? <Loader2 size={15} className="animate-spin" /> : <ImageDown size={15} />}
           {generatingCard ? "Generating..." : "Download Share Card"}
         </button>
@@ -153,60 +153,60 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-zinc-100 text-sm">Trading Resume</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm">Trading Resume</h3>
           <button onClick={toggleShowStats} disabled={statsToggleLoading}
-            className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 disabled:opacity-40 transition-colors">
+            className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] disabled:opacity-40 transition-colors">
             {showStats ? <Eye size={12} /> : <EyeOff size={12} />} {showStats ? "Visible to others" : "Hidden from others"}
           </button>
         </div>
-        <p className="text-xs text-zinc-500 mb-4">Aggregate stats shown on your public profile. Individual trades and PnL are never shared.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-4">Aggregate stats shown on your public profile. Individual trades and PnL are never shared.</p>
         {tradingStats && tradingStats.total_closed_trades > 0 ? (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-zinc-950 border border-white/10 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1"><Target size={12} /> Win Rate</div>
-              <div className="text-lg font-bold text-zinc-100">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
+            <div className="bg-[var(--bg-primary)] border border-white/10 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1"><Target size={12} /> Win Rate</div>
+              <div className="text-lg font-bold text-[var(--text-primary)]">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
             </div>
-            <div className="bg-zinc-950 border border-white/10 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1"><Star size={12} /> Favorite Pair</div>
-              <div className="text-lg font-bold text-zinc-100">{tradingStats.favorite_asset || "—"}</div>
+            <div className="bg-[var(--bg-primary)] border border-white/10 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1"><Star size={12} /> Favorite Pair</div>
+              <div className="text-lg font-bold text-[var(--text-primary)]">{tradingStats.favorite_asset || "—"}</div>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-zinc-600">Log some closed trades to build your public trading resume.</p>
+          <p className="text-xs text-[var(--text-faint)]">Log some closed trades to build your public trading resume.</p>
         )}
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-bold text-zinc-100 text-sm mb-1 flex items-center gap-1.5"><Users size={14} /> Invite Friends</h3>
-        <p className="text-xs text-zinc-500 mb-4">Share your link — friends who join through it count toward your referrals.</p>
+        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 flex items-center gap-1.5"><Users size={14} /> Invite Friends</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">Share your link — friends who join through it count toward your referrals.</p>
         <div className="flex items-center gap-2 mb-3">
-          <code className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-300 truncate">
+          <code className="flex-1 bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2 text-xs text-[var(--text-secondary)] truncate">
             {inviteInfo?.invite_code ? `${window.location.origin}?ref=${inviteInfo.invite_code}` : "Loading..."}
           </code>
           <button onClick={copyInviteLink} disabled={!inviteInfo?.invite_code}
-            className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-zinc-200 font-semibold text-xs px-3 py-2 rounded-lg transition-all">
+            className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-[var(--text-primary)] font-semibold text-xs px-3 py-2 rounded-lg transition-all">
             {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <div className="text-xs text-zinc-500">
-          <span className="font-bold text-zinc-200">{inviteInfo?.referral_count ?? 0}</span> trader{(inviteInfo?.referral_count ?? 0) === 1 ? "" : "s"} joined using your link
+        <div className="text-xs text-[var(--text-muted)]">
+          <span className="font-bold text-[var(--text-primary)]">{inviteInfo?.referral_count ?? 0}</span> trader{(inviteInfo?.referral_count ?? 0) === 1 ? "" : "s"} joined using your link
         </div>
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-bold text-zinc-100 text-sm mb-1">Bio</h3>
-        <p className="text-xs text-zinc-500 mb-4">A short blurb other traders will see on your public profile.</p>
+        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Bio</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">A short blurb other traders will see on your public profile.</p>
         <textarea rows={4} maxLength={280} className={inputCls} placeholder="Tell other traders about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} />
-        <div className="text-xs text-zinc-600 mt-1 mb-3">{bio.length}/280</div>
+        <div className="text-xs text-[var(--text-faint)] mt-1 mb-3">{bio.length}/280</div>
         {error && <p className="text-xs text-rose-400 mb-3">{error}</p>}
         <button onClick={saveBio} disabled={saving}
-          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-40 active:scale-[0.98] text-zinc-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
           {saving ? <Loader2 size={15} className="animate-spin" /> : null}
           Save Bio
         </button>
       </Card>
 
-      <p className="text-xs text-zinc-600 text-center">Want to change your username or password? Head to Settings.</p>
+      <p className="text-xs text-[var(--text-faint)] text-center">Want to change your username or password? Head to Settings.</p>
     </div>
   );
 }

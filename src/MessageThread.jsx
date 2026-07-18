@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, Send, Loader2, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, CheckCheck } from "lucide-react";
 import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages, uploadDmImage, deleteDirectMessage } from "./db";
 
-const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
 function timeShort(dateStr) {
   return new Date(dateStr).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -146,25 +146,25 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
   return (
     <div className={`flex flex-col h-full min-h-0 ${className}`}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-white/10 shrink-0 bg-zinc-950/40">
+      <div className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-white/10 shrink-0 bg-[var(--bg-primary)]/40">
         {onBack && (
-          <button onClick={onBack} className="text-zinc-500 hover:text-zinc-200 transition-colors -ml-1">
+          <button onClick={onBack} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors -ml-1">
             <ChevronLeft size={20} />
           </button>
         )}
         {otherUser.avatar_url ? (
           <img src={otherUser.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
+          <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)]">
             {(otherUser.username || "?")[0].toUpperCase()}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-zinc-100 truncate">{otherUser.username}</h3>
-          <p className="text-[11px] text-zinc-500">Direct message</p>
+          <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{otherUser.username}</h3>
+          <p className="text-[11px] text-[var(--text-muted)]">Direct message</p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={20} /></button>
         )}
       </div>
 
@@ -175,18 +175,18 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       {/* Thread */}
       <div className="flex-1 overflow-y-auto tj-scrollbar p-4 space-y-4 min-h-0">
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+          <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
         ) : messages.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3"><MessageCircle size={20} className="text-zinc-500" /></div>
-            <p className="text-sm font-semibold text-zinc-300">No messages yet</p>
-            <p className="text-xs text-zinc-500 mt-1">Say hello to {otherUser.username}.</p>
+            <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto mb-3"><MessageCircle size={20} className="text-[var(--text-muted)]" /></div>
+            <p className="text-sm font-semibold text-[var(--text-secondary)]">No messages yet</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Say hello to {otherUser.username}.</p>
           </div>
         ) : (
           dayGroups.map((group) => (
             <div key={group.day} className="space-y-1">
               <div className="flex items-center justify-center py-1">
-                <span className="text-[10px] font-medium text-zinc-500 bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-0.5">{group.label}</span>
+                <span className="text-[10px] font-medium text-[var(--text-muted)] bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-0.5">{group.label}</span>
               </div>
               {group.items.map((m) => {
                 const mine = m.sender_id === currentUserId;
@@ -195,13 +195,13 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
                     <div className="relative group max-w-[78%] sm:max-w-[65%]">
                       {mine && !m.deleted && (
                         <button onClick={() => setMenuOpenId(menuOpenId === m.id ? null : m.id)}
-                          className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-rose-400 transition-opacity"
+                          className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-rose-400 transition-opacity"
                           title="Delete message">
                           {deletingId === m.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                         </button>
                       )}
                       {mine && menuOpenId === m.id && (
-                        <div className="absolute right-0 -top-9 bg-zinc-800 border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
+                        <div className="absolute right-0 -top-9 bg-[var(--bg-tertiary)] border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
                           <button onClick={() => handleDelete(m)}
                             className="flex items-center gap-1.5 px-3 py-2 text-xs text-rose-400 hover:bg-white/[0.06] whitespace-nowrap">
                             <Trash2 size={12} /> Delete for everyone
@@ -209,10 +209,10 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
                         </div>
                       )}
                       {!mine && group.items[0] === m && (
-                        <div className="text-[11px] font-medium text-zinc-500 mb-0.5 ml-1">{otherUser.username}</div>
+                        <div className="text-[11px] font-medium text-[var(--text-muted)] mb-0.5 ml-1">{otherUser.username}</div>
                       )}
                       <div className={`rounded-2xl px-3.5 py-2 shadow-sm ${
-                        mine ? "bg-blue-500 text-zinc-950" : "bg-white/[0.07] text-zinc-100"
+                        mine ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-white/[0.07] text-[var(--text-primary)]"
                       } ${m.deleted ? "opacity-60 italic" : ""}`}>
                         {m.deleted ? (
                           <p className="text-sm">Message deleted</p>
@@ -225,9 +225,9 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
                           </>
                         )}
                       </div>
-                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] text-zinc-500 ${mine ? "justify-end mr-1" : "ml-1"}`}>
+                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] text-[var(--text-muted)] ${mine ? "justify-end mr-1" : "ml-1"}`}>
                         <span>{timeShort(m.created_at)}</span>
-                        {mine && m.id === lastMineId && <CheckCheck size={11} className="text-blue-400" />}
+                        {mine && m.id === lastMineId && <CheckCheck size={11} className="text-[var(--accent)]" />}
                       </div>
                     </div>
                   </div>
@@ -244,7 +244,7 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
           <div className="relative inline-block">
             <img src={imagePreview} alt="" className="h-20 rounded-lg border border-white/10 object-cover" />
             <button onClick={cancelImage}
-              className="absolute -top-2 -right-2 bg-zinc-800 border border-white/10 rounded-full p-1 text-zinc-300 hover:text-rose-400">
+              className="absolute -top-2 -right-2 bg-[var(--bg-tertiary)] border border-white/10 rounded-full p-1 text-[var(--text-secondary)] hover:text-rose-400">
               <X size={12} />
             </button>
           </div>
@@ -252,10 +252,10 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       )}
 
       {/* Composer */}
-      <div className="p-3 sm:p-4 flex items-end gap-2 border-t border-white/10 shrink-0 bg-zinc-950/40">
+      <div className="p-3 sm:p-4 flex items-end gap-2 border-t border-white/10 shrink-0 bg-[var(--bg-primary)]/40">
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
         <button onClick={() => fileInputRef.current?.click()} disabled={sending}
-          className="flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-zinc-300 p-2.5 rounded-lg transition-all shrink-0"
+          className="flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-[var(--text-secondary)] p-2.5 rounded-lg transition-all shrink-0"
           title="Attach photo">
           <ImageIcon size={16} />
         </button>
@@ -271,7 +271,7 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
           }}
         />
         <button onClick={send} disabled={sending || uploadingImage || (!text.trim() && !imageFile)}
-          className="flex items-center justify-center bg-blue-500 hover:bg-blue-400 disabled:opacity-40 text-zinc-950 p-2.5 rounded-lg transition-all shrink-0">
+          className="flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 text-[var(--text-inverse)] p-2.5 rounded-lg transition-all shrink-0">
           {sending || uploadingImage ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>

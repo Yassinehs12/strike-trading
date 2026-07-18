@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Target, Plus, X, Trash2, Pencil, Loader2, CheckCircle2, TrendingUp, Percent, Hash, Flag, AlertTriangle } from "lucide-react";
 import { fetchGoals, insertGoal, updateGoalDB, deleteGoalDB } from "./db";
 
-const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
 const Card = ({ className = "", children }) => (
   <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
@@ -10,7 +10,7 @@ const Card = ({ className = "", children }) => (
 
 const Field = ({ label, children }) => (
   <div className="mb-4">
-    <label className="block text-xs font-medium text-zinc-400 mb-1.5">{label}</label>
+    <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">{label}</label>
     {children}
   </div>
 );
@@ -107,14 +107,14 @@ const GoalForm = ({ initial, onCancel, onSubmit, saving }) => {
             return (
               <button key={m.id} type="button" onClick={() => setMetric(m.id)}
                 className={`flex items-center gap-2 text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-                  active ? "bg-blue-500/15 text-blue-300 border-blue-500/40" : "bg-white/[0.03] text-zinc-400 border-white/10 hover:bg-white/[0.08] hover:text-zinc-200"
+                  active ? "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/40" : "bg-white/[0.03] text-[var(--text-tertiary)] border-white/10 hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
                 }`}>
                 <Icon size={14} /> {m.label}
               </button>
             );
           })}
         </div>
-        <p className="text-[11px] text-zinc-500 mt-1.5">{meta.hint}</p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-1.5">{meta.hint}</p>
       </Field>
 
       {metric !== "custom" && (
@@ -140,11 +140,11 @@ const GoalForm = ({ initial, onCancel, onSubmit, saving }) => {
       {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
 
       <div className="flex items-center gap-2 pt-1">
-        <button type="button" onClick={onCancel} className="flex-1 text-sm font-medium px-3 py-2.5 rounded-lg border border-white/10 text-zinc-300 hover:bg-white/[0.05] transition-colors">
+        <button type="button" onClick={onCancel} className="flex-1 text-sm font-medium px-3 py-2.5 rounded-lg border border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.05] transition-colors">
           Cancel
         </button>
         <button type="submit" disabled={saving}
-          className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-3 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 transition-colors">
+          className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-3 py-2.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-[var(--text-inverse)] transition-colors">
           {saving ? <Loader2 size={14} className="animate-spin" /> : null}
           {initial?.id ? "Save changes" : "Create goal"}
         </button>
@@ -164,22 +164,22 @@ const GoalCard = ({ goal, trades, onEdit, onDelete, onToggleComplete, busy }) =>
     <Card className={`p-4 ${isAbandoned ? "opacity-50" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5 min-w-0">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-500/15 text-emerald-400" : "bg-blue-500/15 text-blue-400"}`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-500/15 text-emerald-400" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`}>
             {isDone ? <CheckCircle2 size={16} /> : <Icon size={16} />}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-zinc-100 truncate">{goal.title}</div>
-            <div className="text-[11px] text-zinc-500 mt-0.5">
+            <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{goal.title}</div>
+            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
               {meta.label}
               {goal.endDate ? ` · by ${new Date(goal.endDate).toLocaleDateString()}` : " · ongoing"}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => onEdit(goal)} disabled={busy} className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+          <button onClick={() => onEdit(goal)} disabled={busy} className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors disabled:opacity-40">
             <Pencil size={13} />
           </button>
-          <button onClick={() => onDelete(goal)} disabled={busy} className="p-1.5 rounded-md text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40">
+          <button onClick={() => onDelete(goal)} disabled={busy} className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40">
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
           </button>
         </div>
@@ -188,23 +188,23 @@ const GoalCard = ({ goal, trades, onEdit, onDelete, onToggleComplete, busy }) =>
       {goal.metric === "custom" ? (
         <button onClick={() => onToggleComplete(goal)} disabled={busy || isAbandoned}
           className={`mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors disabled:opacity-40 ${
-            isDone ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-white/[0.03] text-zinc-400 border-white/10 hover:bg-white/[0.08] hover:text-zinc-200"
+            isDone ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-white/[0.03] text-[var(--text-tertiary)] border-white/10 hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
           }`}>
           <CheckCircle2 size={13} /> {isDone ? "Marked complete" : "Mark as complete"}
         </button>
       ) : (
         <div className="mt-3">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="tj-mono text-zinc-300 font-semibold">{formatValue(goal.metric, progress.current)}</span>
-            <span className="text-zinc-500">of {formatValue(goal.metric, progress.target)} target</span>
+            <span className="tj-mono text-[var(--text-secondary)] font-semibold">{formatValue(goal.metric, progress.current)}</span>
+            <span className="text-[var(--text-muted)]">of {formatValue(goal.metric, progress.target)} target</span>
           </div>
-          <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${isDone ? "bg-emerald-500" : "bg-blue-500"}`} style={{ width: `${progress.pct}%` }} />
+          <div className="h-1.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${isDone ? "bg-emerald-500" : "bg-[var(--accent)]"}`} style={{ width: `${progress.pct}%` }} />
           </div>
         </div>
       )}
 
-      {goal.notes && <p className="text-xs text-zinc-500 mt-3 leading-relaxed">{goal.notes}</p>}
+      {goal.notes && <p className="text-xs text-[var(--text-muted)] mt-3 leading-relaxed">{goal.notes}</p>}
     </Card>
   );
 };
@@ -300,8 +300,8 @@ export default function GoalsPage({ session, trades, toast }) {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-sm text-zinc-500">Set targets for your trading and track progress automatically from your journal.</p>
-        <button onClick={openCreate} className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-zinc-950 transition-colors shrink-0">
+        <p className="text-sm text-[var(--text-muted)]">Set targets for your trading and track progress automatically from your journal.</p>
+        <button onClick={openCreate} className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] transition-colors shrink-0">
           <Plus size={15} /> New Goal
         </button>
       </div>
@@ -309,7 +309,7 @@ export default function GoalsPage({ session, trades, toast }) {
       <div className="flex items-center gap-1 bg-white/[0.03] border border-white/10 rounded-lg p-1 w-fit">
         {[["active", `Active${activeCount ? ` (${activeCount})` : ""}`], ["completed", `Completed${completedCount ? ` (${completedCount})` : ""}`], ["all", "All"]].map(([id, label]) => (
           <button key={id} onClick={() => setFilter(id)}
-            className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${filter === id ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+            className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${filter === id ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
             {label}
           </button>
         ))}
@@ -318,14 +318,14 @@ export default function GoalsPage({ session, trades, toast }) {
       {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5">{error}</div>}
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+        <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
       ) : visibleGoals.length === 0 ? (
         <Card className="p-12 text-center">
-          <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3 mx-auto">
-            <Target size={20} className="text-zinc-500" />
+          <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mb-3 mx-auto">
+            <Target size={20} className="text-[var(--text-muted)]" />
           </div>
-          <p className="text-sm font-semibold text-zinc-300">No goals here yet</p>
-          <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">Set a profit, win-rate, or trade-count target and Strike Trading will track it against your journal automatically.</p>
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">No goals here yet</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs mx-auto">Set a profit, win-rate, or trade-count target and Strike Trading will track it against your journal automatically.</p>
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -336,11 +336,11 @@ export default function GoalsPage({ session, trades, toast }) {
       )}
 
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
-          <div className="bg-zinc-900 border border-white/10 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto tj-scrollbar">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 bg-zinc-900 z-10">
-              <h3 className="font-bold text-zinc-100">{editingGoal ? "Edit Goal" : "New Goal"}</h3>
-              <button onClick={() => { setFormOpen(false); setEditingGoal(null); }} className="text-zinc-500 hover:text-zinc-200 transition-colors"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--bg-primary)]/70 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-[var(--bg-secondary)] border border-white/10 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto tj-scrollbar">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 bg-[var(--bg-secondary)] z-10">
+              <h3 className="font-bold text-[var(--text-primary)]">{editingGoal ? "Edit Goal" : "New Goal"}</h3>
+              <button onClick={() => { setFormOpen(false); setEditingGoal(null); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={20} /></button>
             </div>
             <div className="p-5">
               <GoalForm initial={editingGoal} saving={saving} onCancel={() => { setFormOpen(false); setEditingGoal(null); }} onSubmit={handleCreateOrEdit} />

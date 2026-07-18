@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Star, TrendingUp, TrendingDown, Percent, Hash, CalendarRange, Save, CheckCircle2 } from "lucide-react";
 import { fetchJournalEntries, upsertJournalEntry } from "./db";
 
-const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 transition-colors resize-none";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors resize-none";
 
 const Card = ({ className = "", children }) => (
   <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
@@ -62,16 +62,16 @@ const RatingPicker = ({ value, onChange }) => (
     {[1, 2, 3, 4, 5].map((n) => (
       <button key={n} type="button" onClick={() => onChange(value === n ? null : n)}
         className="transition-transform hover:scale-110">
-        <Star size={22} className={n <= (value || 0) ? "text-amber-400 fill-amber-400" : "text-zinc-700"} />
+        <Star size={22} className={n <= (value || 0) ? "text-amber-400 fill-amber-400" : "text-[var(--text-faint)]"} />
       </button>
     ))}
   </div>
 );
 
 const StatChip = ({ icon: Icon, label, value, accent }) => (
-  <div className="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2.5">
-    <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mb-1"><Icon size={11} /> {label}</div>
-    <div className={`tj-mono text-sm font-bold ${accent || "text-zinc-200"}`}>{value}</div>
+  <div className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2.5">
+    <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] mb-1"><Icon size={11} /> {label}</div>
+    <div className={`tj-mono text-sm font-bold ${accent || "text-[var(--text-primary)]"}`}>{value}</div>
   </div>
 );
 
@@ -162,11 +162,11 @@ export default function JournalingPage({ session, trades, toast }) {
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-sm text-zinc-500">Step back from individual trades and reflect on the bigger picture, week by week and month by month.</p>
+        <p className="text-sm text-[var(--text-muted)]">Step back from individual trades and reflect on the bigger picture, week by week and month by month.</p>
         <div className="flex items-center gap-1 bg-white/[0.03] border border-white/10 rounded-lg p-1 w-fit">
           {["weekly", "monthly"].map((m) => (
             <button key={m} onClick={() => setMode(m)}
-              className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors capitalize ${mode === m ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+              className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors capitalize ${mode === m ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
               {m}
             </button>
           ))}
@@ -177,14 +177,14 @@ export default function JournalingPage({ session, trades, toast }) {
 
       {/* Period navigator */}
       <Card className="p-4 flex items-center justify-between">
-        <button onClick={() => shiftPeriod(-1)} className="p-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-zinc-100 transition-colors">
+        <button onClick={() => shiftPeriod(-1)} className="p-1.5 rounded-lg border border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
           <ChevronLeft size={16} />
         </button>
-        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <CalendarRange size={15} className="text-zinc-500" /> {label}
+        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+          <CalendarRange size={15} className="text-[var(--text-muted)]" /> {label}
           {existingEntry && <CheckCircle2 size={14} className="text-emerald-400" />}
         </div>
-        <button onClick={() => shiftPeriod(1)} className="p-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-zinc-100 transition-colors">
+        <button onClick={() => shiftPeriod(1)} className="p-1.5 rounded-lg border border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
           <ChevronRight size={16} />
         </button>
       </Card>
@@ -200,37 +200,37 @@ export default function JournalingPage({ session, trades, toast }) {
       {/* Reflection form */}
       <Card className="p-4 md:p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-sm font-bold text-zinc-100">How did this {mode === "weekly" ? "week" : "month"} go overall?</h3>
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">How did this {mode === "weekly" ? "week" : "month"} go overall?</h3>
           <RatingPicker value={form.rating} onChange={(v) => set("rating", v)} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">What went well</label>
+          <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">What went well</label>
           <textarea rows={3} className={inputCls} placeholder="Setups you executed well, discipline you kept, wins worth repeating..."
             value={form.wentWell} onChange={(e) => set("wentWell", e.target.value)} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">What could be improved</label>
+          <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">What could be improved</label>
           <textarea rows={3} className={inputCls} placeholder="Mistakes, hesitation, rule breaks, emotional trades..."
             value={form.improve} onChange={(e) => set("improve", e.target.value)} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Key lessons</label>
+          <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">Key lessons</label>
           <textarea rows={3} className={inputCls} placeholder="What will you take into next period?"
             value={form.lessons} onChange={(e) => set("lessons", e.target.value)} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Goals for next {mode === "weekly" ? "week" : "month"}</label>
+          <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">Goals for next {mode === "weekly" ? "week" : "month"}</label>
           <textarea rows={3} className={inputCls} placeholder={'Concrete, specific goals — not just "trade better"...'}
             value={form.goalsNext} onChange={(e) => set("goalsNext", e.target.value)} />
         </div>
 
         <div className="flex items-center gap-3 pt-1">
           <button onClick={save} disabled={saving}
-            className="flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 transition-colors">
+            className="flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-[var(--text-inverse)] transition-colors">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {existingEntry ? "Update Review" : "Save Review"}
           </button>
@@ -241,7 +241,7 @@ export default function JournalingPage({ session, trades, toast }) {
       {/* Recent reviews */}
       {!loading && recentEntries.length > 0 && (
         <Card className="p-4">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Past {mode === "weekly" ? "Weekly" : "Monthly"} Reviews</h3>
+          <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Past {mode === "weekly" ? "Weekly" : "Monthly"} Reviews</h3>
           <div className="space-y-1.5">
             {recentEntries.map((e) => {
               const start = new Date(e.periodStart + "T00:00:00");
@@ -250,7 +250,7 @@ export default function JournalingPage({ session, trades, toast }) {
               return (
                 <button key={e.id} onClick={() => setCursor(start)}
                   className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    isCurrent ? "bg-blue-500/10 text-blue-300" : "hover:bg-white/[0.04] text-zinc-300"
+                    isCurrent ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "hover:bg-white/[0.04] text-[var(--text-secondary)]"
                   }`}>
                   <span className="text-sm">{entryLabel}</span>
                   <div className="flex items-center gap-2 shrink-0">
@@ -259,7 +259,7 @@ export default function JournalingPage({ session, trades, toast }) {
                         <Star size={11} className="fill-amber-400" /> {e.rating}
                       </span>
                     )}
-                    <span className="text-[11px] text-zinc-600">{new Date(e.updatedAt).toLocaleDateString()}</span>
+                    <span className="text-[11px] text-[var(--text-faint)]">{new Date(e.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </button>
               );
@@ -269,7 +269,7 @@ export default function JournalingPage({ session, trades, toast }) {
       )}
 
       {loading && (
-        <div className="flex justify-center py-10"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+        <div className="flex justify-center py-10"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
       )}
     </div>
   );

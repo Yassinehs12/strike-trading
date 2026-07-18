@@ -10,7 +10,7 @@ export default function AdminBadge({ size = "xs", className = "" }) {
   const iconSizes = { xs: 10, sm: 12 };
   return (
     <span
-      className={`inline-flex items-center ${sizes[size] || sizes.xs} rounded-full bg-blue-500/15 text-blue-400 font-semibold border border-blue-500/30 ${className}`}
+      className={`inline-flex items-center ${sizes[size] || sizes.xs} rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold border border-[var(--accent)]/30 ${className}`}
       title="Admin"
     >
       <ShieldCheck size={iconSizes[size] || iconSizes.xs} /> Admin

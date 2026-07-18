@@ -11,7 +11,7 @@ export const LogoMark = ({ size = 32, rounded = "rounded-xl" }) => (
       boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
     }}
   >
-    <Zap size={size * 0.56} className="text-zinc-950" strokeWidth={0} fill="currentColor" />
+    <Zap size={size * 0.56} className="text-[var(--text-inverse)]" strokeWidth={0} fill="currentColor" />
   </div>
 );
 
@@ -19,7 +19,7 @@ export const LogoFull = ({ size = 32, textClass = "text-lg" }) => (
   <div className="flex items-center gap-2.5">
     <LogoMark size={size} />
     <span className={`font-extrabold tracking-tight ${textClass}`}>
-      <span className="text-zinc-100">Strike</span><span className="text-blue-400">Trading</span>
+      <span className="text-[var(--text-primary)]">Strike</span><span className="text-[var(--accent)]">Trading</span>
     </span>
   </div>
 );

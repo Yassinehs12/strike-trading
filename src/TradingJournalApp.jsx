@@ -265,7 +265,7 @@ const ToastContainer = ({ toasts }) => (
   <div className="fixed bottom-4 right-4 z-[100] space-y-2 w-[calc(100%-2rem)] sm:w-auto">
     {toasts.map((t) => (
       <div key={t.id} className={`tj-slide-in flex items-center gap-2 px-4 py-3 rounded-lg border shadow-xl text-sm font-medium sm:min-w-[280px]
-        ${t.type === "error" ? "bg-rose-950 border-rose-800 text-rose-200" : t.type === "info" ? "bg-zinc-900 border-zinc-700 text-zinc-200" : "bg-emerald-950 border-emerald-800 text-emerald-200"}`}>
+        ${t.type === "error" ? "bg-rose-950 border-rose-800 text-rose-200" : t.type === "info" ? "bg-[var(--bg-secondary)] border-[var(--border-secondary)] text-[var(--text-primary)]" : "bg-emerald-950 border-emerald-800 text-emerald-200"}`}>
         {t.type === "error" ? <XCircle size={16} /> : t.type === "info" ? <Info size={16} /> : <CheckCircle size={16} />}
         {t.message}
       </div>
@@ -277,21 +277,21 @@ const ToastContainer = ({ toasts }) => (
    SMALL UI PRIMITIVES
    ============================================================ */
 const Card = ({ className = "", children }) => (
-  <div className={`bg-zinc-900 border border-zinc-800 rounded-xl ${className}`}>{children}</div>
+  <div className={`bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl ${className}`}>{children}</div>
 );
 
 const EmptyState = ({ icon: Icon, title, sub, action }) => (
   <div className="flex flex-col items-center justify-center text-center py-14 px-4">
-    <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
-      <Icon size={20} className="text-zinc-500" />
+    <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mb-3">
+      <Icon size={20} className="text-[var(--text-muted)]" />
     </div>
-    <p className="text-sm font-semibold text-zinc-300">{title}</p>
-    {sub && <p className="text-xs text-zinc-500 mt-1 max-w-xs">{sub}</p>}
+    <p className="text-sm font-semibold text-[var(--text-secondary)]">{title}</p>
+    {sub && <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs">{sub}</p>}
     {action}
   </div>
 );
 
-const Skeleton = ({ className = "" }) => <div className={`tj-skeleton bg-zinc-800 rounded-lg ${className}`} />;
+const Skeleton = ({ className = "" }) => <div className={`tj-skeleton bg-[var(--bg-tertiary)] rounded-lg ${className}`} />;
 
 const LoadingScreen = () => (
   <div className="p-4 md:p-6 space-y-6">
@@ -307,7 +307,7 @@ const StatusPill = ({ status }) => {
   const map = {
     Win: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     Loss: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-    BE: "bg-zinc-500/10 text-zinc-400 border-zinc-500/30",
+    BE: "bg-[var(--text-muted)]/10 text-[var(--text-tertiary)] border-[var(--text-muted)]/30",
     Passed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     Funded: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     Failed: "bg-rose-500/10 text-rose-400 border-rose-500/30",
@@ -321,14 +321,14 @@ const GaugeBar = ({ label, usedPct, breached, rightLabel, danger = true }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-zinc-400 flex items-center gap-1"><Gauge size={12} className="text-zinc-500" /> {label}</span>
-        <span className={`tj-mono text-xs font-semibold ${breached ? "text-rose-400" : "text-zinc-300"}`}>{rightLabel}</span>
+        <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1"><Gauge size={12} className="text-[var(--text-muted)]" /> {label}</span>
+        <span className={`tj-mono text-xs font-semibold ${breached ? "text-rose-400" : "text-[var(--text-secondary)]"}`}>{rightLabel}</span>
       </div>
-      <div className="relative h-2.5 rounded-full bg-zinc-800 overflow-hidden">
+      <div className="relative h-2.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
         {danger && <div className="absolute right-0 top-0 h-full w-1/5 bg-rose-500/20" />}
         <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${clamp(usedPct, 2, 100)}%` }} />
         <div className="absolute inset-0 flex justify-between px-[1px]">
-          {Array.from({ length: 10 }).map((_, i) => <div key={i} className="w-px h-full bg-zinc-950/40" />)}
+          {Array.from({ length: 10 }).map((_, i) => <div key={i} className="w-px h-full bg-[var(--bg-primary)]/40" />)}
         </div>
       </div>
     </div>
@@ -336,19 +336,19 @@ const GaugeBar = ({ label, usedPct, breached, rightLabel, danger = true }) => {
 };
 
 const ProgressBar = ({ pct, color = "bg-amber-400" }) => (
-  <div className="h-2 w-full rounded-full bg-zinc-800 overflow-hidden">
+  <div className="h-2 w-full rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
     <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${clamp(pct, 1, 100)}%` }} />
   </div>
 );
 
-const KPICard = ({ icon: Icon, label, value, sub, accent = "text-zinc-100" }) => (
+const KPICard = ({ icon: Icon, label, value, sub, accent = "text-[var(--text-primary)]" }) => (
   <Card className="p-4 tj-animate-in">
     <div className="flex items-center justify-between mb-3">
-      <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{label}</span>
-      <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center"><Icon size={14} className="text-amber-400" /></div>
+      <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{label}</span>
+      <div className="w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center"><Icon size={14} className="text-amber-400" /></div>
     </div>
     <div className={`tj-mono text-2xl font-bold ${accent}`}>{value}</div>
-    {sub && <div className="text-xs text-zinc-500 mt-1">{sub}</div>}
+    {sub && <div className="text-xs text-[var(--text-muted)] mt-1">{sub}</div>}
   </Card>
 );
 
@@ -366,11 +366,11 @@ const NAV_ITEMS = [
 
 const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
   <>
-    <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col
+    <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-[var(--bg-primary)] border-r border-[var(--border-primary)] flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
-      <div className="h-16 flex items-center gap-2 px-5 border-b border-zinc-800">
-        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><LogoMark size={17} className="text-zinc-950" /></div>
-        <span className="font-bold text-zinc-100 text-lg tracking-tight">Strike Trading</span>
+      <div className="h-16 flex items-center gap-2 px-5 border-b border-[var(--border-primary)]">
+        <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center"><LogoMark size={17} className="text-[var(--text-inverse)]" /></div>
+        <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Trading</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map((item) => {
@@ -379,36 +379,36 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen }) => (
           return (
             <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                ${isActive ? "bg-amber-400/10 text-amber-400" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"}`}>
+                ${isActive ? "bg-amber-400/10 text-amber-400" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
               <Icon size={17} />{item.label}
             </button>
           );
         })}
       </nav>
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-[var(--border-primary)]">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">JT</div>
+          <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)]">JT</div>
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-200 truncate">Jordan Trader</div>
-            <div className="text-xs text-zinc-500 truncate">Funded Trader</div>
+            <div className="text-sm font-medium text-[var(--text-primary)] truncate">Jordan Trader</div>
+            <div className="text-xs text-[var(--text-muted)] truncate">Funded Trader</div>
           </div>
         </div>
       </div>
     </aside>
-    {mobileOpen && <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
+    {mobileOpen && <div className="fixed inset-0 bg-[var(--bg-primary)]/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
   </>
 );
 
 const TopBar = ({ title, subtitle, onMenu, onLogTrade }) => (
-  <div className="h-16 border-b border-zinc-800 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-zinc-950/90 backdrop-blur z-20">
+  <div className="h-16 border-b border-[var(--border-primary)] flex items-center justify-between px-4 md:px-6 sticky top-0 bg-[var(--bg-primary)]/90 backdrop-blur z-20">
     <div className="flex items-center gap-3">
-      <button className="md:hidden text-zinc-400" onClick={onMenu}><Menu size={22} /></button>
+      <button className="md:hidden text-[var(--text-tertiary)]" onClick={onMenu}><Menu size={22} /></button>
       <div>
-        <h1 className="text-base md:text-lg font-bold text-zinc-100">{title}</h1>
-        {subtitle && <p className="text-xs text-zinc-500 hidden sm:block">{subtitle}</p>}
+        <h1 className="text-base md:text-lg font-bold text-[var(--text-primary)]">{title}</h1>
+        {subtitle && <p className="text-xs text-[var(--text-muted)] hidden sm:block">{subtitle}</p>}
       </div>
     </div>
-    <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-zinc-950 font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
+    <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-[var(--text-inverse)] font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
       <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
     </button>
   </div>
@@ -420,11 +420,11 @@ const TopBar = ({ title, subtitle, onMenu, onLogTrade }) => (
 const Modal = ({ open, onClose, title, children, wide }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
-      <div className={`bg-zinc-900 border border-zinc-800 w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto tj-scrollbar tj-animate-in`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10">
-          <h3 className="font-bold text-zinc-100">{title}</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors"><X size={20} /></button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--bg-primary)]/70 backdrop-blur-sm p-0 sm:p-4">
+      <div className={`bg-[var(--bg-secondary)] border border-[var(--border-primary)] w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto tj-scrollbar tj-animate-in`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-primary)] sticky top-0 bg-[var(--bg-secondary)] z-10">
+          <h3 className="font-bold text-[var(--text-primary)]">{title}</h3>
+          <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={20} /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -435,11 +435,11 @@ const Modal = ({ open, onClose, title, children, wide }) => {
 const Drawer = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm">
-      <div className="bg-zinc-900 border-l border-zinc-800 w-full sm:max-w-md h-full overflow-y-auto tj-scrollbar tj-slide-in">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10">
-          <h3 className="font-bold text-zinc-100">{title}</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors"><X size={20} /></button>
+    <div className="fixed inset-0 z-50 flex justify-end bg-[var(--bg-primary)]/70 backdrop-blur-sm">
+      <div className="bg-[var(--bg-secondary)] border-l border-[var(--border-primary)] w-full sm:max-w-md h-full overflow-y-auto tj-scrollbar tj-slide-in">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-primary)] sticky top-0 bg-[var(--bg-secondary)] z-10">
+          <h3 className="font-bold text-[var(--text-primary)]">{title}</h3>
+          <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={20} /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -449,13 +449,13 @@ const Drawer = ({ open, onClose, title, children }) => {
 
 const Field = ({ label, error, children }) => (
   <div className="mb-4">
-    <label className="block text-xs font-medium text-zinc-400 mb-1.5">{label}</label>
+    <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">{label}</label>
     {children}
     {error && <p className="text-xs text-rose-400 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
   </div>
 );
 
-const inputCls = "w-full bg-zinc-950 border border-zinc-800 focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-[var(--border-primary)] focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
 /* ============================================================
    CREATE CHALLENGE MODAL
@@ -495,7 +495,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
         <Field label="Max Total Loss (%)" error={errors.maxTotalLossPct}><input type="number" className={inputCls} placeholder="10" value={form.maxTotalLossPct} onChange={(e) => set("maxTotalLossPct", e.target.value)} /></Field>
         <Field label="Duration (Days)" error={errors.durationDays}><input type="number" className={inputCls} placeholder="30" value={form.durationDays} onChange={(e) => set("durationDays", e.target.value)} /></Field>
       </div>
-      <button onClick={submit} className="w-full mt-2 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">Create Challenge</button>
+      <button onClick={submit} className="w-full mt-2 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">Create Challenge</button>
     </Modal>
   );
 };
@@ -546,10 +546,10 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         <Field label="Date / Time"><input type="date" className={inputCls} value={form.date} onChange={(e) => set("date", e.target.value)} /></Field>
         <Field label="Asset / Pair" error={errors.asset}><input className={inputCls} placeholder="EURUSD, BTC, NVDA" value={form.asset} onChange={(e) => set("asset", e.target.value)} /></Field>
         <Field label="Direction">
-          <div className="flex rounded-lg overflow-hidden border border-zinc-800">
+          <div className="flex rounded-lg overflow-hidden border border-[var(--border-primary)]">
             {["Long", "Short"].map((d) => (
               <button key={d} type="button" onClick={() => set("direction", d)}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${form.direction === d ? (d === "Long" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400") : "bg-zinc-950 text-zinc-500"}`}>
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${form.direction === d ? (d === "Long" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400") : "bg-[var(--bg-primary)] text-[var(--text-muted)]"}`}>
                 {d}
               </button>
             ))}
@@ -577,16 +577,16 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         </select>
       </Field>
       <Field label="Chart Screenshot (optional)">
-        <label className="flex items-center gap-2 justify-center border border-dashed border-zinc-700 rounded-lg py-3 text-xs text-zinc-500 cursor-pointer hover:border-amber-400/50 hover:text-zinc-300 transition-colors">
+        <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-amber-400/50 hover:text-[var(--text-secondary)] transition-colors">
           <Upload size={14} /> {form.screenshot ? "Replace image" : "Upload chart screenshot"}
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
-        {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-zinc-800 max-h-32 object-cover" />}
+        {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-[var(--border-primary)] max-h-32 object-cover" />}
       </Field>
       <Field label="Trading Psychology Notes">
         <textarea rows={3} className={inputCls} placeholder="How did you feel? Did you follow your plan?" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
       </Field>
-      <button onClick={submit} className="w-full mt-2 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">Save Trade</button>
+      <button onClick={submit} className="w-full mt-2 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">Save Trade</button>
     </Modal>
   );
 };
@@ -631,25 +631,25 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete }) => {
             <span className={`tj-mono text-lg font-bold ${trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{trade.pnl >= 0 ? "+" : ""}{fmtUSD2(trade.pnl)}</span>
           </div>
 
-          {trade.screenshot && <img src={trade.screenshot} alt="chart" className="w-full rounded-lg border border-zinc-800" />}
+          {trade.screenshot && <img src={trade.screenshot} alt="chart" className="w-full rounded-lg border border-[var(--border-primary)]" />}
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[["Entry", trade.entry], ["Exit", trade.exit], ["Lots", trade.lots], ["Fees", fmtUSD2(trade.fees)],
               ["Setup", trade.setup], ["Session", trade.session], ["Holding", `${trade.holdingMinutes || 0} min`], ["Date", trade.date]].map(([k, v]) => (
-              <div key={k} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2">
-                <div className="text-xs text-zinc-500">{k}</div>
-                <div className="tj-mono text-sm text-zinc-200 font-medium">{v}</div>
+              <div key={k} className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2">
+                <div className="text-xs text-[var(--text-muted)]">{k}</div>
+                <div className="tj-mono text-sm text-[var(--text-primary)] font-medium">{v}</div>
               </div>
             ))}
           </div>
 
           <div>
-            <div className="text-xs text-zinc-500 mb-1">Trading Psychology Notes</div>
-            <p className="text-sm text-zinc-300 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 leading-relaxed">{trade.notes || "—"}</p>
+            <div className="text-xs text-[var(--text-muted)] mb-1">Trading Psychology Notes</div>
+            <p className="text-sm text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 leading-relaxed">{trade.notes || "—"}</p>
           </div>
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => setEditing(true)} className="flex-1 flex items-center justify-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">
+            <button onClick={() => setEditing(true)} className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--bg-secondary)] hover:bg-white text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
               <Pencil size={14} /> Edit
             </button>
             <button onClick={() => onDelete(trade.id)} className="flex items-center justify-center gap-1.5 border border-rose-900 text-rose-400 hover:bg-rose-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
@@ -674,16 +674,16 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete }) => {
             <Field label="Holding (min)"><input type="number" className={inputCls} value={form.holdingMinutes} onChange={(e) => set("holdingMinutes", e.target.value)} /></Field>
           </div>
           <Field label="Chart Screenshot">
-            <label className="flex items-center gap-2 justify-center border border-dashed border-zinc-700 rounded-lg py-3 text-xs text-zinc-500 cursor-pointer hover:border-amber-400/50 hover:text-zinc-300 transition-colors">
+            <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-amber-400/50 hover:text-[var(--text-secondary)] transition-colors">
               <ImageIcon size={14} /> {form.screenshot ? "Replace image" : "Upload chart screenshot"}
               <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
             </label>
-            {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-zinc-800 max-h-32 object-cover" />}
+            {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-[var(--border-primary)] max-h-32 object-cover" />}
           </Field>
           <Field label="Notes"><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
           <div className="flex gap-2">
-            <button onClick={save} className="flex-1 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-semibold text-sm py-2.5 rounded-lg transition-all">Save Changes</button>
-            <button onClick={() => setEditing(false)} className="px-4 py-2.5 rounded-lg border border-zinc-800 text-zinc-400 text-sm font-medium hover:text-zinc-100 transition-colors">Cancel</button>
+            <button onClick={save} className="flex-1 bg-amber-400 hover:bg-amber-300 text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">Save Changes</button>
+            <button onClick={() => setEditing(false)} className="px-4 py-2.5 rounded-lg border border-[var(--border-primary)] text-[var(--text-tertiary)] text-sm font-medium hover:text-[var(--text-primary)] transition-colors">Cancel</button>
           </div>
         </div>
       )}
@@ -703,8 +703,8 @@ const equityCurve = (trades) => {
 const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs shadow-xl">
-      <div className="text-zinc-500 mb-1">{label}</div>
+    <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2 text-xs shadow-xl">
+      <div className="text-[var(--text-muted)] mb-1">{label}</div>
       {payload.map((p, i) => (
         <div key={i} className="tj-mono font-semibold" style={{ color: p.color || p.fill }}>{prefix}{typeof p.value === "number" ? p.value.toLocaleString() : p.value}</div>
       ))}
@@ -730,7 +730,7 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
           <div className="flex items-center justify-between mb-4">
-            <div><h3 className="font-bold text-zinc-100 text-sm">Equity Curve</h3><p className="text-xs text-zinc-500">Cumulative net P&L over time</p></div>
+            <div><h3 className="font-bold text-[var(--text-primary)] text-sm">Equity Curve</h3><p className="text-xs text-[var(--text-muted)]">Cumulative net P&L over time</p></div>
             <TrendingUp size={16} className="text-emerald-400" />
           </div>
           {curve.length ? (
@@ -748,17 +748,17 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
         </Card>
 
         <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-zinc-100 text-sm mb-4">Active Challenges</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Active Challenges</h3>
           <div className="space-y-5">
             {challenges.slice(0, 2).map((c) => {
               const s = computeChallengeStats(c, trades);
               return (
-                <div key={c.id} className="pb-4 border-b border-zinc-800 last:border-0 last:pb-0">
+                <div key={c.id} className="pb-4 border-b border-[var(--border-primary)] last:border-0 last:pb-0">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-zinc-200">{c.firm}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{c.firm}</span>
                     <StatusPill status={s.status} />
                   </div>
-                  <div className="flex justify-between text-xs text-zinc-500 mb-1"><span>{fmtUSD(s.currentBalance)}</span><span>Target {fmtUSD(s.targetBalance)}</span></div>
+                  <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1"><span>{fmtUSD(s.currentBalance)}</span><span>Target {fmtUSD(s.targetBalance)}</span></div>
                   <ProgressBar pct={s.progressToTarget} />
                 </div>
               );
@@ -769,23 +769,23 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
       </div>
 
       <Card className="p-4 md:p-5">
-        <h3 className="font-bold text-zinc-100 text-sm mb-4">Recent Trades</h3>
+        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Recent Trades</h3>
         {recent.length ? (
           <div className="overflow-x-auto tj-scrollbar">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
-                <tr className="text-left text-xs text-zinc-500 border-b border-zinc-800">
+                <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)]">
                   <th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Asset</th><th className="pb-2 font-medium">Dir</th>
                   <th className="pb-2 font-medium">Setup</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">P&L</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.map((t) => (
-                  <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-zinc-900 last:border-0 cursor-pointer hover:bg-zinc-800/40 transition-colors">
-                    <td className="py-2.5 text-zinc-400 tj-mono text-xs">{t.date}</td>
-                    <td className="py-2.5 text-zinc-200 font-medium">{t.asset}</td>
+                  <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-[var(--border-primary)] last:border-0 cursor-pointer hover:bg-[var(--bg-tertiary)]/40 transition-colors">
+                    <td className="py-2.5 text-[var(--text-tertiary)] tj-mono text-xs">{t.date}</td>
+                    <td className="py-2.5 text-[var(--text-primary)] font-medium">{t.asset}</td>
                     <td className={`py-2.5 ${t.direction === "Long" ? "text-emerald-400" : "text-rose-400"}`}>{t.direction}</td>
-                    <td className="py-2.5 text-zinc-400">{t.setup}</td>
+                    <td className="py-2.5 text-[var(--text-tertiary)]">{t.setup}</td>
                     <td className="py-2.5"><StatusPill status={t.status} /></td>
                     <td className={`py-2.5 text-right tj-mono font-semibold ${t.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{t.pnl >= 0 ? "+" : ""}{fmtUSD2(t.pnl)}</td>
                   </tr>
@@ -805,29 +805,29 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
 const RuleRow = ({ ok, label, detail }) => (
   <div className="flex items-start gap-2.5 py-2">
     {ok ? <CheckCircle2 size={17} className="text-emerald-400 shrink-0 mt-0.5" /> : <XCircle size={17} className="text-rose-400 shrink-0 mt-0.5" />}
-    <div><div className={`text-sm font-medium ${ok ? "text-zinc-200" : "text-rose-300"}`}>{label}</div><div className="text-xs text-zinc-500">{detail}</div></div>
+    <div><div className={`text-sm font-medium ${ok ? "text-[var(--text-primary)]" : "text-rose-300"}`}>{label}</div><div className="text-xs text-[var(--text-muted)]">{detail}</div></div>
   </div>
 );
 
 const FundedPanel = ({ challenge, stats, onRequestPayout }) => (
-  <div className="mt-4 pt-4 border-t border-zinc-800">
-    <div className="flex items-center gap-2 mb-3"><Banknote size={14} className="text-amber-400" /><h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">Funded Account · Payouts</h4></div>
+  <div className="mt-4 pt-4 border-t border-[var(--border-primary)]">
+    <div className="flex items-center gap-2 mb-3"><Banknote size={14} className="text-amber-400" /><h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Funded Account · Payouts</h4></div>
     <div className="grid grid-cols-2 gap-3 mb-3">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2"><div className="text-xs text-zinc-500">Profit Split</div><div className="tj-mono text-sm font-semibold text-zinc-200">{challenge.profitSplitPct}%</div></div>
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2"><div className="text-xs text-zinc-500">Available Payout</div><div className="tj-mono text-sm font-semibold text-emerald-400">{fmtUSD2(Math.max(0, stats.payoutAmount))}</div></div>
+      <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2"><div className="text-xs text-[var(--text-muted)]">Profit Split</div><div className="tj-mono text-sm font-semibold text-[var(--text-primary)]">{challenge.profitSplitPct}%</div></div>
+      <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2"><div className="text-xs text-[var(--text-muted)]">Available Payout</div><div className="tj-mono text-sm font-semibold text-emerald-400">{fmtUSD2(Math.max(0, stats.payoutAmount))}</div></div>
     </div>
     <button onClick={() => onRequestPayout(challenge.id)} disabled={stats.payoutAmount <= 0}
-      className="w-full flex items-center justify-center gap-1.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-30 disabled:cursor-not-allowed text-zinc-950 font-semibold text-sm py-2 rounded-lg transition-all mb-3">
+      className="w-full flex items-center justify-center gap-1.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-inverse)] font-semibold text-sm py-2 rounded-lg transition-all mb-3">
       <Banknote size={14} /> Request Payout
     </button>
     <div className="space-y-1.5 max-h-32 overflow-y-auto tj-scrollbar">
       {(challenge.payoutHistory || []).slice().reverse().map((p, i) => (
-        <div key={i} className="flex justify-between text-xs bg-zinc-950/60 rounded-lg px-3 py-2">
-          <span className="text-zinc-500">{p.date}</span>
-          <span className="tj-mono text-emerald-400 font-medium">+{fmtUSD2(p.amount)} <span className="text-zinc-600">({p.split}% split)</span></span>
+        <div key={i} className="flex justify-between text-xs bg-[var(--bg-primary)]/60 rounded-lg px-3 py-2">
+          <span className="text-[var(--text-muted)]">{p.date}</span>
+          <span className="tj-mono text-emerald-400 font-medium">+{fmtUSD2(p.amount)} <span className="text-[var(--text-faint)]">({p.split}% split)</span></span>
         </div>
       ))}
-      {(!challenge.payoutHistory || challenge.payoutHistory.length === 0) && <p className="text-xs text-zinc-600">No payouts requested yet.</p>}
+      {(!challenge.payoutHistory || challenge.payoutHistory.length === 0) && <p className="text-xs text-[var(--text-faint)]">No payouts requested yet.</p>}
     </div>
   </div>
 );
@@ -839,28 +839,28 @@ const ChallengeDetailCard = ({ challenge, trades, onDelete, onMarkFunded, onRequ
     <Card className="p-4 md:p-5 tj-animate-in">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="flex items-center gap-2"><h3 className="font-bold text-zinc-100">{challenge.firm}</h3><StatusPill status={s.status} /></div>
-          <p className="text-xs text-zinc-500 mt-0.5">{challenge.phase} · {fmtUSD(challenge.accountSize)} account{!isFunded ? ` · ${s.daysLeft} days left` : ""}</p>
+          <div className="flex items-center gap-2"><h3 className="font-bold text-[var(--text-primary)]">{challenge.firm}</h3><StatusPill status={s.status} /></div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">{challenge.phase} · {fmtUSD(challenge.accountSize)} account{!isFunded ? ` · ${s.daysLeft} days left` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => onExport(challenge, s)} title="Export summary" className="text-zinc-600 hover:text-amber-400 transition-colors"><Download size={16} /></button>
-          <button onClick={() => onDelete(challenge.id)} title="Delete" className="text-zinc-600 hover:text-rose-400 transition-colors"><Trash2 size={16} /></button>
+          <button onClick={() => onExport(challenge, s)} title="Export summary" className="text-[var(--text-faint)] hover:text-amber-400 transition-colors"><Download size={16} /></button>
+          <button onClick={() => onDelete(challenge.id)} title="Delete" className="text-[var(--text-faint)] hover:text-rose-400 transition-colors"><Trash2 size={16} /></button>
         </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4 mb-1">
         {!isFunded && (
           <div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1.5"><span>Balance</span><span className="tj-mono text-zinc-300">{fmtUSD(s.currentBalance)} / {fmtUSD(s.targetBalance)}</span></div>
+            <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1.5"><span>Balance</span><span className="tj-mono text-[var(--text-secondary)]">{fmtUSD(s.currentBalance)} / {fmtUSD(s.targetBalance)}</span></div>
             <ProgressBar pct={s.progressToTarget} color="bg-amber-400" />
-            <div className="text-xs text-zinc-500 mt-1">{s.progressToTarget.toFixed(1)}% to profit target</div>
+            <div className="text-xs text-[var(--text-muted)] mt-1">{s.progressToTarget.toFixed(1)}% to profit target</div>
           </div>
         )}
         {isFunded && (
           <div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1.5"><span>Account Balance</span><span className="tj-mono text-zinc-300">{fmtUSD(s.currentBalance)}</span></div>
+            <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1.5"><span>Account Balance</span><span className="tj-mono text-[var(--text-secondary)]">{fmtUSD(s.currentBalance)}</span></div>
             <div className="text-lg tj-mono font-bold text-emerald-400">{s.netPnl >= 0 ? "+" : ""}{fmtUSD2(s.netPnl)}</div>
-            <div className="text-xs text-zinc-500 mt-1">net profit since funding</div>
+            <div className="text-xs text-[var(--text-muted)] mt-1">net profit since funding</div>
           </div>
         )}
         <div className="space-y-3">
@@ -870,8 +870,8 @@ const ChallengeDetailCard = ({ challenge, trades, onDelete, onMarkFunded, onRequ
       </div>
 
       {!isFunded && (
-        <div className="border-t border-zinc-800 pt-2 mt-3">
-          <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">Rules Monitor</h4>
+        <div className="border-t border-[var(--border-primary)] pt-2 mt-3">
+          <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Rules Monitor</h4>
           <RuleRow ok={s.targetReached} label="Profit Target Reached" detail={s.targetReached ? "Target achieved — eligible to progress." : `${fmtUSD(s.targetBalance - s.currentBalance)} remaining to target.`} />
           <RuleRow ok={!s.dailyLossBreached} label="Daily Loss Limit Safe" detail={s.dailyLossBreached ? "Daily loss limit breached on worst trading day." : "No single day has exceeded the daily loss limit."} />
           <RuleRow ok={!s.totalLossBreached} label="Max Total Loss Safe" detail={s.totalLossBreached ? "Account drawdown breached the max total loss floor." : `${(100 - s.totalDrawdownUsed).toFixed(0)}% of drawdown buffer remaining.`} />
@@ -898,7 +898,7 @@ const ComparisonTable = ({ challenges, trades }) => {
       <div className="overflow-x-auto tj-scrollbar">
         <table className="w-full text-sm min-w-[760px]">
           <thead>
-            <tr className="text-left text-xs text-zinc-500 bg-zinc-950/60 border-b border-zinc-800">
+            <tr className="text-left text-xs text-[var(--text-muted)] bg-[var(--bg-primary)]/60 border-b border-[var(--border-primary)]">
               <th className="px-4 py-3 font-medium">Firm</th><th className="px-4 py-3 font-medium">Stage</th>
               <th className="px-4 py-3 font-medium">Balance</th><th className="px-4 py-3 font-medium">Progress</th>
               <th className="px-4 py-3 font-medium">Daily Loss Used</th><th className="px-4 py-3 font-medium">Total Loss Used</th>
@@ -907,14 +907,14 @@ const ComparisonTable = ({ challenges, trades }) => {
           </thead>
           <tbody>
             {rows.map(({ c, s }) => (
-              <tr key={c.id} className="border-b border-zinc-900 last:border-0">
-                <td className="px-4 py-3 font-medium text-zinc-200">{c.firm}</td>
-                <td className="px-4 py-3 text-zinc-400">{c.phase}</td>
-                <td className="px-4 py-3 tj-mono text-zinc-300">{fmtUSD(s.currentBalance)}</td>
-                <td className="px-4 py-3 tj-mono text-zinc-300">{c.stage === "funded" ? "—" : `${s.progressToTarget.toFixed(0)}%`}</td>
-                <td className={`px-4 py-3 tj-mono ${s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? "text-amber-400 font-semibold" : "text-zinc-400"}`}>{s.dailyLossUsed.toFixed(0)}%{s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? " · tightest" : ""}</td>
-                <td className={`px-4 py-3 tj-mono ${s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? "text-amber-400 font-semibold" : "text-zinc-400"}`}>{s.totalDrawdownUsed.toFixed(0)}%{s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? " · tightest" : ""}</td>
-                <td className="px-4 py-3 tj-mono text-zinc-400">{c.stage === "funded" ? "∞" : s.daysLeft}</td>
+              <tr key={c.id} className="border-b border-[var(--border-primary)] last:border-0">
+                <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{c.firm}</td>
+                <td className="px-4 py-3 text-[var(--text-tertiary)]">{c.phase}</td>
+                <td className="px-4 py-3 tj-mono text-[var(--text-secondary)]">{fmtUSD(s.currentBalance)}</td>
+                <td className="px-4 py-3 tj-mono text-[var(--text-secondary)]">{c.stage === "funded" ? "—" : `${s.progressToTarget.toFixed(0)}%`}</td>
+                <td className={`px-4 py-3 tj-mono ${s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? "text-amber-400 font-semibold" : "text-[var(--text-tertiary)]"}`}>{s.dailyLossUsed.toFixed(0)}%{s.dailyLossUsed === tightestDaily && tightestDaily > 40 ? " · tightest" : ""}</td>
+                <td className={`px-4 py-3 tj-mono ${s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? "text-amber-400 font-semibold" : "text-[var(--text-tertiary)]"}`}>{s.totalDrawdownUsed.toFixed(0)}%{s.totalDrawdownUsed === tightestTotal && tightestTotal > 40 ? " · tightest" : ""}</td>
+                <td className="px-4 py-3 tj-mono text-[var(--text-tertiary)]">{c.stage === "funded" ? "∞" : s.daysLeft}</td>
                 <td className="px-4 py-3"><StatusPill status={s.status} /></td>
               </tr>
             ))}
@@ -939,13 +939,13 @@ const ChallengesPage = ({ challenges, trades, onCreate, onDelete, onMarkFunded, 
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-zinc-500">Track funding evaluations, live rule compliance, and payouts.</p>
+        <p className="text-sm text-[var(--text-muted)]">Track funding evaluations, live rule compliance, and payouts.</p>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-zinc-800 overflow-hidden">
-            <button onClick={() => setView("cards")} className={`p-2 ${view === "cards" ? "bg-zinc-800 text-amber-400" : "text-zinc-500"}`} title="Card view"><LayoutGrid size={15} /></button>
-            <button onClick={() => setView("compare")} className={`p-2 ${view === "compare" ? "bg-zinc-800 text-amber-400" : "text-zinc-500"}`} title="Compare view"><Table2 size={15} /></button>
+          <div className="flex rounded-lg border border-[var(--border-primary)] overflow-hidden">
+            <button onClick={() => setView("cards")} className={`p-2 ${view === "cards" ? "bg-[var(--bg-tertiary)] text-amber-400" : "text-[var(--text-muted)]"}`} title="Card view"><LayoutGrid size={15} /></button>
+            <button onClick={() => setView("compare")} className={`p-2 ${view === "compare" ? "bg-[var(--bg-tertiary)] text-amber-400" : "text-[var(--text-muted)]"}`} title="Compare view"><Table2 size={15} /></button>
           </div>
-          <button onClick={() => setModalOpen(true)} className="flex items-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95">
+          <button onClick={() => setModalOpen(true)} className="flex items-center gap-1.5 bg-[var(--bg-secondary)] hover:bg-white text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95">
             <Plus size={16} strokeWidth={2.5} /> New Challenge
           </button>
         </div>
@@ -973,8 +973,8 @@ const ChallengesPage = ({ challenges, trades, onCreate, onDelete, onMarkFunded, 
 const PAGE_SIZE = 8;
 
 const SortHeader = ({ label, sortKey, sortConfig, onSort }) => (
-  <th className="px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-300 transition-colors" onClick={() => onSort(sortKey)}>
-    <span className="flex items-center gap-1">{label}<ArrowUpDown size={11} className={sortConfig.key === sortKey ? "text-amber-400" : "text-zinc-700"} /></span>
+  <th className="px-4 py-3 font-medium cursor-pointer select-none hover:text-[var(--text-secondary)] transition-colors" onClick={() => onSort(sortKey)}>
+    <span className="flex items-center gap-1">{label}<ArrowUpDown size={11} className={sortConfig.key === sortKey ? "text-amber-400" : "text-[var(--text-faint)]"} /></span>
   </th>
 );
 
@@ -1013,15 +1013,15 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
     <div className="p-4 md:p-6 space-y-4">
       <Card className="p-3 md:p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 flex-1 min-w-[160px]">
-            <Search size={14} className="text-zinc-500" />
-            <input placeholder="Search asset..." className="bg-transparent outline-none text-sm text-zinc-200 placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
+          <div className="flex items-center gap-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-1.5 flex-1 min-w-[160px]">
+            <Search size={14} className="text-[var(--text-muted)]" />
+            <input placeholder="Search asset..." className="bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
           </div>
-          <select className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option>{ASSETS.map((a) => <option key={a}>{a}</option>)}</select>
-          <select className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{SETUPS.map((s) => <option key={s}>{s}</option>)}</select>
-          <select className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-300" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
-          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> Export CSV</button>
-          <div className="flex items-center gap-1 text-xs text-zinc-500 ml-auto"><Filter size={12} /> {filtered.length} trades</div>
+          <select className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option>{ASSETS.map((a) => <option key={a}>{a}</option>)}</select>
+          <select className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{SETUPS.map((s) => <option key={s}>{s}</option>)}</select>
+          <select className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
+          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> Export CSV</button>
+          <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] ml-auto"><Filter size={12} /> {filtered.length} trades</div>
         </div>
       </Card>
 
@@ -1033,7 +1033,7 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
             <div className="overflow-x-auto tj-scrollbar">
               <table className="w-full text-sm min-w-[860px]">
                 <thead>
-                  <tr className="text-left text-xs text-zinc-500 bg-zinc-950/60 border-b border-zinc-800">
+                  <tr className="text-left text-xs text-[var(--text-muted)] bg-[var(--bg-primary)]/60 border-b border-[var(--border-primary)]">
                     <SortHeader label="Date" sortKey="date" sortConfig={sortConfig} onSort={onSort} />
                     <SortHeader label="Asset" sortKey="asset" sortConfig={sortConfig} onSort={onSort} />
                     <th className="px-4 py-3 font-medium">Dir</th>
@@ -1048,30 +1048,30 @@ const JournalPage = ({ trades, onDelete, onOpenTrade }) => {
                 </thead>
                 <tbody>
                   {pageData.map((t) => (
-                    <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-zinc-900 hover:bg-zinc-900/40 transition-colors group cursor-pointer">
-                      <td className="px-4 py-3 tj-mono text-xs text-zinc-400">{t.date}</td>
-                      <td className="px-4 py-3 font-medium text-zinc-200">{t.asset}</td>
+                    <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-secondary)]/40 transition-colors group cursor-pointer">
+                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.date}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{t.asset}</td>
                       <td className="px-4 py-3"><span className={`flex items-center gap-1 text-xs font-medium ${t.direction === "Long" ? "text-emerald-400" : "text-rose-400"}`}>{t.direction === "Long" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />} {t.direction}</span></td>
-                      <td className="px-4 py-3 tj-mono text-xs text-zinc-400">{t.entry}</td>
-                      <td className="px-4 py-3 tj-mono text-xs text-zinc-400">{t.exit}</td>
-                      <td className="px-4 py-3 text-zinc-400">{t.setup}</td>
-                      <td className="px-4 py-3 text-zinc-500">{t.session}</td>
+                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.entry}</td>
+                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.exit}</td>
+                      <td className="px-4 py-3 text-[var(--text-tertiary)]">{t.setup}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{t.session}</td>
                       <td className="px-4 py-3"><StatusPill status={t.status} /></td>
                       <td className={`px-4 py-3 text-right tj-mono font-semibold ${t.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{t.pnl >= 0 ? "+" : ""}{fmtUSD2(t.pnl)}</td>
                       <td className="px-4 py-3">
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} className="opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
                       </td>
                     </tr>
                   ))}
-                  {pageData.length === 0 && <tr><td colSpan={10} className="text-center py-10 text-zinc-500 text-sm">No trades match these filters.</td></tr>}
+                  {pageData.length === 0 && <tr><td colSpan={10} className="text-center py-10 text-[var(--text-muted)] text-sm">No trades match these filters.</td></tr>}
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
-              <span className="text-xs text-zinc-500">Page {page} of {totalPages}</span>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border-primary)]">
+              <span className="text-xs text-[var(--text-muted)]">Page {page} of {totalPages}</span>
               <div className="flex gap-2">
-                <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="p-1.5 rounded-lg border border-zinc-800 disabled:opacity-30 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronLeft size={15} /></button>
-                <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)} className="p-1.5 rounded-lg border border-zinc-800 disabled:opacity-30 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronRight size={15} /></button>
+                <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="p-1.5 rounded-lg border border-[var(--border-primary)] disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronLeft size={15} /></button>
+                <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)} className="p-1.5 rounded-lg border border-[var(--border-primary)] disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronRight size={15} /></button>
               </div>
             </div>
           </>
@@ -1109,8 +1109,8 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const cellColor = (pnl) => {
-    if (pnl === undefined) return "bg-zinc-900/60";
-    if (pnl === 0) return "bg-zinc-800";
+    if (pnl === undefined) return "bg-[var(--bg-secondary)]/60";
+    if (pnl === 0) return "bg-[var(--bg-tertiary)]";
     const intensity = clamp(Math.abs(pnl) / maxAbs, 0.15, 1);
     return pnl > 0 ? `bg-emerald-500` : `bg-rose-500`;
   };
@@ -1124,17 +1124,17 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
       <Card className="p-4 md:p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="font-bold text-zinc-100">{monthLabel}</h3>
+            <h3 className="font-bold text-[var(--text-primary)]">{monthLabel}</h3>
             <p className={`text-xs tj-mono ${monthTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{monthTotal >= 0 ? "+" : ""}{fmtUSD2(monthTotal)} net this month</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="p-1.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronLeft size={15} /></button>
-            <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="p-1.5 rounded-lg border border-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronRight size={15} /></button>
+            <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="p-1.5 rounded-lg border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronLeft size={15} /></button>
+            <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="p-1.5 rounded-lg border border-[var(--border-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronRight size={15} /></button>
           </div>
         </div>
 
         <div className="grid grid-cols-7 gap-1.5 mb-1.5">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="text-center text-xs text-zinc-500 font-medium py-1">{d}</div>)}
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="text-center text-xs text-[var(--text-muted)] font-medium py-1">{d}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-1.5">
           {cells.map((d, i) => {
@@ -1143,19 +1143,19 @@ const CalendarPage = ({ trades, onOpenTrade }) => {
             const info = byDay[dateStr];
             return (
               <button key={i} onClick={() => info?.trades?.[0] && onOpenTrade(info.trades[0])}
-                className={`aspect-square rounded-lg border border-zinc-800/60 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-zinc-900/40"}`}
+                className={`aspect-square rounded-lg border border-[var(--border-primary)]/60 flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-[var(--bg-secondary)]/40"}`}
                 style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
-                <span className="text-[11px] text-zinc-300 font-medium">{d}</span>
-                {info && <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+" : ""}{Math.round(info.pnl)}</span>}
+                <span className="text-[11px] text-[var(--text-secondary)] font-medium">{d}</span>
+                {info && <span className="text-[10px] tj-mono text-[var(--text-primary)] font-semibold">{info.pnl >= 0 ? "+" : ""}{Math.round(info.pnl)}</span>}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-4 mt-5 text-xs text-zinc-500">
+        <div className="flex items-center gap-4 mt-5 text-xs text-[var(--text-muted)]">
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500" /> Profitable day</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-rose-500" /> Losing day</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-zinc-800" /> No trades</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[var(--bg-tertiary)]" /> No trades</span>
         </div>
       </Card>
     </div>
@@ -1211,30 +1211,30 @@ const AnalyticsPage = ({ trades }) => {
       </div>
 
       <Card className="p-4 md:p-5">
-        <div className="flex items-center gap-2 mb-4"><Award size={15} className="text-amber-400" /><h3 className="font-bold text-zinc-100 text-sm">Discipline & Streaks</h3></div>
+        <div className="flex items-center gap-2 mb-4"><Award size={15} className="text-amber-400" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Discipline & Streaks</h3></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5">
-            <div className="text-xs text-zinc-500">Current Streak</div>
+          <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5">
+            <div className="text-xs text-[var(--text-muted)]">Current Streak</div>
             <div className={`tj-mono text-lg font-bold ${streaks.currentType === "Win" ? "text-emerald-400" : "text-rose-400"}`}>{streaks.currentCount} {streaks.currentType || "—"}{streaks.currentCount === 1 ? "" : "s"}</div>
           </div>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5">
-            <div className="text-xs text-zinc-500">Longest Win Streak</div>
+          <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5">
+            <div className="text-xs text-[var(--text-muted)]">Longest Win Streak</div>
             <div className="tj-mono text-lg font-bold text-emerald-400">{streaks.longestWin}</div>
           </div>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5">
-            <div className="text-xs text-zinc-500 flex items-center gap-1"><Clock size={11} /> Avg Holding Time</div>
-            <div className="tj-mono text-lg font-bold text-zinc-200">{Math.round(streaks.avgHold)}m</div>
+          <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5">
+            <div className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Clock size={11} /> Avg Holding Time</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{Math.round(streaks.avgHold)}m</div>
           </div>
-          <div className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5">
-            <div className="text-xs text-zinc-500">Days Since Last Loss</div>
-            <div className="tj-mono text-lg font-bold text-zinc-200">{streaks.daysSinceLastLoss ?? "—"}</div>
+          <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5">
+            <div className="text-xs text-[var(--text-muted)]">Days Since Last Loss</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{streaks.daysSinceLastLoss ?? "—"}</div>
           </div>
         </div>
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
         <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-zinc-100 text-sm mb-4">Win / Loss Ratio</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Win / Loss Ratio</h3>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={winLossData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3}>
@@ -1247,7 +1247,7 @@ const AnalyticsPage = ({ trades }) => {
         </Card>
 
         <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-zinc-100 text-sm mb-4">Most Profitable Assets</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Most Profitable Assets</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={byAsset} layout="vertical" margin={{ left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
@@ -1260,7 +1260,7 @@ const AnalyticsPage = ({ trades }) => {
         </Card>
 
         <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-zinc-100 text-sm mb-4">Performance by Day of Week</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Performance by Day of Week</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byDow}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -1273,7 +1273,7 @@ const AnalyticsPage = ({ trades }) => {
         </Card>
 
         <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-zinc-100 text-sm mb-4">Performance by Session</h3>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Performance by Session</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={bySession}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -1301,8 +1301,8 @@ const SettingsPage = ({ settings, onSave }) => {
   return (
     <div className="p-4 md:p-6 max-w-xl">
       <Card className="p-5">
-        <h3 className="font-bold text-zinc-100 text-sm mb-1">Preferences</h3>
-        <p className="text-xs text-zinc-500 mb-5">These scaffold future personalization once connected to a database.</p>
+        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Preferences</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-5">These scaffold future personalization once connected to a database.</p>
         <Field label="Display Currency">
           <select className={inputCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select>
         </Field>
@@ -1317,7 +1317,7 @@ const SettingsPage = ({ settings, onSave }) => {
         <Field label="Minimum Trading Days (new challenges)">
           <input type="number" className={inputCls} value={form.minTradingDays} onChange={(e) => set("minTradingDays", e.target.value)} />
         </Field>
-        <button onClick={save} className="bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-zinc-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">Save Preferences</button>
+        <button onClick={save} className="bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">Save Preferences</button>
       </Card>
     </div>
   );
@@ -1372,7 +1372,7 @@ export default function App() {
 
   return (
     <ToastContext.Provider value={addToast}>
-      <div className="tj-root min-h-screen bg-zinc-950 text-zinc-100 flex">
+      <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex">
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
         <div className="flex-1 min-w-0 flex flex-col">

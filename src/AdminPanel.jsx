@@ -12,7 +12,7 @@ import {
 import AdminBadge from "./AdminBadge";
 import { BADGE_CATALOG, badgeFromKey } from "./Badges";
 
-const inputCls = "w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors";
+const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
 const Card = ({ className = "", children, ...rest }) => (
   <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`} {...rest}>{children}</div>
@@ -57,17 +57,17 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
       {u.avatar_url ? (
         <img src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
       ) : (
-        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300 shrink-0">
+        <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)] shrink-0">
           {(u.username || "?")[0].toUpperCase()}
         </div>
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-semibold text-zinc-100 truncate">{u.username || "Unknown"}</span>
+          <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{u.username || "Unknown"}</span>
           {u.is_admin && <AdminBadge />}
           <StatusPill user={u} />
         </div>
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-[var(--text-muted)]">
           Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
           {u.is_banned && u.ban_reason ? ` · Reason: ${u.ban_reason}` : ""}
           {isTimedOut ? ` · Until ${new Date(u.timeout_until).toLocaleString()}` : ""}
@@ -75,11 +75,11 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
       </div>
 
       {isSelf ? (
-        <span className="text-xs text-zinc-600 shrink-0">This is you</span>
+        <span className="text-xs text-[var(--text-faint)] shrink-0">This is you</span>
       ) : (
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
           <button onClick={() => onPromote(u)} disabled={busy}
-            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_admin ? "text-zinc-400 hover:text-zinc-200 bg-white/[0.06] hover:bg-white/[0.1]" : "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15"}`}>
+            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_admin ? "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1]" : "text-[var(--accent)] hover:text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"}`}>
             {u.is_admin ? <ShieldOff size={12} /> : <ShieldCheck size={12} />} {u.is_admin ? "Demote" : "Make Admin"}
           </button>
 
@@ -89,10 +89,10 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
               <Clock size={12} /> {isTimedOut ? "Update Timeout" : "Timeout"}
             </button>
             {timeoutMenuOpen && (
-              <div className="absolute right-0 mt-1 w-40 bg-zinc-800 border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
+              <div className="absolute right-0 mt-1 w-40 bg-[var(--bg-tertiary)] border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
                 {TIMEOUT_OPTIONS.map((opt) => (
                   <button key={opt.label} onClick={() => { onTimeout(u, opt.ms); setTimeoutMenuOpen(false); }}
-                    className="w-full text-left px-3 py-2 text-xs text-zinc-200 hover:bg-white/[0.06] transition-colors">
+                    className="w-full text-left px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
                     {opt.label}
                   </button>
                 ))}
@@ -167,23 +167,23 @@ const BadgeManagerRow = ({ u, notify }) => {
     <Card className="p-3">
       <button onClick={toggleOpen} className="w-full flex items-center justify-between text-left">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-zinc-100">{u.username}</span>
+          <span className="text-sm font-medium text-[var(--text-primary)]">{u.username}</span>
           {u.is_admin && <AdminBadge size="sm" />}
           {granted && granted.size > 0 && (
-            <span className="text-xs text-zinc-500">({granted.size} badge{granted.size === 1 ? "" : "s"})</span>
+            <span className="text-xs text-[var(--text-muted)]">({granted.size} badge{granted.size === 1 ? "" : "s"})</span>
           )}
         </div>
-        <span className="text-xs text-zinc-500">{open ? "Hide" : "Manage badges"}</span>
+        <span className="text-xs text-[var(--text-muted)]">{open ? "Hide" : "Manage badges"}</span>
       </button>
 
       {open && (
         loading || granted === null ? (
-          <div className="flex justify-center py-6"><Loader2 size={16} className="text-blue-500 animate-spin" /></div>
+          <div className="flex justify-center py-6"><Loader2 size={16} className="text-[var(--accent)] animate-spin" /></div>
         ) : (
           <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
             {BADGE_GROUPS.map((group) => (
               <div key={group}>
-                <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">{group}</div>
+                <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">{group}</div>
                 <div className="flex flex-wrap gap-1.5">
                   {BADGE_CATALOG.filter((b) => b.group === group).map((b) => {
                     const Icon = b.icon;
@@ -193,8 +193,8 @@ const BadgeManagerRow = ({ u, notify }) => {
                         title={isGranted ? `Revoke ${b.label}` : `Grant ${b.label}`}
                         className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors disabled:opacity-40 ${
                           isGranted
-                            ? "bg-blue-500/15 text-blue-300 border-blue-500/40 hover:bg-blue-500/25"
-                            : "bg-white/[0.03] text-zinc-400 border-white/10 hover:bg-white/[0.08] hover:text-zinc-200"
+                            ? "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/40 hover:bg-[var(--accent)]/25"
+                            : "bg-white/[0.03] text-[var(--text-tertiary)] border-white/10 hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
                         }`}>
                         {busyKey === b.id ? <Loader2 size={11} className="animate-spin" /> : <Icon size={11} />} {b.label}
                       </button>
@@ -382,27 +382,27 @@ export default function AdminPanel({ session, profile, toast }) {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <p className="text-sm text-zinc-500">Manage users and moderate community content.</p>
+      <p className="text-sm text-[var(--text-muted)]">Manage users and moderate community content.</p>
 
       <div className="flex items-center gap-1 bg-white/[0.03] border border-white/10 rounded-lg p-1 w-fit">
         <button onClick={() => setTab("users")}
-          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "users" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "users" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <Users size={14} /> Users
         </button>
         <button onClick={() => setTab("content")}
-          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "content" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "content" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <MessagesSquare size={14} /> Content
         </button>
         <button onClick={() => setTab("badges")}
-          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "badges" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "badges" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <Star size={14} /> Badges
         </button>
         <button onClick={() => setTab("spotlight")}
-          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "spotlight" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "spotlight" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <Star size={14} /> Spotlight{spotlights.length > 0 ? ` (${spotlights.length})` : ""}
         </button>
         <button onClick={() => setTab("audit")}
-          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "audit" ? "bg-blue-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}>
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "audit" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <ScrollText size={14} /> Audit Log
         </button>
       </div>
@@ -412,13 +412,13 @@ export default function AdminPanel({ session, profile, toast }) {
       {tab === "users" && (
         <div className="space-y-3">
           <div className="relative w-full sm:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input className={`${inputCls} pl-8`} placeholder="Search users..." value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
           {usersLoading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : filteredUsers.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-500">No users found.</Card>
+            <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No users found.</Card>
           ) : (
             <div className="space-y-2">
               {filteredUsers.map((u) => (
@@ -433,15 +433,15 @@ export default function AdminPanel({ session, profile, toast }) {
 
       {tab === "badges" && (
         <div className="space-y-3">
-          <p className="text-xs text-zinc-500">Grant or revoke badges for any member. They'll show on the member's profile and public card, and the member gets notified when granted.</p>
+          <p className="text-xs text-[var(--text-muted)]">Grant or revoke badges for any member. They'll show on the member's profile and public card, and the member gets notified when granted.</p>
           <div className="relative w-full sm:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input className={`${inputCls} pl-8`} placeholder="Search users..." value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
           {usersLoading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : filteredUsers.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-500">No users found.</Card>
+            <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No users found.</Card>
           ) : (
             <div className="space-y-2">
               {filteredUsers.map((u) => <BadgeManagerRow key={u.id} u={u} notify={notify} />)}
@@ -453,26 +453,26 @@ export default function AdminPanel({ session, profile, toast }) {
       {tab === "content" && (
         <div className="space-y-5">
           <div className="relative w-full sm:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input className={`${inputCls} pl-8`} placeholder="Search posts & messages..." value={contentQuery} onChange={(e) => setContentQuery(e.target.value)} />
           </div>
 
           {contentLoading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : (
             <>
               <div>
-                <h3 className="text-sm font-semibold text-zinc-400 mb-2 flex items-center gap-1.5"><MessagesSquare size={14} /> Community Posts</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-tertiary)] mb-2 flex items-center gap-1.5"><MessagesSquare size={14} /> Community Posts</h3>
                 {filteredPosts.length === 0 ? (
-                  <Card className="p-6 text-center text-sm text-zinc-500">No posts found.</Card>
+                  <Card className="p-6 text-center text-sm text-[var(--text-muted)]">No posts found.</Card>
                 ) : (
                   <div className="space-y-2">
                     {filteredPosts.map((p) => (
                       <Card key={p.id} className="p-3.5 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-zinc-100 truncate">{p.title}</div>
-                          <div className="text-xs text-zinc-500 truncate">{p.username} · {timeAgo(p.created_at)}</div>
-                          <p className="text-xs text-zinc-400 line-clamp-2 mt-1">{p.body}</p>
+                          <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{p.title}</div>
+                          <div className="text-xs text-[var(--text-muted)] truncate">{p.username} · {timeAgo(p.created_at)}</div>
+                          <p className="text-xs text-[var(--text-tertiary)] line-clamp-2 mt-1">{p.body}</p>
                         </div>
                         <button onClick={() => handleDeletePost(p.id)} disabled={busyId === `post-${p.id}`}
                           className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 transition-colors shrink-0 disabled:opacity-40">
@@ -485,16 +485,16 @@ export default function AdminPanel({ session, profile, toast }) {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-zinc-400 mb-2 flex items-center gap-1.5"><Radio size={14} /> Live Chat</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-tertiary)] mb-2 flex items-center gap-1.5"><Radio size={14} /> Live Chat</h3>
                 {filteredChat.length === 0 ? (
-                  <Card className="p-6 text-center text-sm text-zinc-500">No messages found.</Card>
+                  <Card className="p-6 text-center text-sm text-[var(--text-muted)]">No messages found.</Card>
                 ) : (
                   <div className="space-y-2 max-h-[420px] overflow-y-auto">
                     {filteredChat.slice().reverse().map((m) => (
                       <Card key={m.id} className="p-3 flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-xs text-zinc-500">{m.username} · {timeAgo(m.created_at)}</div>
-                          <p className="text-sm text-zinc-300 truncate">{m.body}</p>
+                          <div className="text-xs text-[var(--text-muted)]">{m.username} · {timeAgo(m.created_at)}</div>
+                          <p className="text-sm text-[var(--text-secondary)] truncate">{m.body}</p>
                         </div>
                         <button onClick={() => handleDeleteChatMsg(m.id)} disabled={busyId === `chat-${m.id}`}
                           className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 transition-colors shrink-0 disabled:opacity-40">
@@ -513,30 +513,30 @@ export default function AdminPanel({ session, profile, toast }) {
       {tab === "spotlight" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs text-zinc-500 flex-1">Traders submit journaled trades from their Trade Journal. Approving one pins it to the top of the Community forum, replacing any currently active spotlight.</p>
+            <p className="text-xs text-[var(--text-muted)] flex-1">Traders submit journaled trades from their Trade Journal. Approving one pins it to the top of the Community forum, replacing any currently active spotlight.</p>
             <button onClick={handleBroadcastLeaderboardReset} disabled={busyId === "leaderboard-reset"}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-zinc-300 hover:text-zinc-100 bg-white/[0.06] hover:bg-white/[0.1] transition-colors disabled:opacity-40 whitespace-nowrap">
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1] transition-colors disabled:opacity-40 whitespace-nowrap">
               {busyId === "leaderboard-reset" ? <Loader2 size={12} className="animate-spin" /> : <Radio size={12} />} Notify: Leaderboard Reset
             </button>
           </div>
           {spotlightsLoading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : spotlights.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-500">No pending submissions.</Card>
+            <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No pending submissions.</Card>
           ) : (
             <div className="space-y-2">
               {spotlights.map((s) => (
                 <Card key={s.id} className="p-4">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-zinc-100">
+                      <div className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
                         <span className="font-semibold">{s.username}</span>
-                        <span className="text-zinc-600">·</span>
+                        <span className="text-[var(--text-faint)]">·</span>
                         <span>{s.asset}</span>
                         <span className={s.direction === "Long" ? "text-emerald-400" : "text-rose-400"}>{s.direction}</span>
                       </div>
-                      {s.notes && <p className="text-sm text-zinc-400 mt-1">{s.notes}</p>}
-                      <div className="text-xs text-zinc-500 mt-1">Submitted {timeAgo(s.submitted_at)}</div>
+                      {s.notes && <p className="text-sm text-[var(--text-tertiary)] mt-1">{s.notes}</p>}
+                      <div className="text-xs text-[var(--text-muted)] mt-1">Submitted {timeAgo(s.submitted_at)}</div>
                     </div>
                     <span className={`text-sm font-bold ${s.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {s.pnl >= 0 ? "+" : ""}{Number(s.pnl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
@@ -562,30 +562,30 @@ export default function AdminPanel({ session, profile, toast }) {
 
       {tab === "audit" && (
         <div className="space-y-3">
-          <p className="text-xs text-zinc-500">Every ban, timeout, admin grant, deletion, and broadcast performed from this panel, most recent first.</p>
+          <p className="text-xs text-[var(--text-muted)]">Every ban, timeout, admin grant, deletion, and broadcast performed from this panel, most recent first.</p>
           {auditLoading ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : auditLog.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-500">No actions logged yet.</Card>
+            <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No actions logged yet.</Card>
           ) : (
             <div className="space-y-2 max-h-[560px] overflow-y-auto tj-scrollbar">
               {auditLog.map((entry) => (
                 <Card key={entry.id} className="p-3 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0 mt-0.5">
                     <ScrollText size={13} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm text-zinc-200">
+                    <div className="text-sm text-[var(--text-primary)]">
                       <span className="font-semibold">{entry.actor_username || "Unknown admin"}</span>{" "}
-                      <span className="text-zinc-400">{(entry.action || "").replace(/_/g, " ")}</span>
-                      {entry.target_type ? <span className="text-zinc-500"> · {entry.target_type.replace(/_/g, " ")}</span> : null}
+                      <span className="text-[var(--text-tertiary)]">{(entry.action || "").replace(/_/g, " ")}</span>
+                      {entry.target_type ? <span className="text-[var(--text-muted)]"> · {entry.target_type.replace(/_/g, " ")}</span> : null}
                     </div>
                     {entry.details && Object.keys(entry.details).length > 0 && (
-                      <div className="text-xs text-zinc-500 mt-0.5 truncate">
+                      <div className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                         {Object.entries(entry.details).map(([k, v]) => `${k}: ${v}`).join(" · ")}
                       </div>
                     )}
-                    <div className="text-[11px] text-zinc-600 mt-1">{timeAgo(entry.created_at)}</div>
+                    <div className="text-[11px] text-[var(--text-faint)] mt-1">{timeAgo(entry.created_at)}</div>
                   </div>
                 </Card>
               ))}

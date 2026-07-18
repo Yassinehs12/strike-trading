@@ -99,14 +99,14 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
     if (friendship === null) {
       return (
         <button onClick={handleAddFriend} disabled={friendActionLoading}
-          className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-zinc-950 font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
+          className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
           {friendActionLoading ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />} Add Friend
         </button>
       );
     }
     if (friendship.status === "pending" && friendship.requester_id === currentUserId) {
       return (
-        <button disabled className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-400 font-semibold text-sm px-3.5 py-2 rounded-lg">
+        <button disabled className="flex items-center gap-1.5 bg-white/[0.06] text-[var(--text-tertiary)] font-semibold text-sm px-3.5 py-2 rounded-lg">
           <Clock size={14} /> Request Sent
         </button>
       );
@@ -114,13 +114,13 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
     if (friendship.status === "pending" && friendship.addressee_id === currentUserId) {
       return (
         <button onClick={handleAccept} disabled={friendActionLoading}
-          className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-zinc-950 font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
+          className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
           {friendActionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Accept Request
         </button>
       );
     }
     return (
-      <button disabled className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-400 font-semibold text-sm px-3.5 py-2 rounded-lg">
+      <button disabled className="flex items-center gap-1.5 bg-white/[0.06] text-[var(--text-tertiary)] font-semibold text-sm px-3.5 py-2 rounded-lg">
         <Check size={14} /> Friends
       </button>
     );
@@ -128,15 +128,15 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
-        <div className="bg-zinc-900 border border-white/10 w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--bg-primary)]/70 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
+        <div className="bg-[var(--bg-secondary)] border border-white/10 w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between px-4 pt-4">
             {!isOwnProfile && profile ? (
               <div className="relative">
-                <button onClick={() => setMenuOpen((o) => !o)} className="text-zinc-500 hover:text-zinc-200"><MoreVertical size={18} /></button>
+                <button onClick={() => setMenuOpen((o) => !o)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"><MoreVertical size={18} /></button>
                 {menuOpen && (
-                  <div className="absolute left-0 mt-1 w-44 bg-zinc-800 border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
-                    <button onClick={toggleBlock} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-zinc-200 hover:bg-white/[0.06] transition-colors">
+                  <div className="absolute left-0 mt-1 w-44 bg-[var(--bg-tertiary)] border border-white/10 rounded-lg shadow-xl overflow-hidden z-10">
+                    <button onClick={toggleBlock} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
                       <Ban size={14} /> {blocked ? "Unblock" : "Block"} User
                     </button>
                     <button onClick={() => { setMenuOpen(false); setReportOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-rose-400 hover:bg-white/[0.06] transition-colors">
@@ -146,67 +146,67 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                 )}
               </div>
             ) : <span />}
-            <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200"><X size={20} /></button>
+            <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"><X size={20} /></button>
           </div>
 
           {reportOpen ? (
             <div className="px-6 pb-6">
-              <h3 className="font-bold text-zinc-100 text-sm mb-1">Report {profile?.username}</h3>
+              <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Report {profile?.username}</h3>
               {reportSubmitted ? (
                 <p className="text-sm text-emerald-400 mt-3">Thanks — your report has been submitted for review.</p>
               ) : (
                 <>
-                  <p className="text-xs text-zinc-500 mb-3">Tell us what's wrong. This is sent privately for review.</p>
-                  <textarea rows={3} className="w-full bg-zinc-950 border border-white/10 focus:border-blue-500/60 outline-none rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 mb-3"
+                  <p className="text-xs text-[var(--text-muted)] mb-3">Tell us what's wrong. This is sent privately for review.</p>
+                  <textarea rows={3} className="w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 mb-3"
                     placeholder="Describe the issue..." value={reportReason} onChange={(e) => setReportReason(e.target.value)} />
                   <div className="flex gap-2">
                     <button onClick={handleReport} disabled={!reportReason.trim()}
-                      className="flex-1 bg-rose-500 hover:bg-rose-400 disabled:opacity-40 text-zinc-950 font-semibold text-sm py-2 rounded-lg transition-all">Submit Report</button>
-                    <button onClick={() => setReportOpen(false)} className="flex-1 bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 font-semibold text-sm py-2 rounded-lg transition-all">Cancel</button>
+                      className="flex-1 bg-rose-500 hover:bg-rose-400 disabled:opacity-40 text-[var(--text-inverse)] font-semibold text-sm py-2 rounded-lg transition-all">Submit Report</button>
+                    <button onClick={() => setReportOpen(false)} className="flex-1 bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] font-semibold text-sm py-2 rounded-lg transition-all">Cancel</button>
                   </div>
                 </>
               )}
             </div>
           ) : profile === undefined ? (
-            <div className="flex justify-center py-16"><Loader2 size={20} className="text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
           ) : error && profile === undefined ? (
             <div className="px-6 pb-8 text-sm text-rose-400 text-center">{error}</div>
           ) : profile === null ? (
-            <div className="px-6 pb-8 text-sm text-zinc-500 text-center">This trader's profile couldn't be found.</div>
+            <div className="px-6 pb-8 text-sm text-[var(--text-muted)] text-center">This trader's profile couldn't be found.</div>
           ) : (
             <div className="px-6 pb-6 text-center">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border border-white/10" />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3 text-xl font-bold text-zinc-300">
+                <div className="w-20 h-20 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto mb-3 text-xl font-bold text-[var(--text-secondary)]">
                   {(profile.username || "?")[0].toUpperCase()}
                 </div>
               )}
-              <h3 className="font-bold text-zinc-100 text-lg flex items-center justify-center gap-1.5">
+              <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center justify-center gap-1.5">
                 {profile.username} {profile.is_admin && <AdminBadge size="sm" />}
               </h3>
-              {profile.bio && <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
+              {profile.bio && <p className="text-sm text-[var(--text-tertiary)] mt-2 whitespace-pre-wrap">{profile.bio}</p>}
               {badgeStats && <Badges size="sm" className="justify-center mt-3" badges={mergeBadges(computeBadges(badgeStats), manualBadges)} />}
 
-              <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mt-3">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] mt-3">
                 <CalendarDays size={12} /> Joined {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
               </div>
 
               {postCount !== null && (
                 <div className="flex items-center justify-center gap-6 mt-5 pt-5 border-t border-white/10">
                   <div>
-                    <div className="text-lg font-bold text-zinc-100">{postCount}</div>
-                    <div className="flex items-center gap-1 text-xs text-zinc-500"><MessagesSquare size={11} /> Posts</div>
+                    <div className="text-lg font-bold text-[var(--text-primary)]">{postCount}</div>
+                    <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><MessagesSquare size={11} /> Posts</div>
                   </div>
                   {tradingStats && tradingStats.total_closed_trades > 0 && (
                     <>
                       <div>
-                        <div className="text-lg font-bold text-zinc-100">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-500"><Target size={11} /> Win Rate</div>
+                        <div className="text-lg font-bold text-[var(--text-primary)]">{tradingStats.win_rate != null ? `${tradingStats.win_rate}%` : "—"}</div>
+                        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Target size={11} /> Win Rate</div>
                       </div>
                       <div>
-                        <div className="text-lg font-bold text-zinc-100">{tradingStats.favorite_asset || "—"}</div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-500"><Star size={11} /> Top Pair</div>
+                        <div className="text-lg font-bold text-[var(--text-primary)]">{tradingStats.favorite_asset || "—"}</div>
+                        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Star size={11} /> Top Pair</div>
                       </div>
                     </>
                   )}
@@ -220,7 +220,7 @@ export default function UserProfileModal({ userId, currentUserId, currentUsernam
                 <div className="flex items-center justify-center gap-2 mt-5">
                   {renderFriendButton()}
                   <button onClick={() => setDmOpen(true)}
-                    className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
+                    className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-primary)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all">
                     <MessageCircle size={14} /> Message
                   </button>
                 </div>
