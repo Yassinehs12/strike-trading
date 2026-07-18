@@ -739,6 +739,52 @@ export async function revokeMemberBadge(userId, badgeKey) {
   if (error) throw error;
 }
 
+/* ---------- weekly / monthly journaling (reflections, separate from trade logs) ---------- */
+const journalEntryFromDB = (r) => ({
+  id: r.id,
+  periodType: r.period_type, // "weekly" | "monthly"
+  periodStart: r.period_start,
+  rating: r.rating,
+  wentWell: r.went_well ?? "",
+  improve: r.improve ?? "",
+  lessons: r.lessons ?? "",
+  goalsNext: r.goals_next ?? "",
+  updatedAt: r.updated_at,
+});
+
+export async function fetchJournalEntries(userId) {
+  const { data, error } = await supabase.from("journal_entries").select("*").eq("user_id", userId).order("period_start", { ascending: false });
+  if (error) throw error;
+  return data.map(journalEntryFromDB);
+}
+
+// Upserts on (user_id, period_type, period_start) — one entry per person per week/month.
+export async function upsertJournalEntry(entry, userId) {
+  const payload = {
+    user_id: userId,
+    period_type: entry.periodType,
+    period_start: entry.periodStart,
+    rating: entry.rating ?? null,
+    went_well: entry.wentWell || "",
+    improve: entry.improve || "",
+    lessons: entry.lessons || "",
+    goals_next: entry.goalsNext || "",
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .upsert(payload, { onConflict: "user_id,period_type,period_start" })
+    .select()
+    .single();
+  if (error) throw error;
+  return journalEntryFromDB(data);
+}
+
+export async function deleteJournalEntry(id) {
+  const { error } = await supabase.from("journal_entries").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /* ---------- personal goals ---------- */
 const goalFromDB = (r) => ({
   id: r.id,

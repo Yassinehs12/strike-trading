@@ -10,7 +10,7 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
@@ -24,6 +24,7 @@ import AdminPanel from "./AdminPanel";
 import AdminBadge from "./AdminBadge";
 import LeaderboardPage from "./LeaderboardPage";
 import GoalsPage from "./GoalsPage";
+import JournalingPage from "./JournalingPage";
 import UserProfileModal from "./UserProfileModal";
 import { LogoFull } from "./Logo";
 
@@ -473,6 +474,7 @@ const NAV_GROUPS = [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "challenges", label: "Challenges", icon: ShieldCheck },
       { id: "journal", label: "Trade Journal", icon: BookOpen },
+      { id: "journaling", label: "Weekly/Monthly Review", icon: BookMarked },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "goals", label: "Goals", icon: Target },
       { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
@@ -2440,6 +2442,7 @@ export default function App() {
     dashboard: ["Dashboard", "Your trading performance at a glance"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
+    journaling: ["Weekly & Monthly Review", "Reflect on your trading beyond the individual trade"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
@@ -2615,6 +2618,7 @@ export default function App() {
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} />}
+                {active === "journaling" && <JournalingPage session={session} trades={trades} toast={addToast} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
