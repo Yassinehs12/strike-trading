@@ -633,7 +633,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
       <button onClick={() => setOpen((o) => !o)} className="relative text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1.5">
         <Bell size={20} />
         {totalBadge > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-[var(--text-primary)] text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
             {totalBadge}
           </span>
         )}

@@ -136,7 +136,7 @@ const NewPostModal = ({ open, onClose, onSubmit }) => {
             {imagePreview ? (
               <div className="relative">
                 <img src={imagePreview} alt="Preview" className="w-full max-h-56 object-cover rounded-lg border border-white/10" />
-                <button onClick={removeImage} className="absolute top-2 right-2 bg-[var(--bg-primary)]/70 hover:bg-[var(--bg-primary)]/90 text-white rounded-full p-1.5 transition-colors">
+                <button onClick={removeImage} className="absolute top-2 right-2 bg-[var(--bg-primary)]/70 hover:bg-[var(--bg-primary)]/90 text-[var(--text-primary)] rounded-full p-1.5 transition-colors">
                   <X size={14} />
                 </button>
               </div>

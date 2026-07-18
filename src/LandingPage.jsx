@@ -5,6 +5,7 @@ import {
   MessagesSquare, Users, Send, Quote, Sparkles,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
+import ThemeToggle from "./ThemeToggle.jsx";
 import { fetchLandingStats } from "./db";
 
 const LandingStyle = () => (
@@ -61,20 +62,24 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={17} className="text-[var(--text-inverse)]" /></div>
-          <span className="font-bold text-white text-lg tracking-tight">Strike Trading</span>
+          <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Trading</span>
         </div>
         <nav className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-white transition-colors">{l.label}</a>
+            <a key={l.href} href={l.href} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">{l.label}</a>
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-3">
-          <button onClick={onSignIn} className="text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors px-3 py-2">Sign In</button>
+          <ThemeToggle />
+          <button onClick={onSignIn} className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors px-3 py-2">Sign In</button>
           <button onClick={onGetStarted} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2 rounded-lg transition-all active:scale-95">
             Get Started <ArrowRight size={14} />
           </button>
         </div>
-        <button className="md:hidden text-white" onClick={() => setOpen((o) => !o)}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button className="text-[var(--text-primary)]" onClick={() => setOpen((o) => !o)}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+        </div>
       </div>
       {open && (
         <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3 bg-[var(--bg-primary)]">
@@ -98,7 +103,7 @@ const DashboardMock = () => (
       <span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" />
     </div>
     <div className="grid grid-cols-3 gap-3 mb-4">
-      {[["Net Profit", "$7,069.50", "text-emerald-400"], ["Win Rate", "49.0%", "text-white"], ["Profit Factor", "1.94", "text-white"]].map(([label, val, color], i) => (
+      {[["Net Profit", "$7,069.50", "text-emerald-400"], ["Win Rate", "49.0%", "text-[var(--text-primary)]"], ["Profit Factor", "1.94", "text-[var(--text-primary)]"]].map(([label, val, color], i) => (
         <div key={i} className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
           <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1">{label}</div>
           <div className={`lp-mono text-sm md:text-base font-bold ${color}`}>{val}</div>
@@ -137,7 +142,7 @@ const Hero = ({ onGetStarted }) => (
       <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-[var(--text-tertiary)] mb-6">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> Built for every kind of trader
       </div>
-      <h1 className="lp-fade-up text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] mb-5" style={{ animationDelay: "0.05s" }}>
+      <h1 className="lp-fade-up text-4xl md:text-6xl font-extrabold text-[var(--text-primary)] tracking-tight leading-[1.1] mb-5" style={{ animationDelay: "0.05s" }}>
         The trading journal built for<br className="hidden md:block" /> <span className="text-[var(--accent)]">all types of traders.</span>
       </h1>
       <p className="lp-fade-up text-base md:text-lg text-[var(--text-tertiary)] max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
@@ -191,7 +196,7 @@ const SocialProof = () => {
       <div className="max-w-2xl mx-auto grid grid-cols-3 gap-3 md:gap-6">
         {items.map((i) => (
           <div key={i.label} className="text-center border border-white/10 rounded-xl bg-white/[0.02] py-4">
-            <div className="lp-mono text-2xl md:text-3xl font-bold text-white">{fmt(i.value)}+</div>
+            <div className="lp-mono text-2xl md:text-3xl font-bold text-[var(--text-primary)]">{fmt(i.value)}+</div>
             <div className="text-[11px] md:text-xs text-[var(--text-muted)] mt-1">{i.label}</div>
           </div>
         ))}
@@ -206,14 +211,14 @@ const Testimonials = () => {
     <section className="py-20 md:py-28 px-4 border-t border-white/5">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-xl mx-auto mb-14">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">What traders are saying</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">What traders are saying</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TESTIMONIALS.map((t, i) => (
             <div key={i} className="rounded-2xl border border-white/10 p-6">
               <Quote size={18} className="text-[var(--accent)]/60 mb-3" />
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">{t.quote}</p>
-              <div className="text-sm font-semibold text-white">{t.name}</div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">{t.name}</div>
               {t.role && <div className="text-xs text-[var(--text-muted)]">{t.role}</div>}
             </div>
           ))}
@@ -227,7 +232,7 @@ const Features = () => (
   <section id="features" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-6xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-14">
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything you need to trade with discipline</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Everything you need to trade with discipline</h2>
         <p className="text-[var(--text-tertiary)]">From your first evaluation trade to a fully funded, payout-eligible account — plus a community to trade alongside.</p>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -238,7 +243,7 @@ const Features = () => (
               <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center mb-4">
                 <Icon size={18} className="text-[var(--accent)]" />
               </div>
-              <h3 className="text-white font-semibold mb-2">{f.title}</h3>
+              <h3 className="text-[var(--text-primary)] font-semibold mb-2">{f.title}</h3>
               <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{f.desc}</p>
             </div>
           );
@@ -252,13 +257,13 @@ const HowItWorks = () => (
   <section id="how-it-works" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-5xl mx-auto">
       <div className="text-center max-w-xl mx-auto mb-14">
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Up and running in minutes</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Up and running in minutes</h2>
       </div>
       <div className="grid md:grid-cols-3 gap-8">
         {STEPS.map((s, i) => (
           <div key={i} className="relative">
             <div className="lp-mono text-5xl font-bold text-[var(--accent)]/20 mb-3">{s.n}</div>
-            <h3 className="text-white font-semibold mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--accent)]" /> {s.title}</h3>
+            <h3 className="text-[var(--text-primary)] font-semibold mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--accent)]" /> {s.title}</h3>
             <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{s.desc}</p>
           </div>
         ))}
@@ -271,7 +276,7 @@ const FinalCTA = ({ onGetStarted }) => (
   <section className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="relative max-w-3xl mx-auto text-center rounded-3xl border border-white/10 lp-card-glow p-10 md:p-14 overflow-hidden">
       <TrendingUp size={28} className="text-[var(--accent)] mx-auto mb-5" />
-      <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Start journaling your next challenge today</h2>
+      <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Start journaling your next challenge today</h2>
       <p className="text-[var(--text-tertiary)] mb-8 max-w-md mx-auto">Free to start. Your trades, your rules monitor, your analytics — all in one dashboard.</p>
       <button onClick={onGetStarted} className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95">
         Get Started Free <ArrowRight size={16} />
@@ -285,7 +290,7 @@ const Footer = () => (
     <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} className="text-[var(--text-inverse)]" /></div>
-        <span className="font-bold text-white text-sm">Strike Trading</span>
+        <span className="font-bold text-[var(--text-primary)] text-sm">Strike Trading</span>
       </div>
       <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Trading. All rights reserved.</p>
     </div>
@@ -294,7 +299,7 @@ const Footer = () => (
 
 export default function LandingPage({ onGetStarted, onSignIn }) {
   return (
-    <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-white">
+    <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <LandingStyle />
       <NavBar onSignIn={onSignIn} onGetStarted={onGetStarted} />
       <Hero onGetStarted={onGetStarted} />
