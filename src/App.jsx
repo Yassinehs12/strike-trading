@@ -791,24 +791,29 @@ const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:bor
    CREATE CHALLENGE MODAL
    ============================================================ */
 const CreateChallengeModal = ({ open, onClose, onCreate }) => {
-  const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
+  const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", profitSplitPct: "80" });
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const isLive = form.phase === "Live";
 
   const submit = () => {
     const errs = {};
     if (!form.firm.trim()) errs.firm = "Prop firm name is required";
-    ["accountSize", "profitTargetPct", "maxDailyLossPct", "maxTotalLossPct"].forEach((k) => {
+    ["accountSize", "maxDailyLossPct", "maxTotalLossPct"].forEach((k) => {
       if (!form[k] || Number(form[k]) <= 0) errs[k] = "Enter a valid positive number";
     });
+    if (!isLive && (!form.profitTargetPct || Number(form.profitTargetPct) <= 0)) errs.profitTargetPct = "Enter a valid positive number";
+    if (isLive && (!form.profitSplitPct || Number(form.profitSplitPct) <= 0 || Number(form.profitSplitPct) > 100)) errs.profitSplitPct = "Enter a split between 1-100";
     if (Object.keys(errs).length) { setErrors(errs); return; }
+
     onCreate({
-      id: Date.now(), firm: form.firm, phase: form.phase, stage: "evaluation",
-      accountSize: Number(form.accountSize), profitTargetPct: Number(form.profitTargetPct),
+      id: Date.now(), firm: form.firm, phase: isLive ? "Funded" : form.phase, stage: isLive ? "funded" : "evaluation",
+      accountSize: Number(form.accountSize), profitTargetPct: Number(form.profitTargetPct || 0),
       maxDailyLossPct: Number(form.maxDailyLossPct), maxTotalLossPct: Number(form.maxTotalLossPct),
       minTradingDays: 10, startDate: "2026-07-10",
+      ...(isLive ? { profitSplitPct: Number(form.profitSplitPct), lastPayoutNetProfit: 0, payoutHistory: [] } : {}),
     });
-    setForm({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "" });
+    setForm({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", profitSplitPct: "80" });
     setErrors({});
     onClose();
   };
@@ -820,20 +825,34 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
       </Field>
       <Field label="Phase">
         <div className="flex rounded-lg overflow-hidden border border-white/10">
-          {["Phase 1", "Phase 2"].map((p) => (
+          {["Phase 1", "Phase 2", "Live"].map((p) => (
             <button key={p} type="button" onClick={() => set("phase", p)}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${form.phase === p ? "bg-[var(--accent)]/20 text-[var(--accent)]" : "bg-[var(--bg-primary)] text-[var(--text-muted)]"}`}>
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${form.phase === p ? (p === "Live" ? "bg-emerald-500/20 text-emerald-400" : "bg-[var(--accent)]/20 text-[var(--accent)]") : "bg-[var(--bg-primary)] text-[var(--text-muted)]"}`}>
               {p}
             </button>
           ))}
         </div>
+        {isLive && <p className="text-xs text-[var(--text-muted)] mt-1.5">Already funded and trading live? This skips straight to payout tracking below.</p>}
       </Field>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Account Size ($)" error={errors.accountSize}><input type="number" className={inputCls} placeholder="100000" value={form.accountSize} onChange={(e) => set("accountSize", e.target.value)} /></Field>
-        <Field label="Profit Target (%)" error={errors.profitTargetPct}><input type="number" className={inputCls} placeholder="10" value={form.profitTargetPct} onChange={(e) => set("profitTargetPct", e.target.value)} /></Field>
+        {!isLive && (
+          <Field label="Profit Target (%)" error={errors.profitTargetPct}><input type="number" className={inputCls} placeholder="10" value={form.profitTargetPct} onChange={(e) => set("profitTargetPct", e.target.value)} /></Field>
+        )}
         <Field label="Max Daily Loss (%)" error={errors.maxDailyLossPct}><input type="number" className={inputCls} placeholder="5" value={form.maxDailyLossPct} onChange={(e) => set("maxDailyLossPct", e.target.value)} /></Field>
         <Field label="Max Total Loss (%)" error={errors.maxTotalLossPct}><input type="number" className={inputCls} placeholder="10" value={form.maxTotalLossPct} onChange={(e) => set("maxTotalLossPct", e.target.value)} /></Field>
       </div>
+
+      {isLive && (
+        <div className="mt-2 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-2 mb-3"><Banknote size={14} className="text-emerald-400" /><h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Payout Tracker</h4></div>
+          <Field label="Profit Split (%)" error={errors.profitSplitPct}>
+            <input type="number" className={inputCls} placeholder="80" value={form.profitSplitPct} onChange={(e) => set("profitSplitPct", e.target.value)} />
+          </Field>
+          <p className="text-xs text-[var(--text-faint)] -mt-2">The percentage of net profit you keep from each payout. You can request payouts and see your history from the challenge card once it's created.</p>
+        </div>
+      )}
+
       <button onClick={submit} className="w-full mt-2 bg-[var(--accent)] hover:bg-[var(--accent)] active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">Create Challenge</button>
     </Modal>
   );
