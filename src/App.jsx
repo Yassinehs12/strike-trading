@@ -10,7 +10,7 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
@@ -391,6 +391,16 @@ const ToastContainer = ({ toasts }) => (
    ============================================================ */
 const Card = ({ className = "", children }) => (
   <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
+);
+
+const SectionHeader = ({ title, subtitle, icon, noMargin }) => (
+  <div className={noMargin ? "" : "mb-4"}>
+    <h3 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1.5">
+      {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
+      {title}
+    </h3>
+    {subtitle && <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">{subtitle}</p>}
+  </div>
 );
 
 const EmptyState = ({ icon: Icon, title, sub, action }) => (
@@ -1951,15 +1961,51 @@ const EconomicCalendarPage = () => {
 /* ============================================================
    SETTINGS PAGE
    ============================================================ */
+const passwordStrength = (pw) => {
+  if (!pw) return { score: 0, label: "", color: "" };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const levels = [
+    { label: "Very weak", color: "bg-rose-500" },
+    { label: "Weak", color: "bg-rose-500" },
+    { label: "Fair", color: "bg-amber-500" },
+    { label: "Good", color: "bg-amber-400" },
+    { label: "Strong", color: "bg-emerald-500" },
+    { label: "Very strong", color: "bg-emerald-500" },
+  ];
+  return { score, ...levels[Math.min(score, levels.length - 1)] };
+};
+
+const SETTINGS_TABS = [
+  { id: "account", label: "Account", icon: UserCircle },
+  { id: "security", label: "Security", icon: Shield },
+  { id: "trading", label: "Trading", icon: Target },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "danger", label: "Danger Zone", icon: AlertTriangle },
+];
+
 const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onSignOut }) => {
   const [form, setForm] = useState(settings);
   const toast = useToast();
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const save = () => { onSave(form); toast("Preferences saved", "success"); };
+  const [tab, setTab] = useState("account");
 
   const [username, setUsername] = useState(profile?.username || "");
   const [usernameError, setUsernameError] = useState("");
   const [usernameLoading, setUsernameLoading] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
+
+  const copyUserId = () => {
+    if (!session?.user?.id) return;
+    navigator.clipboard?.writeText(session.user.id);
+    setIdCopied(true);
+    setTimeout(() => setIdCopied(false), 1500);
+  };
 
   const saveUsername = async () => {
     const clean = username.trim();
@@ -1985,8 +2031,11 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const strength = passwordStrength(newPassword);
 
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const toggleLeaderboardOptIn = async () => {
@@ -2027,92 +2076,203 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
     }
   };
 
+  const lastSignIn = session?.user?.last_sign_in_at ? new Date(session.user.last_sign_in_at) : null;
+
+  const Toggle = ({ checked, onChange, disabled }) => (
+    <button onClick={onChange} disabled={disabled}
+      className={`shrink-0 relative w-11 h-6 rounded-full transition-colors ${checked ? "bg-[var(--accent)]" : "bg-[var(--bg-quaternary)]"} disabled:opacity-50`}>
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : ""}`} />
+    </button>
+  );
+
   return (
-    <div className="p-4 md:p-6 max-w-xl space-y-5">
-      <Card className="p-5">
-        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Account</h3>
-        <p className="text-xs text-[var(--text-muted)] mb-5">Your identity on Strike Trading.</p>
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] tracking-tight">Settings</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">Manage your account, security, and preferences.</p>
+      </div>
 
-        <Field label="Email">
-          <input className={inputCls} value={session?.user?.email || ""} disabled />
-        </Field>
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Tab nav */}
+        <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible md:w-48 shrink-0 pb-1 md:pb-0">
+          {SETTINGS_TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex items-center gap-2.5 text-sm font-medium px-3 py-2.5 rounded-lg whitespace-nowrap transition-colors text-left
+                  ${active ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"}
+                  ${t.id === "danger" && !active ? "text-rose-400/80 hover:text-rose-400" : ""}`}>
+                <Icon size={15} /> {t.label}
+              </button>
+            );
+          })}
+        </nav>
 
-        <Field label="Username" error={usernameError}>
-          <div className="flex gap-2">
-            <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} />
-            <button onClick={saveUsername} disabled={usernameLoading || username.trim() === profile?.username}
-              className="shrink-0 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 text-[var(--text-inverse)] font-semibold text-sm px-3.5 rounded-lg transition-all">
-              {usernameLoading ? <Loader2 size={14} className="animate-spin" /> : "Save"}
-            </button>
-          </div>
-        </Field>
+        {/* Tab content */}
+        <div className="flex-1 min-w-0 space-y-5">
+          {tab === "account" && (
+            <>
+              <Card className="p-5 md:p-6">
+                <SectionHeader title="Account" subtitle="Your identity on Strike Trading." />
+                <Field label="Email">
+                  <input className={inputCls} value={session?.user?.email || ""} disabled />
+                </Field>
+                <Field label="Username" error={usernameError}>
+                  <div className="flex gap-2">
+                    <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} />
+                    <button onClick={saveUsername} disabled={usernameLoading || username.trim() === profile?.username}
+                      className="shrink-0 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-[var(--text-inverse)] font-semibold text-sm px-3.5 rounded-lg transition-all">
+                      {usernameLoading ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+                    </button>
+                  </div>
+                </Field>
+                <div className="grid sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-[var(--border-primary)]">
+                  <div>
+                    <div className="text-xs text-[var(--text-muted)] mb-1">Member since</div>
+                    <div className="text-sm text-[var(--text-secondary)]">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-[var(--text-muted)] mb-1">Last sign in</div>
+                    <div className="text-sm text-[var(--text-secondary)]">{lastSignIn ? lastSignIn.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</div>
+                  </div>
+                </div>
+              </Card>
 
-        <div className="text-xs text-[var(--text-muted)] mt-1">
-          Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"}
+              <Card className="p-5 md:p-6">
+                <SectionHeader title="Support & Account ID" subtitle="Include this ID when contacting support about your account." />
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-xs text-[var(--text-secondary)] truncate">
+                    {session?.user?.id || "—"}
+                  </code>
+                  <button onClick={copyUserId} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] font-semibold text-xs px-3 py-2.5 rounded-lg transition-all shrink-0">
+                    {idCopied ? <Check size={13} /> : <Copy size={13} />} {idCopied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </Card>
+            </>
+          )}
+
+          {tab === "security" && (
+            <>
+              <Card className="p-5 md:p-6">
+                <SectionHeader title="Change Password" icon={<KeyRound size={14} />} subtitle="You'll need your current password to set a new one." />
+                <Field label="Current Password">
+                  <div className="relative">
+                    <input type={showCurrentPw ? "text" : "password"} className={`${inputCls} pr-9`} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
+                    <button type="button" onClick={() => setShowCurrentPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                      {showCurrentPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </Field>
+                <Field label="New Password">
+                  <div className="relative">
+                    <input type={showNewPw ? "text" : "password"} className={`${inputCls} pr-9`} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+                    <button type="button" onClick={() => setShowNewPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                      {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {newPassword && (
+                    <div className="mt-2">
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <div key={i} className={`h-1 flex-1 rounded-full ${i < strength.score ? strength.color : "bg-[var(--bg-quaternary)]"}`} />
+                        ))}
+                      </div>
+                      <div className="text-xs text-[var(--text-muted)] mt-1">{strength.label}</div>
+                    </div>
+                  )}
+                </Field>
+                <Field label="Confirm New Password" error={passwordError}>
+                  <input type={showNewPw ? "text" : "password"} className={inputCls} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+                </Field>
+                <button onClick={changePassword} disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
+                  className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+                  {passwordLoading ? <Loader2 size={15} className="animate-spin" /> : null}
+                  Change Password
+                </button>
+              </Card>
+
+              <Card className="p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 flex items-center gap-1.5"><Award size={15} className="text-[var(--accent)]" /> Leaderboard</h3>
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">Show your win rate and net P&amp;L on the weekly/monthly leaderboard. Off by default — your results stay private until you opt in.</p>
+                  </div>
+                  <Toggle checked={!!profile?.leaderboard_opt_in} onChange={toggleLeaderboardOptIn} disabled={leaderboardLoading} />
+                </div>
+              </Card>
+            </>
+          )}
+
+          {tab === "trading" && (
+            <>
+              <Card className="p-5 md:p-6">
+                <SectionHeader title="Trading Preferences" icon={<Target size={14} />} subtitle="Defaults used across your journal and challenges." />
+                <div className="grid sm:grid-cols-2 gap-x-4">
+                  <Field label="Display Currency">
+                    <select className={inputCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select>
+                  </Field>
+                  <Field label="Timezone">
+                    <select className={inputCls} value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
+                      <option>UTC</option><option>America/New_York</option><option>Europe/London</option><option>Asia/Tokyo</option>
+                    </select>
+                  </Field>
+                  <Field label="Default Risk per Trade (%)">
+                    <input type="number" step="0.1" className={inputCls} value={form.defaultRiskPct} onChange={(e) => set("defaultRiskPct", e.target.value)} />
+                  </Field>
+                  <Field label="Minimum Trading Days (new challenges)">
+                    <input type="number" className={inputCls} value={form.minTradingDays} onChange={(e) => set("minTradingDays", e.target.value)} />
+                  </Field>
+                </div>
+                <button onClick={save} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">Save Preferences</button>
+              </Card>
+
+              <Card className="p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 flex items-center gap-1.5"><BellRing size={15} className="text-[var(--accent)]" /> Trade Reminders</h3>
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">Get a gentle nudge to log a trade if you haven't journaled by end of session.</p>
+                  </div>
+                  <Toggle checked={!!form.tradeReminders} onChange={() => { const v = !form.tradeReminders; set("tradeReminders", v); onSave({ ...form, tradeReminders: v }); }} />
+                </div>
+              </Card>
+            </>
+          )}
+
+          {tab === "appearance" && (
+            <Card className="p-5 md:p-6">
+              <SectionHeader title="Appearance" icon={<Palette size={14} />} subtitle="Switch between the black and white theme." />
+              <div className="flex items-center justify-between gap-4 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg p-4">
+                <div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">Theme</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-0.5">Your preference is saved on this device.</div>
+                </div>
+                <ThemeToggle />
+              </div>
+            </Card>
+          )}
+
+          {tab === "danger" && (
+            <>
+              <Card className="p-5 md:p-6">
+                <SectionHeader title="Sign Out" subtitle="End your session on this device." />
+                <button onClick={onSignOut} className="flex items-center gap-2 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+                  <LogOut size={15} /> Sign Out
+                </button>
+              </Card>
+
+              <Card className="p-5 md:p-6 border-rose-900/50">
+                <SectionHeader title="Delete Account" icon={<AlertTriangle size={14} className="text-rose-400" />} subtitle="Permanently delete your account, trades, and journal entries. This can't be undone." />
+                <a href={`mailto:support@striketrading.app?subject=Account%20deletion%20request&body=Please%20delete%20my%20account%20(${encodeURIComponent(session?.user?.email || "")}).`}
+                  className="inline-flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+                  <Ban size={15} /> Request Account Deletion
+                </a>
+              </Card>
+            </>
+          )}
         </div>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Change Password</h3>
-        <p className="text-xs text-[var(--text-muted)] mb-5">You'll need your current password to set a new one.</p>
-
-        <Field label="Current Password">
-          <input type="password" className={inputCls} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
-        </Field>
-        <Field label="New Password">
-          <input type="password" className={inputCls} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
-        </Field>
-        <Field label="Confirm New Password" error={passwordError}>
-          <input type="password" className={inputCls} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
-        </Field>
-
-        <button onClick={changePassword} disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
-          {passwordLoading ? <Loader2 size={15} className="animate-spin" /> : null}
-          Change Password
-        </button>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 flex items-center gap-1.5"><Award size={15} className="text-[var(--accent)]" /> Leaderboard</h3>
-            <p className="text-xs text-[var(--text-muted)]">Show your win rate and net P&amp;L on the weekly/monthly leaderboard. Off by default — your results stay private until you opt in.</p>
-          </div>
-          <button onClick={toggleLeaderboardOptIn} disabled={leaderboardLoading}
-            className={`shrink-0 relative w-11 h-6 rounded-full transition-colors ${profile?.leaderboard_opt_in ? "bg-[var(--accent)]" : "bg-[var(--bg-quaternary)]"} disabled:opacity-50`}>
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${profile?.leaderboard_opt_in ? "translate-x-5" : ""}`} />
-          </button>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Preferences</h3>
-        <p className="text-xs text-[var(--text-muted)] mb-5">These scaffold future personalization once connected to a database.</p>
-        <Field label="Display Currency">
-          <select className={inputCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}><option>USD</option><option>EUR</option><option>GBP</option></select>
-        </Field>
-        <Field label="Timezone">
-          <select className={inputCls} value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
-            <option>UTC</option><option>America/New_York</option><option>Europe/London</option><option>Asia/Tokyo</option>
-          </select>
-        </Field>
-        <Field label="Default Risk per Trade (%)">
-          <input type="number" step="0.1" className={inputCls} value={form.defaultRiskPct} onChange={(e) => set("defaultRiskPct", e.target.value)} />
-        </Field>
-        <Field label="Minimum Trading Days (new challenges)">
-          <input type="number" className={inputCls} value={form.minTradingDays} onChange={(e) => set("minTradingDays", e.target.value)} />
-        </Field>
-        <button onClick={save} className="bg-[var(--accent)] hover:bg-[var(--accent)] active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">Save Preferences</button>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Sign Out</h3>
-        <p className="text-xs text-[var(--text-muted)] mb-4">End your session on this device.</p>
-        <button onClick={onSignOut} className="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
-          <LogOut size={15} /> Sign Out
-        </button>
-      </Card>
+      </div>
     </div>
   );
 };
@@ -2278,14 +2438,6 @@ const AuthPage = ({ onBack }) => {
             <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signin" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Sign In</button>
             <button onClick={() => { setMode("signup"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signup" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Sign Up</button>
           </div>
-
-          <button onClick={signInWithGoogle} disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-[var(--bg-secondary)] hover:bg-white disabled:opacity-50 text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all mb-4">
-            <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.6 35 26.9 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.6 5.6C39.9 37.1 44 31 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
-            Continue with Google
-          </button>
-
-          <div className="flex items-center gap-3 mb-4"><div className="h-px bg-[var(--bg-tertiary)] flex-1" /><span className="text-xs text-[var(--text-faint)]">or</span><div className="h-px bg-[var(--bg-tertiary)] flex-1" /></div>
 
           <form onSubmit={submitEmail}>
             <Field label="Email">
