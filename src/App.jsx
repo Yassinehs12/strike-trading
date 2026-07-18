@@ -1074,7 +1074,7 @@ const InsightsCard = ({ trades }) => {
 
       {!ready ? (
         <div className="py-6 text-center">
-          <p className="text-sm text-zinc-500">Not enough closed trades this {period} yet ({sampleSize}/5 minimum).</p>
+          <p className="text-sm text-zinc-500">No closed trades this {period} yet.</p>
           <p className="text-xs text-zinc-600 mt-1">Keep logging — insights unlock once there's enough data to spot real patterns.</p>
         </div>
       ) : (
