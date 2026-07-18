@@ -53,9 +53,9 @@ const UserRow = ({ u, isSelf, isOwner, onPromote, onToggleSupporter, onBan, onUn
   const [timeoutMenuOpen, setTimeoutMenuOpen] = useState(false);
   const isTimedOut = u.timeout_until && new Date(u.timeout_until) > new Date();
 
-  // Non-owners can grant a role, but only the owner can take one away.
-  const adminLocked = u.is_admin && !isOwner;
-  const supporterLocked = u.is_supporter && !isOwner;
+  // Only the owner can grant or remove a role — everyone else sees it locked.
+  const adminLocked = !isOwner;
+  const supporterLocked = !isOwner;
 
   return (
     <Card className="p-3.5 flex items-center gap-3 flex-wrap">
@@ -85,13 +85,13 @@ const UserRow = ({ u, isSelf, isOwner, onPromote, onToggleSupporter, onBan, onUn
       ) : (
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
           <button onClick={() => onPromote(u)} disabled={busy || adminLocked}
-            title={adminLocked ? "Only the owner can remove admin" : undefined}
+            title={adminLocked ? "Only the owner can change admin status" : undefined}
             className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_admin ? "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1]" : "text-[var(--accent)] hover:text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"}`}>
             {adminLocked ? <Lock size={12} /> : u.is_admin ? <ShieldOff size={12} /> : <ShieldCheck size={12} />} {u.is_admin ? "Demote" : "Make Admin"}
           </button>
 
           <button onClick={() => onToggleSupporter(u)} disabled={busy || supporterLocked}
-            title={supporterLocked ? "Only the owner can remove supporter" : undefined}
+            title={supporterLocked ? "Only the owner can change supporter status" : undefined}
             className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_supporter ? "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1]" : "text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/15"}`}>
             {supporterLocked ? <Lock size={12} /> : u.is_supporter ? <StarOff size={12} /> : <Star size={12} />} {u.is_supporter ? "Remove Supporter" : "Make Supporter"}
           </button>
@@ -441,11 +441,11 @@ export default function AdminPanel({ session, profile, toast }) {
             </div>
             {isOwner ? (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold">
-                <Crown size={11} /> You're the owner — only you can remove roles
+                <Crown size={11} /> You're the owner — only you can grant or remove roles
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-primary)] font-semibold">
-                <Lock size={11} /> Only the owner can remove admin/supporter roles
+                <Lock size={11} /> Only the owner can grant or remove admin/supporter roles
               </span>
             )}
           </div>
