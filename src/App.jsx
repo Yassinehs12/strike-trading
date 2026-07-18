@@ -58,6 +58,11 @@ const SESSIONS = ["London", "New York", "Asia"];
 const EMOTIONS = ["Neutral", "Greed", "FOMO", "Overtrading", "Fear"];
 const SETUP_GRADES = ["A+", "A", "B"];
 const TODAY = new Date("2026-07-10");
+const todayISO = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 function seededRandom(seed) {
   let s = seed;
@@ -862,7 +867,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    LOG TRADE MODAL
    ============================================================ */
 const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
-  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" };
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
