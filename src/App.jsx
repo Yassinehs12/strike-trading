@@ -512,6 +512,22 @@ const NAV_GROUPS = [
 
 const ADMIN_NAV_ITEM = { id: "admin", label: "Admin Panel", icon: ShieldAlert };
 
+// Every tab the app can be on, used to keep the URL in sync so a refresh
+// stays on the current page instead of bouncing back to the dashboard.
+const VALID_TAB_IDS = [
+  ...NAV_GROUPS.flatMap((g) => g.items.map((i) => i.id)),
+  ADMIN_NAV_ITEM.id,
+  "profile",
+];
+
+// Reads the tab out of the URL hash (e.g. "#/settings" -> "settings") on
+// first load. Anything unrecognized — including Supabase's own auth hash
+// like "#access_token=..." — falls back to the dashboard.
+const tabFromHash = () => {
+  const raw = window.location.hash.replace(/^#\/?/, "");
+  return VALID_TAB_IDS.includes(raw) ? raw : "dashboard";
+};
+
 const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => {
   const groups = NAV_GROUPS.map((g, i) =>
     i === NAV_GROUPS.length - 1 && profile?.is_admin ? { ...g, items: [...g.items, ADMIN_NAV_ITEM] } : g
@@ -2599,7 +2615,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
-  const [active, setActive] = useState("dashboard");
+  const [active, setActive] = useState(tabFromHash);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
@@ -2610,6 +2626,23 @@ export default function App() {
 
   const [dataError, setDataError] = useState("");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+
+  // Keep the URL hash in sync with the active tab, so refreshing (or sharing
+  // a link) lands back on the same page instead of resetting to dashboard.
+  // Skip this while the hash still holds a Supabase auth token (password
+  // reset / magic link) so we don't clobber it before Supabase reads it.
+  useEffect(() => {
+    if (/access_token|type=recovery|error=/.test(window.location.hash)) return;
+    const target = `#/${active}`;
+    if (window.location.hash !== target) window.history.pushState(null, "", target);
+  }, [active]);
+
+  // Support the browser's back/forward buttons switching tabs too.
+  useEffect(() => {
+    const onPopState = () => setActive(tabFromHash());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     if (!session?.user) { if (session === null) setLoading(false); return; }
