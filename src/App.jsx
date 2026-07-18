@@ -1590,7 +1590,10 @@ const CalendarCard = ({ trades, onOpenTrade }) => {
                 {isToday && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />}
                 <span className={`text-[11px] font-medium ${isToday ? "text-blue-300" : "text-zinc-300"}`}>{d}</span>
                 {info ? (
-                  <span className="text-[10px] tj-mono text-zinc-100 font-semibold">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
+                  <>
+                    <span className="text-[10px] tj-mono text-zinc-100 font-semibold leading-tight">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
+                    <span className="text-[9px] tj-mono text-zinc-200/80 leading-tight">{info.count} trade{info.count === 1 ? "" : "s"}</span>
+                  </>
                 ) : (
                   <>
                     <span className="text-[9px] tj-mono text-zinc-600 leading-tight">0 Trade</span>
