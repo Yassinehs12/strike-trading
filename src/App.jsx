@@ -55,6 +55,8 @@ const GlobalStyle = () => (
 const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "BTCUSD", "ETHUSD", "NVDA", "US30", "NAS100"];
 const SETUPS = ["Breakout", "FVG", "Trend Following", "Reversal", "Liquidity Grab", "Range"];
 const SESSIONS = ["London", "New York", "Asia"];
+const EMOTIONS = ["Neutral", "Greed", "FOMO", "Overtrading", "Fear"];
+const SETUP_GRADES = ["A+", "A", "B"];
 const TODAY = new Date("2026-07-10");
 
 function seededRandom(seed) {
@@ -825,7 +827,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    LOG TRADE MODAL
    ============================================================ */
 const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
-  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" };
+  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" };
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -852,8 +854,8 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
 
     onCreate({
       id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
-      entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, session: form.session,
-      status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0),
+      entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
+      status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
       challengeId: form.challengeId || null, notes: form.notes, screenshot: form.screenshot,
     });
     setForm(blank);
@@ -892,6 +894,16 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         <Field label="Setup / Strategy">
           <input className={inputCls} placeholder="e.g. Breakout, FVG, Trend Following — your own note" value={form.setup} onChange={(e) => set("setup", e.target.value)} />
         </Field>
+        <Field label="Setup Quality">
+          <div className="flex rounded-lg overflow-hidden border border-white/10">
+            {SETUP_GRADES.map((g) => (
+              <button key={g} type="button" onClick={() => set("setupGrade", g)}
+                className={`flex-1 py-2 text-sm font-semibold transition-colors ${form.setupGrade === g ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
+                {g}
+              </button>
+            ))}
+          </div>
+        </Field>
         <Field label="Session">
           <select className={inputCls} value={form.session} onChange={(e) => set("session", e.target.value)}>{SESSIONS.map((s) => <option key={s}>{s}</option>)}</select>
         </Field>
@@ -909,6 +921,18 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
         {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-white/10 max-h-32 object-cover" />}
+      </Field>
+      <Field label="Emotion Behind the Trade">
+        <div className="flex flex-wrap gap-2">
+          {EMOTIONS.map((e) => (
+            <button key={e} type="button" onClick={() => set("emotion", e)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${form.emotion === e
+                ? (e === "Neutral" ? "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/40" : "bg-amber-500/15 text-amber-400 border-amber-500/40")
+                : "bg-[var(--bg-primary)] text-[var(--text-muted)] border-white/10 hover:text-[var(--text-secondary)]"}`}>
+              {e}
+            </button>
+          ))}
+        </div>
       </Field>
       <Field label="Trading Psychology Notes">
         <textarea rows={3} className={inputCls} placeholder="How did you feel? Did you follow your plan?" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
@@ -962,11 +986,17 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
       {!editing ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <StatusPill status={trade.status} />
               <span className={`flex items-center gap-1 text-xs font-semibold ${trade.direction === "Long" ? "text-emerald-400" : "text-rose-400"}`}>
                 {trade.direction === "Long" ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {trade.direction}
               </span>
+              {trade.setupGrade && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30">{trade.setupGrade}</span>
+              )}
+              {trade.emotion && trade.emotion !== "Neutral" && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">{trade.emotion}</span>
+              )}
             </div>
             <span className={`tj-mono text-lg font-bold ${trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{trade.pnl >= 0 ? "+" : ""}{fmtUSD2(trade.pnl)}</span>
           </div>
@@ -1022,6 +1052,28 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
             </Field>
             <Field label="Holding (min)"><input type="number" className={inputCls} value={form.holdingMinutes} onChange={(e) => set("holdingMinutes", e.target.value)} /></Field>
           </div>
+          <Field label="Setup Quality">
+            <div className="flex rounded-lg overflow-hidden border border-white/10">
+              {SETUP_GRADES.map((g) => (
+                <button key={g} type="button" onClick={() => set("setupGrade", g)}
+                  className={`flex-1 py-2 text-sm font-semibold transition-colors ${form.setupGrade === g ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Emotion Behind the Trade">
+            <div className="flex flex-wrap gap-2">
+              {EMOTIONS.map((e) => (
+                <button key={e} type="button" onClick={() => set("emotion", e)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${form.emotion === e
+                    ? (e === "Neutral" ? "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/40" : "bg-amber-500/15 text-amber-400 border-amber-500/40")
+                    : "bg-[var(--bg-primary)] text-[var(--text-muted)] border-white/10 hover:text-[var(--text-secondary)]"}`}>
+                  {e}
+                </button>
+              ))}
+            </div>
+          </Field>
           <Field label="Chart Screenshot">
             <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
               <ImageIcon size={14} /> {form.screenshot ? "Replace image" : "Upload chart screenshot"}

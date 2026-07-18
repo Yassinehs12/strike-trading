@@ -18,6 +18,8 @@ const tradeFromDB = (r) => ({
   challengeId: r.challenge_id,
   screenshot: r.screenshot,
   notes: r.notes ?? "",
+  emotion: r.emotion || "Neutral",
+  setupGrade: r.setup_grade || "A",
 });
 
 const tradeToDB = (t, userId) => ({
@@ -37,6 +39,8 @@ const tradeToDB = (t, userId) => ({
   challenge_id: t.challengeId || null,
   screenshot: t.screenshot || null,
   notes: t.notes || "",
+  emotion: t.emotion || "Neutral",
+  setup_grade: t.setupGrade || "A",
 });
 
 const challengeFromDB = (r) => ({
