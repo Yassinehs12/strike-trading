@@ -10,13 +10,14 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
+import CalculatorPage from "./CalculatorPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
@@ -497,6 +498,12 @@ const NAV_GROUPS = [
       { id: "goals", label: "Goals", icon: Target },
       { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
       { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { id: "calculator", label: "Position Size Calculator", icon: Calculator },
     ],
   },
   {
@@ -2711,6 +2718,7 @@ export default function App() {
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
+    calculator: ["Position Size Calculator", "Size every trade to your risk, not your gut"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Trading"],
@@ -2887,6 +2895,7 @@ export default function App() {
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
+                {active === "calculator" && <CalculatorPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "leaderboard" && <LeaderboardPage session={session} profile={profile} onViewProfile={setViewingUserId} onGoToSettings={() => setActive("settings")} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
