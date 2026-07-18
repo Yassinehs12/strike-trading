@@ -487,11 +487,26 @@ export async function fetchAdminUserIds() {
   return data.map((r) => r.id);
 }
 
+// IDs of every profile currently flagged as a supporter.
+export async function fetchSupporterUserIds() {
+  const { data, error } = await supabase.from("profiles").select("id").eq("is_supporter", true);
+  if (error) throw error;
+  return data.map((r) => r.id);
+}
+
+// Whether the signed-in user is the app owner — the only account that can
+// remove an admin or supporter role once granted. Enforced server-side too.
+export async function amIOwner() {
+  const { data, error } = await supabase.rpc("am_i_owner");
+  if (error) throw error;
+  return !!data;
+}
+
 // Full user list for the admin panel, most recently joined first.
 export async function fetchAllProfilesAdmin() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, is_admin, is_banned, ban_reason, timeout_until, created_at")
+    .select("id, username, avatar_url, is_admin, is_supporter, is_banned, ban_reason, timeout_until, created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
@@ -499,6 +514,12 @@ export async function fetchAllProfilesAdmin() {
 
 export async function setUserAdmin(userId, isAdmin) {
   const { data, error } = await supabase.from("profiles").update({ is_admin: isAdmin }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setUserSupporter(userId, isSupporter) {
+  const { data, error } = await supabase.from("profiles").update({ is_supporter: isSupporter }).eq("id", userId).select().single();
   if (error) throw error;
   return data;
 }

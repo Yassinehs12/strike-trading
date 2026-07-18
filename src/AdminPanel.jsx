@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2, Star, ScrollText,
+  ShieldCheck, Ban, Clock, Trash2, Search, Loader2, Users, MessagesSquare, Radio, X, ShieldOff, CheckCircle2, Star, StarOff, ScrollText, Lock, Crown,
 } from "lucide-react";
 import {
-  fetchAllProfilesAdmin, setUserAdmin, banUser, unbanUser, timeoutUser,
+  fetchAllProfilesAdmin, setUserAdmin, setUserSupporter, amIOwner, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
   fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification,
   fetchMemberBadges, grantMemberBadge, revokeMemberBadge,
   logAuditEvent, fetchAuditLog,
 } from "./db";
 import AdminBadge from "./AdminBadge";
+import SupporterBadge from "./SupporterBadge";
 import { BADGE_CATALOG, badgeFromKey } from "./Badges";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
@@ -48,9 +49,13 @@ function StatusPill({ user }) {
   return null;
 }
 
-const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeout, busy }) => {
+const UserRow = ({ u, isSelf, isOwner, onPromote, onToggleSupporter, onBan, onUnban, onTimeout, onClearTimeout, busy }) => {
   const [timeoutMenuOpen, setTimeoutMenuOpen] = useState(false);
   const isTimedOut = u.timeout_until && new Date(u.timeout_until) > new Date();
+
+  // Non-owners can grant a role, but only the owner can take one away.
+  const adminLocked = u.is_admin && !isOwner;
+  const supporterLocked = u.is_supporter && !isOwner;
 
   return (
     <Card className="p-3.5 flex items-center gap-3 flex-wrap">
@@ -65,6 +70,7 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{u.username || "Unknown"}</span>
           {u.is_admin && <AdminBadge />}
+          {u.is_supporter && <SupporterBadge />}
           <StatusPill user={u} />
         </div>
         <div className="text-xs text-[var(--text-muted)]">
@@ -78,9 +84,16 @@ const UserRow = ({ u, isSelf, onPromote, onBan, onUnban, onTimeout, onClearTimeo
         <span className="text-xs text-[var(--text-faint)] shrink-0">This is you</span>
       ) : (
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-          <button onClick={() => onPromote(u)} disabled={busy}
+          <button onClick={() => onPromote(u)} disabled={busy || adminLocked}
+            title={adminLocked ? "Only the owner can remove admin" : undefined}
             className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_admin ? "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1]" : "text-[var(--accent)] hover:text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15"}`}>
-            {u.is_admin ? <ShieldOff size={12} /> : <ShieldCheck size={12} />} {u.is_admin ? "Demote" : "Make Admin"}
+            {adminLocked ? <Lock size={12} /> : u.is_admin ? <ShieldOff size={12} /> : <ShieldCheck size={12} />} {u.is_admin ? "Demote" : "Make Admin"}
+          </button>
+
+          <button onClick={() => onToggleSupporter(u)} disabled={busy || supporterLocked}
+            title={supporterLocked ? "Only the owner can remove supporter" : undefined}
+            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-40 ${u.is_supporter ? "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] bg-white/[0.06] hover:bg-white/[0.1]" : "text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/15"}`}>
+            {supporterLocked ? <Lock size={12} /> : u.is_supporter ? <StarOff size={12} /> : <Star size={12} />} {u.is_supporter ? "Remove Supporter" : "Make Supporter"}
           </button>
 
           <div className="relative">
@@ -217,6 +230,7 @@ export default function AdminPanel({ session, profile, toast }) {
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
+  const [isOwner, setIsOwner] = useState(false);
 
   const [posts, setPosts] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
@@ -269,6 +283,7 @@ export default function AdminPanel({ session, profile, toast }) {
   }, []);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
+  useEffect(() => { amIOwner().then(setIsOwner).catch(() => {}); }, []);
   useEffect(() => { if (tab === "content") loadContent(); }, [tab, loadContent]);
   useEffect(() => { if (tab === "spotlight") loadSpotlights(); }, [tab, loadSpotlights]);
   useEffect(() => { if (tab === "audit") loadAuditLog(); }, [tab, loadAuditLog]);
@@ -292,6 +307,14 @@ export default function AdminPanel({ session, profile, toast }) {
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
       logAction(updated.is_admin ? "grant_admin" : "revoke_admin", "user", u.id, { username: u.username });
       notify(updated.is_admin ? `${u.username} is now an admin` : `${u.username} is no longer an admin`);
+    });
+
+  const handleToggleSupporter = (u) =>
+    withBusy(u.id, async () => {
+      const updated = await setUserSupporter(u.id, !u.is_supporter);
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      logAction(updated.is_supporter ? "grant_supporter" : "revoke_supporter", "user", u.id, { username: u.username });
+      notify(updated.is_supporter ? `${u.username} is now a supporter` : `${u.username} is no longer a supporter`);
     });
 
   const handleBan = (u) =>
@@ -411,9 +434,20 @@ export default function AdminPanel({ session, profile, toast }) {
 
       {tab === "users" && (
         <div className="space-y-3">
-          <div className="relative w-full sm:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input className={`${inputCls} pl-8`} placeholder="Search users..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="relative w-full sm:w-72">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input className={`${inputCls} pl-8`} placeholder="Search users..." value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+            {isOwner ? (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold">
+                <Crown size={11} /> You're the owner — only you can remove roles
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-primary)] font-semibold">
+                <Lock size={11} /> Only the owner can remove admin/supporter roles
+              </span>
+            )}
           </div>
           {usersLoading ? (
             <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
@@ -422,8 +456,8 @@ export default function AdminPanel({ session, profile, toast }) {
           ) : (
             <div className="space-y-2">
               {filteredUsers.map((u) => (
-                <UserRow key={u.id} u={u} isSelf={u.id === session.user.id} busy={busyId === u.id}
-                  onPromote={handlePromote} onBan={handleBan} onUnban={handleUnban}
+                <UserRow key={u.id} u={u} isSelf={u.id === session.user.id} isOwner={isOwner} busy={busyId === u.id}
+                  onPromote={handlePromote} onToggleSupporter={handleToggleSupporter} onBan={handleBan} onUnban={handleUnban}
                   onTimeout={handleTimeout} onClearTimeout={handleClearTimeout} />
               ))}
             </div>
