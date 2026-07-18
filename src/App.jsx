@@ -503,7 +503,7 @@ const NAV_GROUPS = [
   {
     label: "Tools",
     items: [
-      { id: "calculator", label: "Position Size Calculator", icon: Calculator },
+      { id: "calculator", label: "Pips Calculator", icon: Calculator },
     ],
   },
   {
@@ -2718,7 +2718,7 @@ export default function App() {
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
-    calculator: ["Position Size Calculator", "Size every trade to your risk, not your gut"],
+    calculator: ["Pips Calculator", "Know what a pip is worth before you're in the trade"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Trading"],
