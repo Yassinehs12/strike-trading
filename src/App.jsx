@@ -466,41 +466,70 @@ const KPICard = ({ icon: Icon, label, value, sub, accent = "text-zinc-100" }) =>
 /* ============================================================
    NAVIGATION
    ============================================================ */
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "challenges", label: "Challenges", icon: ShieldCheck },
-  { id: "journal", label: "Trade Journal", icon: BookOpen },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
-  { id: "goals", label: "Goals", icon: Target },
-  { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
-  { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
-  { id: "forum", label: "Community", icon: MessagesSquare },
-  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-  { id: "messages", label: "Messages", icon: Mail },
-  { id: "settings", label: "Settings", icon: SettingsIcon },
+const NAV_GROUPS = [
+  {
+    label: "Trading",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "challenges", label: "Challenges", icon: ShieldCheck },
+      { id: "journal", label: "Trade Journal", icon: BookOpen },
+      { id: "analytics", label: "Analytics", icon: BarChart3 },
+      { id: "goals", label: "Goals", icon: Target },
+      { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
+      { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      { id: "forum", label: "Community", icon: MessagesSquare },
+      { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+      { id: "messages", label: "Messages", icon: Mail },
+    ],
+  },
+  {
+    label: null,
+    items: [
+      { id: "settings", label: "Settings", icon: SettingsIcon },
+    ],
+  },
 ];
 
 const ADMIN_NAV_ITEM = { id: "admin", label: "Admin Panel", icon: ShieldAlert };
 
-const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => (
+const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, onSignOut }) => {
+  const groups = NAV_GROUPS.map((g, i) =>
+    i === NAV_GROUPS.length - 1 && profile?.is_admin ? { ...g, items: [...g.items, ADMIN_NAV_ITEM] } : g
+  );
+  return (
   <>
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-black border-r border-white/10 flex flex-col
       transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static`}>
       <div className="h-16 flex items-center gap-2 px-5 border-b border-white/10">
         <LogoFull size={30} textClass="text-base" />
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {(profile?.is_admin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS).map((item) => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
-          return (
-            <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                ${isActive ? "bg-blue-500/10 text-blue-500" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"}`}>
-              <Icon size={17} />{item.label}
-            </button>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto tj-scrollbar">
+        {groups.map((group, gi) => (
+          <div key={group.label || `group-${gi}`}>
+            {group.label && (
+              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">{group.label}</div>
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = active === item.id;
+                return (
+                  <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                      ${isActive ? "bg-blue-500/10 text-blue-500" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"}`}>
+                    <Icon size={17} />{item.label}
+                  </button>
+                );
+              })}
+            </div>
+            {gi < groups.length - 1 && <div className="mt-4 border-t border-white/10" />}
+          </div>
+        ))}
       </nav>
       <div className="p-4 border-t border-white/10">
         <button onClick={() => setActive("profile")} className="w-full flex items-center gap-3 px-2 mb-2 rounded-lg hover:bg-zinc-900 py-1.5 transition-colors text-left">
@@ -525,7 +554,8 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
     </aside>
     {mobileOpen && <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
   </>
-);
+  );
+};
 
 const NotificationBell = ({ session, profile, setActive }) => {
   const [open, setOpen] = useState(false);
