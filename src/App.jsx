@@ -781,7 +781,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    LOG TRADE MODAL
    ============================================================ */
 const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
-  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null };
+  const blank = { date: "2026-07-10", asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" };
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -800,11 +800,11 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
     if (!form.entry || Number(form.entry) <= 0) errs.entry = "Enter entry price";
     if (!form.exit || Number(form.exit) <= 0) errs.exit = "Enter exit price";
     if (!form.lots || Number(form.lots) <= 0) errs.lots = "Enter lot size";
+    if (form.pnl === "" || isNaN(Number(form.pnl))) errs.pnl = "Enter the trade's P&L";
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     const entry = Number(form.entry), exit = Number(form.exit), lots = Number(form.lots);
-    const direction = form.direction === "Long" ? 1 : -1;
-    const pnl = +(direction * (exit - entry) * lots * 100).toFixed(2);
+    const pnl = +Number(form.pnl).toFixed(2);
 
     onCreate({
       id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
@@ -843,6 +843,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         <Field label="Entry Price" error={errors.entry}><input type="number" step="any" className={inputCls} value={form.entry} onChange={(e) => set("entry", e.target.value)} /></Field>
         <Field label="Exit Price" error={errors.exit}><input type="number" step="any" className={inputCls} value={form.exit} onChange={(e) => set("exit", e.target.value)} /></Field>
         <Field label="Lot Size / Contracts" error={errors.lots}><input type="number" step="any" className={inputCls} value={form.lots} onChange={(e) => set("lots", e.target.value)} /></Field>
+        <Field label="P&L ($)" error={errors.pnl}><input type="number" step="any" className={inputCls} placeholder="e.g. 240 or -85" value={form.pnl} onChange={(e) => set("pnl", e.target.value)} /></Field>
         <Field label="Fees / Commissions"><input type="number" step="any" className={inputCls} placeholder="0" value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
         <Field label="Setup / Strategy">
           <input className={inputCls} placeholder="e.g. Breakout, FVG, Trend Following — your own note" value={form.setup} onChange={(e) => set("setup", e.target.value)} />
@@ -907,8 +908,7 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
 
   const save = () => {
     const entry = Number(form.entry), exit = Number(form.exit), lots = Number(form.lots);
-    const direction = form.direction === "Long" ? 1 : -1;
-    const pnl = +(direction * (exit - entry) * lots * 100).toFixed(2);
+    const pnl = +Number(form.pnl).toFixed(2);
     onSave({ ...form, entry, exit, lots, fees: Number(form.fees), pnl });
     setEditing(false);
   };
@@ -971,6 +971,7 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
             <Field label="Entry"><input type="number" step="any" className={inputCls} value={form.entry} onChange={(e) => set("entry", e.target.value)} /></Field>
             <Field label="Exit"><input type="number" step="any" className={inputCls} value={form.exit} onChange={(e) => set("exit", e.target.value)} /></Field>
             <Field label="Lots"><input type="number" step="any" className={inputCls} value={form.lots} onChange={(e) => set("lots", e.target.value)} /></Field>
+            <Field label="P&L ($)"><input type="number" step="any" className={inputCls} value={form.pnl} onChange={(e) => set("pnl", e.target.value)} /></Field>
             <Field label="Fees"><input type="number" step="any" className={inputCls} value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
             <Field label="Status">
               <select className={inputCls} value={form.status} onChange={(e) => set("status", e.target.value)}><option>Win</option><option>Loss</option><option>BE</option></select>
