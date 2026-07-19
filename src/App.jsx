@@ -18,6 +18,7 @@ import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
+import ChangelogPage from "./ChangelogPage";
 import CalculatorPage from "./CalculatorPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -2364,7 +2365,7 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
 
               <Card className="p-5 md:p-6 border-rose-900/50">
                 <SectionHeader title="Delete Account" icon={<AlertTriangle size={14} className="text-rose-400" />} subtitle="Permanently delete your account, trades, and journal entries. This can't be undone." />
-                <a href={`mailto:support@strikejournal.app?subject=Account%20deletion%20request&body=Please%20delete%20my%20account%20(${encodeURIComponent(session?.user?.email || "")}).`}
+                <a href={`mailto:support@strikejournal.com?subject=Account%20deletion%20request&body=Please%20delete%20my%20account%20(${encodeURIComponent(session?.user?.email || "")}).`}
                   className="inline-flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
                   <Ban size={15} /> Request Account Deletion
                 </a>
@@ -2676,6 +2677,7 @@ export default function App() {
     const raw = window.location.hash.replace(/^#\/?/, "");
     if (raw === "privacy") return "privacy";
     if (raw === "terms") return "terms";
+    if (raw === "changelog") return "changelog";
     return null;
   };
   const [legalPage, setLegalPage] = useState(legalFromHash);
@@ -2840,6 +2842,7 @@ export default function App() {
 
   if (legalPage === "privacy") return <PrivacyPolicy />;
   if (legalPage === "terms") return <TermsOfService />;
+  if (legalPage === "changelog") return <ChangelogPage />;
 
   if (session === undefined) {
     return (
