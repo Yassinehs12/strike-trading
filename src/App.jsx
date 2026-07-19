@@ -2643,6 +2643,8 @@ const ResetPasswordScreen = ({ onDone }) => {
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [profile, setProfile] = useState(undefined); // undefined = checking, null = needs onboarding
+  const [profileFetchError, setProfileFetchError] = useState("");
+  const [profileRetryKey, setProfileRetryKey] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
@@ -2688,9 +2690,9 @@ export default function App() {
   useEffect(() => {
     if (!session?.user) { setProfile(session === null ? null : undefined); return; }
     fetchProfile(session.user.id)
-      .then(setProfile)
-      .catch(() => setProfile(null));
-  }, [session]);
+      .then((p) => { setProfile(p); setProfileFetchError(""); })
+      .catch((err) => setProfileFetchError(err.message || "Failed to load your profile."));
+  }, [session, profileRetryKey]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
@@ -2827,6 +2829,23 @@ export default function App() {
   if (!session) {
     if (!showAuth) return <LandingPage onGetStarted={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />;
     return <AuthPage onBack={() => setShowAuth(false)} />;
+  }
+
+  if (profileFetchError && profile === undefined) {
+    return (
+      <div className="tj-root min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4">
+        <GlobalStyle />
+        <Card className="p-6 max-w-sm w-full text-center">
+          <AlertTriangle size={22} className="text-amber-400 mx-auto mb-3" />
+          <h2 className="font-bold text-[var(--text-primary)] mb-1">Couldn't load your profile</h2>
+          <p className="text-xs text-[var(--text-muted)] mb-4">{profileFetchError} This doesn't mean anything was lost — just a connection hiccup.</p>
+          <button onClick={() => { setProfileFetchError(""); setProfileRetryKey((k) => k + 1); }}
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
+            Try Again
+          </button>
+        </Card>
+      </div>
+    );
   }
 
   if (profile === undefined) {
