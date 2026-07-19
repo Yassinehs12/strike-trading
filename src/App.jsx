@@ -1984,16 +1984,21 @@ const EconomicCalendarPage = () => {
     try { localStorage.setItem("econCalendar.countries", JSON.stringify(countries)); } catch {}
   }, [countries]);
 
+  const [widgetLoaded, setWidgetLoaded] = useState(false);
+
   useEffect(() => {
     if (!containerRef.current) return;
+    setWidgetLoaded(false);
     containerRef.current.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-events.js";
     script.type = "text/javascript";
     script.async = true;
+    script.onload = () => setWidgetLoaded(true);
     const config = {
       colorTheme: "dark",
-      isTransparent: true,
+      isTransparent: false,
+      backgroundColor: "#000000",
       width: "100%",
       height: "680",
       locale: "en",
@@ -2002,11 +2007,15 @@ const EconomicCalendarPage = () => {
     if (countries.length && countries.length < ECON_COUNTRIES.length) config.countryFilter = countries.join(",");
     script.text = JSON.stringify(config);
     containerRef.current.appendChild(script);
+    // The widget's own iframe fires a 'load' event after the script tag's
+    // onload, so give it a beat before swapping out the skeleton.
+    const t = setTimeout(() => setWidgetLoaded(true), 1200);
+    return () => clearTimeout(t);
   }, [impacts, countries]);
 
   return (
     <div className="p-4 md:p-6">
-      <Card className="p-4 md:p-5">
+      <Card className="p-4 md:p-5 !bg-black !border-white/10">
         <div className="flex items-center gap-2 mb-1">
           <CalendarClock size={16} className="text-[var(--accent)]" />
           <h3 className="font-bold text-[var(--text-primary)] text-sm">Economic Calendar</h3>
@@ -2050,8 +2059,17 @@ const EconomicCalendarPage = () => {
           </div>
         </div>
 
-        <div className="tradingview-widget-container rounded-lg overflow-hidden" ref={containerRef}>
-          <div className="tradingview-widget-container__widget" />
+        <div className="relative rounded-lg overflow-hidden bg-black border border-white/10">
+          {!widgetLoaded && (
+            <div className="absolute inset-0 z-10 bg-black p-4 space-y-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-10 rounded-md bg-white/[0.04] tj-skeleton" />
+              ))}
+            </div>
+          )}
+          <div className="tradingview-widget-container" ref={containerRef}>
+            <div className="tradingview-widget-container__widget" />
+          </div>
         </div>
       </Card>
     </div>
