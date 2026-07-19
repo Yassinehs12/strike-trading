@@ -1206,6 +1206,93 @@ const InsightsCard = ({ trades }) => {
   );
 };
 
+// Returns a stable per-week key (e.g. "2026-W29") so we can remember whether
+// the person already dismissed this week's recap without needing a backend.
+function isoWeekKey(d = new Date()) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+const WeeklyRecapCard = ({ trades }) => {
+  const weekKey = isoWeekKey();
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("weeklyRecap.dismissedWeek") === weekKey; } catch { return false; }
+  });
+
+  const thisWeek = useMemo(() => filterTradesByPeriod(trades, 7), [trades]);
+  const prevWeek = useMemo(() => {
+    const last14 = filterTradesByPeriod(trades, 14);
+    const thisWeekIds = new Set(thisWeek.map((t) => t.id));
+    return last14.filter((t) => !thisWeekIds.has(t.id));
+  }, [trades, thisWeek]);
+
+  if (dismissed || thisWeek.length === 0) return null;
+
+  const kpis = computeKPIs(thisWeek);
+  const prevKpis = computeKPIs(prevWeek);
+  const netDelta = kpis.netProfit - prevKpis.netProfit;
+  const winRateDelta = prevWeek.length ? kpis.winRate - prevKpis.winRate : null;
+  const bestDay = [...thisWeek].sort((a, b) => (b.pnl - b.fees) - (a.pnl - a.fees))[0];
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem("weeklyRecap.dismissedWeek", weekKey); } catch {}
+  };
+
+  const isUp = kpis.netProfit >= 0;
+
+  return (
+    <Card className="p-4 md:p-5 relative overflow-hidden border-[var(--accent)]/30">
+      <div className="absolute inset-0 pointer-events-none opacity-[0.07]" style={{ background: "radial-gradient(60% 100% at 0% 0%, #3b82f6 0%, transparent 70%)" }} />
+      <button onClick={dismiss} className="absolute top-3 right-3 text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors z-10" aria-label="Dismiss weekly recap">
+        <X size={16} />
+      </button>
+
+      <div className="relative flex items-center gap-2 mb-4">
+        <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
+          <Sparkles size={14} className="text-[var(--accent)]" />
+        </div>
+        <div>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm">Your week in review</h3>
+          <p className="text-xs text-[var(--text-muted)]">Last 7 days, compared to the week before</p>
+        </div>
+      </div>
+
+      <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div>
+          <p className="text-xs text-[var(--text-muted)] mb-1">Net P&L</p>
+          <p className={`text-lg font-bold tj-mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>{isUp ? "+" : ""}{fmtUSD2(kpis.netProfit)}</p>
+          {prevWeek.length > 0 && (
+            <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{netDelta >= 0 ? "▲" : "▼"} {fmtUSD2(Math.abs(netDelta))} vs last week</p>
+          )}
+        </div>
+        <div>
+          <p className="text-xs text-[var(--text-muted)] mb-1">Win Rate</p>
+          <p className="text-lg font-bold tj-mono text-[var(--text-primary)]">{kpis.winRate.toFixed(0)}%</p>
+          {winRateDelta !== null && (
+            <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{winRateDelta >= 0 ? "▲" : "▼"} {Math.abs(winRateDelta).toFixed(0)}pt vs last week</p>
+          )}
+        </div>
+        <div>
+          <p className="text-xs text-[var(--text-muted)] mb-1">Trades Logged</p>
+          <p className="text-lg font-bold tj-mono text-[var(--text-primary)]">{thisWeek.length}</p>
+          <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{prevWeek.length} last week</p>
+        </div>
+        <div>
+          <p className="text-xs text-[var(--text-muted)] mb-1">Best Trade</p>
+          <p className="text-lg font-bold tj-mono text-emerald-400">{bestDay ? fmtUSD2(bestDay.pnl - bestDay.fees) : "—"}</p>
+          <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{bestDay ? bestDay.asset : "No trades yet"}</p>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+
 const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -1213,6 +1300,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <WeeklyRecapCard trades={trades} />
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <KPICard icon={Wallet} label="Net Profit" value={fmtUSD2(kpis.netProfit)} accent={kpis.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} sub="all-time" />
         <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} sub={`${trades.filter(t=>t.status==='Win').length} wins`} />
