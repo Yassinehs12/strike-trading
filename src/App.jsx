@@ -17,6 +17,7 @@ import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB
 import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
+import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import CalculatorPage from "./CalculatorPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -2580,6 +2581,14 @@ const AuthPage = ({ onBack }) => {
             </button>
           </p>
         )}
+        {mode === "signup" && (
+          <p className="text-center text-[11px] text-[var(--text-faint)] mt-3">
+            By creating an account, you agree to our{" "}
+            <a href="#/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
+            and{" "}
+            <a href="#/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -2659,6 +2668,22 @@ export default function App() {
 
   const [dataError, setDataError] = useState("");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+
+  // Standalone legal pages (Privacy Policy / Terms) are accessible via
+  // #/privacy and #/terms regardless of auth state, so they render before
+  // any of the session/auth branching below.
+  const legalFromHash = () => {
+    const raw = window.location.hash.replace(/^#\/?/, "");
+    if (raw === "privacy") return "privacy";
+    if (raw === "terms") return "terms";
+    return null;
+  };
+  const [legalPage, setLegalPage] = useState(legalFromHash);
+  useEffect(() => {
+    const onHashChange = () => setLegalPage(legalFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // Keep the URL hash in sync with the active tab, so refreshing (or sharing
   // a link) lands back on the same page instead of resetting to dashboard.
@@ -2812,6 +2837,9 @@ export default function App() {
       addToast("Payout requested");
     } catch (err) { addToast(err.message || "Failed to request payout", "error"); }
   };
+
+  if (legalPage === "privacy") return <PrivacyPolicy />;
+  if (legalPage === "terms") return <TermsOfService />;
 
   if (session === undefined) {
     return (

@@ -343,7 +343,11 @@ const Footer = () => (
       </div>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
         <p className="text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Journal. All rights reserved.</p>
-        <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]"><Lock size={12} /> Your trade data stays private by default</span>
+        <div className="flex items-center gap-5">
+          <a href="#/privacy" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
+          <a href="#/terms" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
+          <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]"><Lock size={12} /> Your trade data stays private by default</span>
+        </div>
       </div>
     </div>
   </footer>
