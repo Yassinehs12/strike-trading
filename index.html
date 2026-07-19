@@ -26,7 +26,49 @@
     <title>Strike Journal — Trading Journal & Funding Challenge Tracker</title>
   </head>
   <body class="bg-zinc-950">
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        Static fallback content. Strike Journal is a client-rendered React
+        app — this block exists so crawlers, link-preview bots, and safety
+        scanners that don't execute JavaScript see real content instead of
+        an empty page. Real visitors never see this: React replaces it the
+        instant the app mounts (see src/main.jsx).
+      -->
+      <div style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#000;color:#f4f4f5;min-height:100vh;padding:64px 24px;box-sizing:border-box;">
+        <div style="max-width:720px;margin:0 auto;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#60a5fa,#1d4ed8);"></div>
+            <span style="font-weight:800;font-size:18px;">Strike<span style="color:#3b82f6;">Journal</span></span>
+          </div>
+          <h1 style="font-size:32px;font-weight:800;line-height:1.25;margin:0 0 16px;">
+            Trading journal &amp; prop firm funding challenge tracker
+          </h1>
+          <p style="font-size:16px;line-height:1.6;color:#a1a1aa;margin:0 0 28px;">
+            Strike Journal helps traders log every trade, monitor prop firm evaluation
+            rules in real time, and see the analytics that explain their edge. Free to
+            start — trade journaling, risk gauges, a P&amp;L calendar, payout tracking,
+            and a live trading community, all in one place.
+          </p>
+          <ul style="list-style:none;padding:0;margin:0 0 32px;display:flex;flex-wrap:wrap;gap:10px;">
+            <li style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 16px;font-size:14px;">Trade Journal</li>
+            <li style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 16px;font-size:14px;">Funding Challenge Tracker</li>
+            <li style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 16px;font-size:14px;">Risk Gauges</li>
+            <li style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 16px;font-size:14px;">Analytics &amp; Insights</li>
+            <li style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:8px 16px;font-size:14px;">Community &amp; Live Chat</li>
+          </ul>
+          <p style="font-size:13px;color:#71717a;">
+            strikejournal.com &middot; Sign up is free, no credit card required.
+          </p>
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div style="font-family:sans-serif;background:#000;color:#fff;padding:40px;text-align:center;">
+        Strike Journal requires JavaScript to run the full app. It's a trading journal
+        and prop firm funding challenge tracker — visit strikejournal.com with
+        JavaScript enabled to sign up and get started.
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
