@@ -30,6 +30,7 @@ const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "How it works", href: "#how-it-works" },
   { label: "FAQ", href: "#faq" },
+  { label: "Changelog", href: "#/changelog" },
 ];
 
 const FEATURES = [
@@ -346,6 +347,8 @@ const Footer = () => (
         <div className="flex items-center gap-5">
           <a href="#/privacy" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
           <a href="#/terms" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
+          <a href="https://discord.gg/WuJSsCb3AW" target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Discord</a>
+          <a href="mailto:support@strikejournal.com?subject=Bug%20report" className="text-xs text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Report a bug</a>
           <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]"><Lock size={12} /> Your trade data stays private by default</span>
         </div>
       </div>
