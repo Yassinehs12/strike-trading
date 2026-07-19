@@ -1,12 +1,19 @@
 import React from "react";
 import { ArrowLeft } from "lucide-react";
 import { LogoFull } from "./Logo";
+import ThemeToggle from "./ThemeToggle.jsx";
 
 /* ============================================================
    Shared shell for legal pages — matches the landing page's
-   dark theme (CSS vars) so it doesn't feel like a bolted-on
-   page from a template.
+   nav (sticky, blurred, theme toggle) so these don't feel like
+   a bolted-on page from a template.
    ============================================================ */
+const SUB_NAV = [
+  { label: "Privacy Policy", href: "#/privacy" },
+  { label: "Terms of Service", href: "#/terms" },
+  { label: "Changelog", href: "#/changelog" },
+];
+
 const LegalShell = ({ title, updated, children }) => (
   <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <style>{`
@@ -14,23 +21,43 @@ const LegalShell = ({ title, updated, children }) => (
       .lp-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     `}</style>
 
-    <header className="border-b border-white/10">
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
       <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
         <a href="#/" className="flex items-center gap-2">
           <LogoFull size={26} textClass="text-sm" />
         </a>
-        <a
-          href="#/"
-          className="flex items-center gap-1.5 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <ArrowLeft size={14} /> Back to site
-        </a>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <a
+            href="#/"
+            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <ArrowLeft size={14} /> Back to site
+          </a>
+        </div>
       </div>
     </header>
 
     <main className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-2xl md:text-3xl font-extrabold mb-1">{title}</h1>
-      <p className="text-xs text-[var(--text-faint)] mb-10">Last updated: {updated}</p>
+      <p className="text-xs text-[var(--text-faint)] mb-8">Last updated: {updated}</p>
+
+      <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
+        {SUB_NAV.map((l) => {
+          const isActive = typeof window !== "undefined" && window.location.hash.replace(/^#\/?/, "") === l.href.replace("#/", "");
+          return (
+            <a
+              key={l.href}
+              href={l.href}
+              className={`text-xs font-semibold uppercase tracking-wide transition-colors ${
+                isActive ? "text-[var(--accent)]" : "text-[var(--text-faint)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {l.label}
+            </a>
+          );
+        })}
+      </nav>
 
       <div className="space-y-8 text-sm leading-relaxed text-[var(--text-tertiary)]">
         {children}
@@ -46,8 +73,8 @@ const LegalShell = ({ title, updated, children }) => (
 );
 
 const Section = ({ id, title, children }) => (
-  <section id={id}>
-    <h2 className="text-base font-bold text-[var(--text-primary)] mb-2">{title}</h2>
+  <section id={id} className="scroll-mt-24">
+    <h2 className="text-base font-bold text-[var(--text-primary)] mb-2 tracking-tight">{title}</h2>
     <div className="space-y-2">{children}</div>
   </section>
 );

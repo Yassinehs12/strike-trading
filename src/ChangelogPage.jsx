@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowLeft, Sparkles, Wrench, Bug, Rocket } from "lucide-react";
 import { LogoFull } from "./Logo";
+import ThemeToggle from "./ThemeToggle.jsx";
 
 /* ============================================================
    CHANGELOG ENTRIES
@@ -75,28 +76,37 @@ export default function ChangelogPage() {
         .lp-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
       `}</style>
 
-      <header className="border-b border-white/10">
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
           <a href="#/" className="flex items-center gap-2">
             <LogoFull size={26} textClass="text-sm" />
           </a>
-          <a
-            href="#/"
-            className="flex items-center gap-1.5 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <ArrowLeft size={14} /> Back to site
-          </a>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <a
+              href="#/"
+              className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              <ArrowLeft size={14} /> Back to site
+            </a>
+          </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-12">
         <div className="flex items-center gap-2 mb-1">
           <Rocket size={20} className="text-[var(--accent)]" />
-          <h1 className="text-2xl md:text-3xl font-extrabold">What's new</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">What's new</h1>
         </div>
-        <p className="text-sm text-[var(--text-faint)] mb-10">
+        <p className="text-sm text-[var(--text-faint)] mb-8">
           Every update we ship to Strike Journal, in one place.
         </p>
+
+        <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
+          <a href="#/privacy" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
+          <a href="#/terms" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
+          <a href="#/changelog" className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Changelog</a>
+        </nav>
 
         {CHANGELOG.length === 0 ? (
           <p className="text-sm text-[var(--text-faint)]">Nothing here yet — check back soon.</p>
