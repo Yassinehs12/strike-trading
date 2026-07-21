@@ -10,10 +10,10 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, fetchBrokerConnections, connectBrokerAccount, disconnectBrokerAccount, deleteBrokerConnection } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
@@ -2192,9 +2192,178 @@ const SETTINGS_TABS = [
   { id: "account", label: "Account", icon: UserCircle },
   { id: "security", label: "Security", icon: Shield },
   { id: "trading", label: "Trading", icon: Target },
+  { id: "broker", label: "Broker Sync", icon: Plug },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ];
+
+const BROKER_STATUS_STYLES = {
+  connected: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+  pending: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  error: "bg-rose-500/10 text-rose-400 border-rose-500/30",
+  disconnected: "bg-[var(--text-muted)]/10 text-[var(--text-tertiary)] border-[var(--text-muted)]/30",
+};
+
+const BrokerSyncTab = ({ session, toast }) => {
+  const [connections, setConnections] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ platform: "mt5", server: "", login: "", investorPassword: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  const load = async () => {
+    try {
+      const data = await fetchBrokerConnections(session.user.id);
+      setConnections(data);
+    } catch (err) {
+      toast(err.message || "Failed to load broker connections", "error");
+      setConnections([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleConnect = async (e) => {
+    e.preventDefault();
+    if (!form.server.trim() || !form.login.trim() || !form.investorPassword) {
+      toast("Server, login, and investor password are all required.", "error");
+      return;
+    }
+    setConnecting(true);
+    try {
+      await connectBrokerAccount({
+        platform: form.platform,
+        server: form.server.trim(),
+        login: form.login.trim(),
+        investorPassword: form.investorPassword,
+      });
+      toast("Account connected — trades will start syncing shortly.", "success");
+      setForm({ platform: "mt5", server: "", login: "", investorPassword: "" });
+      load();
+    } catch (err) {
+      toast(err.message || "Couldn't connect that account. Double-check your details.", "error");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async (id) => {
+    setBusyId(id);
+    try {
+      await disconnectBrokerAccount(id);
+      toast("Account disconnected", "success");
+      load();
+    } catch (err) {
+      toast(err.message || "Failed to disconnect", "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    setBusyId(id);
+    try {
+      await deleteBrokerConnection(id);
+      toast("Connection removed", "success");
+      load();
+    } catch (err) {
+      toast(err.message || "Failed to remove", "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <>
+      <Card className="p-5 md:p-6">
+        <SectionHeader
+          title="Connect a Prop Firm Account"
+          icon={<Plug size={14} />}
+          subtitle="Sync trades automatically from your MT4/MT5 account instead of logging them by hand."
+        />
+
+        <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg p-3.5 mb-5 flex items-start gap-2.5">
+          <ShieldCheck size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+            Use your <strong className="text-[var(--text-primary)]">investor password</strong>, not your trading
+            password — it's a read-only login built into MT4/MT5 that can view trades and balance but can't place
+            trades or withdraw funds. Your prop firm's platform login screen has an option to generate one. We never
+            store this password — it's used once to establish the connection and then discarded.
+          </p>
+        </div>
+
+        <form onSubmit={handleConnect} className="grid sm:grid-cols-2 gap-x-4">
+          <Field label="Platform">
+            <select className={inputCls} value={form.platform} onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}>
+              <option value="mt5">MetaTrader 5</option>
+              <option value="mt4">MetaTrader 4</option>
+            </select>
+          </Field>
+          <Field label="Broker Server">
+            <input className={inputCls} placeholder="e.g. FTMO-Server3" value={form.server} onChange={(e) => setForm((f) => ({ ...f, server: e.target.value }))} />
+          </Field>
+          <Field label="Account Login">
+            <input className={inputCls} placeholder="e.g. 12345678" value={form.login} onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))} />
+          </Field>
+          <Field label="Investor Password">
+            <div className="relative">
+              <input type={showPw ? "text" : "password"} className={`${inputCls} pr-9`} placeholder="Read-only investor password" value={form.investorPassword} onChange={(e) => setForm((f) => ({ ...f, investorPassword: e.target.value }))} />
+              <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </Field>
+          <div className="sm:col-span-2 mt-1">
+            <button type="submit" disabled={connecting} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:scale-[0.98] disabled:opacity-60 text-[var(--text-inverse)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all flex items-center gap-2">
+              {connecting ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
+              {connecting ? "Connecting…" : "Connect Account"}
+            </button>
+          </div>
+        </form>
+      </Card>
+
+      <Card className="p-5 md:p-6">
+        <SectionHeader title="Connected Accounts" icon={<Wallet size={14} />} noMargin />
+        <div className="mt-4 space-y-3">
+          {loading ? (
+            <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-[var(--text-muted)]" /></div>
+          ) : connections.length === 0 ? (
+            <EmptyState icon={Plug} title="No accounts connected yet" sub="Connect an MT4/MT5 account above to start auto-syncing trades." />
+          ) : (
+            connections.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-3 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg p-3.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-[var(--text-primary)] uppercase">{c.platform}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${BROKER_STATUS_STYLES[c.status] || BROKER_STATUS_STYLES.pending}`}>{c.status}</span>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] truncate">{c.broker_server} · Login {c.login}</p>
+                  {c.status === "error" && c.error_message && (
+                    <p className="text-xs text-rose-400 mt-1 truncate">{c.error_message}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {c.status !== "disconnected" && (
+                    <button onClick={() => handleDisconnect(c.id)} disabled={busyId === c.id} className="text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors">
+                      Disconnect
+                    </button>
+                  )}
+                  <button onClick={() => handleRemove(c.id)} disabled={busyId === c.id} className="text-[var(--text-muted)] hover:text-rose-400 disabled:opacity-50 transition-colors" aria-label="Remove connection">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    </>
+  );
+};
+
 
 const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onSignOut }) => {
   const [form, setForm] = useState(settings);
@@ -2447,6 +2616,8 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
               </Card>
             </>
           )}
+
+          {tab === "broker" && <BrokerSyncTab session={session} toast={toast} />}
 
           {tab === "appearance" && (
             <Card className="p-5 md:p-6">

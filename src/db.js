@@ -881,7 +881,48 @@ export async function fetchAuditLog({ limit = 200, action = null, actorId = null
   return data;
 }
 
-/* ---------- landing page stats ---------- */
+/* ---------- broker connections (MT4/MT5 investor-password sync) ---------- */
+// The investor password itself never touches these functions or this
+// table — it's sent once, straight from the UI to the connect-broker Edge
+// Function, which hands it to MetaApi and returns only a connection
+// reference. See supabase/functions/connect-broker and
+// supabase-migrations/broker_connections.sql for the full flow.
+
+export async function fetchBrokerConnections(userId) {
+  const { data, error } = await supabase
+    .from("broker_connections")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// Calls the connect-broker Edge Function. `investorPassword` is sent over
+// HTTPS in this single request and is never persisted client-side or
+// written to any table by this app.
+export async function connectBrokerAccount({ platform, server, login, investorPassword, challengeId }) {
+  const { data, error } = await supabase.functions.invoke("connect-broker", {
+    body: { platform, server, login, investorPassword, challengeId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.connection;
+}
+
+export async function disconnectBrokerAccount(id) {
+  const { error } = await supabase
+    .from("broker_connections")
+    .update({ status: "disconnected", updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteBrokerConnection(id) {
+  const { error } = await supabase.from("broker_connections").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an
 // anonymous read) doesn't break the others.
