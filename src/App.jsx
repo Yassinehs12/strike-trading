@@ -10,15 +10,16 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, fetchBrokerConnections, connectBrokerAccount, disconnectBrokerAccount, deleteBrokerConnection } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, fetchBrokerConnections, connectBrokerAccount, disconnectBrokerAccount, deleteBrokerConnection, setShowPublicStats } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import ChangelogPage from "./ChangelogPage";
+import ReportCardPage from "./ReportCardPage";
 import CalculatorPage from "./CalculatorPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -2443,6 +2444,20 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
     }
   };
 
+  const [reportCardLoading, setReportCardLoading] = useState(false);
+  const toggleReportCard = async () => {
+    setReportCardLoading(true);
+    try {
+      const updated = await setShowPublicStats(session.user.id, !profile?.show_public_stats);
+      onProfileUpdate(updated);
+      toast(updated.show_public_stats ? "Your report card is now public" : "Your report card is now private", "success");
+    } catch (err) {
+      toast(err.message || "Failed to update this setting", "error");
+    } finally {
+      setReportCardLoading(false);
+    }
+  };
+
   const changePassword = async () => {
     setPasswordError("");
     if (newPassword.length < 8) { setPasswordError("New password must be at least 8 characters."); return; }
@@ -2593,6 +2608,27 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
                   </div>
                   <Toggle checked={!!profile?.leaderboard_opt_in} onChange={toggleLeaderboardOptIn} disabled={leaderboardLoading} />
                 </div>
+              </Card>
+
+              <Card className="p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 flex items-center gap-1.5"><Share2 size={15} className="text-[var(--accent)]" /> Public Report Card</h3>
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">Share a read-only page with your win rate, trade count, and funded status — no dollar amounts or individual trades. Off by default.</p>
+                  </div>
+                  <Toggle checked={!!profile?.show_public_stats} onChange={toggleReportCard} disabled={reportCardLoading} />
+                </div>
+                {profile?.show_public_stats && profile?.username && (
+                  <div className="mt-3 flex items-center gap-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2">
+                    <code className="text-xs text-[var(--text-tertiary)] flex-1 truncate">strikejournal.com/#/u/{profile.username}</code>
+                    <button
+                      onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/#/u/${profile.username}`); toast("Link copied", "success"); }}
+                      className="text-xs font-semibold text-[var(--accent)] hover:underline shrink-0"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
               </Card>
             </>
           )}
@@ -2969,6 +3005,7 @@ export default function App() {
     if (raw === "privacy") return "privacy";
     if (raw === "terms") return "terms";
     if (raw === "changelog") return "changelog";
+    if (raw.startsWith("u/")) return "report-card";
     return null;
   };
   const [legalPage, setLegalPage] = useState(legalFromHash);
@@ -3134,6 +3171,10 @@ export default function App() {
   if (legalPage === "privacy") return <PrivacyPolicy />;
   if (legalPage === "terms") return <TermsOfService />;
   if (legalPage === "changelog") return <ChangelogPage />;
+  if (legalPage === "report-card") {
+    const uname = window.location.hash.replace(/^#\/?u\//, "").split(/[/?#]/)[0];
+    return <ReportCardPage username={decodeURIComponent(uname)} />;
+  }
 
   if (session === undefined) {
     return (

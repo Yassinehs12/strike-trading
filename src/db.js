@@ -943,3 +943,18 @@ export async function fetchLandingStats() {
   ]);
   return { traders, trades, posts };
 }
+
+/* ---------- public report card (opt-in, read-only, no auth required) ---------- */
+export async function fetchPublicProfileByUsername(username) {
+  const { data, error } = await supabase.rpc("get_public_profile", { target_username: username });
+  if (error) throw error;
+  return data?.[0] || null; // null means not found OR not opted in — both look the same to the visitor
+}
+
+export async function fetchPublicReportCard(userId) {
+  const [badges, stats] = await Promise.all([
+    fetchPublicBadgeStats(userId),
+    fetchPublicTradingStats(userId),
+  ]);
+  return { ...badges, ...stats };
+}
