@@ -3022,6 +3022,9 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     if (/access_token|type=recovery|error=/.test(window.location.hash)) return;
+    // Standalone routes (public report cards, legal pages, changelog) manage
+    // their own URL — don't let the dashboard-tab sync stomp on them.
+    if (legalFromHash()) return;
     const target = `#/${active}`;
     if (window.location.hash !== target) window.history.pushState(null, "", target);
   }, [active, session]);
