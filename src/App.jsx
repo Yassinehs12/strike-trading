@@ -2192,11 +2192,26 @@ const SETTINGS_TABS = [
   { id: "account", label: "Account", icon: UserCircle },
   { id: "security", label: "Security", icon: Shield },
   { id: "trading", label: "Trading", icon: Target },
-  { id: "broker", label: "Broker Sync", icon: Plug },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ];
 
+/* ============================================================
+   BROKER SYNC — currently DISABLED, not wired into Settings.
+
+   Fully built (this component, plus src/db.js helpers, the
+   supabase-migrations/broker_connections.sql migration, and the
+   supabase/functions/connect-broker Edge Function) and ready to go —
+   just not exposed in the UI yet. MetaApi (the MT4/MT5 bridge this
+   relies on) bills per connected trading account, so this is meant to
+   be turned back on once there's a paid membership tier to gate it
+   behind rather than eating that cost on every free signup.
+
+   To re-enable: add { id: "broker", label: "Broker Sync", icon: Plug }
+   back into SETTINGS_TABS, and add
+   {tab === "broker" && <BrokerSyncTab session={session} toast={toast} />}
+   back into the tab === "appearance" block in SettingsPage below.
+   ============================================================ */
 const BROKER_STATUS_STYLES = {
   connected: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
   pending: "bg-amber-500/10 text-amber-400 border-amber-500/30",
@@ -2616,8 +2631,6 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
               </Card>
             </>
           )}
-
-          {tab === "broker" && <BrokerSyncTab session={session} toast={toast} />}
 
           {tab === "appearance" && (
             <Card className="p-5 md:p-6">
