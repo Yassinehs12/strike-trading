@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Trophy, Flame, ShieldCheck, TrendingUp, Target, Loader2, Share2, Check, UserX } from "lucide-react";
+import { ArrowLeft, Trophy, Flame, ShieldCheck, TrendingUp, Target, Loader2, Share2, Check, UserX, AlertTriangle } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { fetchPublicProfileByUsername, fetchPublicReportCard } from "./db";
@@ -31,7 +31,7 @@ const NotFoundState = ({ username }) => (
 );
 
 export default function ReportCardPage({ username }) {
-  const [status, setStatus] = useState("loading"); // loading | ready | not_found
+  const [status, setStatus] = useState("loading"); // loading | ready | not_found | error
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -39,17 +39,26 @@ export default function ReportCardPage({ username }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      let p;
       try {
-        const p = await fetchPublicProfileByUsername(username);
-        if (cancelled) return;
-        if (!p) { setStatus("not_found"); return; }
-        setProfile(p);
+        p = await fetchPublicProfileByUsername(username);
+      } catch (err) {
+        console.error("[ReportCardPage] get_public_profile failed:", err);
+        if (!cancelled) setStatus("error");
+        return;
+      }
+      if (cancelled) return;
+      if (!p) { setStatus("not_found"); return; }
+      setProfile(p);
+
+      try {
         const s = await fetchPublicReportCard(p.id);
         if (cancelled) return;
         setStats(s);
         setStatus("ready");
-      } catch {
-        if (!cancelled) setStatus("not_found");
+      } catch (err) {
+        console.error("[ReportCardPage] stats fetch failed:", err);
+        if (!cancelled) setStatus("error");
       }
     })();
     return () => { cancelled = true; };
@@ -93,6 +102,21 @@ export default function ReportCardPage({ username }) {
       )}
 
       {status === "not_found" && <NotFoundState username={username} />}
+
+      {status === "error" && (
+        <div className="flex flex-col items-center justify-center text-center py-24 px-4">
+          <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4">
+            <AlertTriangle size={22} className="text-rose-400" />
+          </div>
+          <h1 className="text-lg font-bold text-[var(--text-primary)] mb-1.5">Something went wrong</h1>
+          <p className="text-sm text-[var(--text-muted)] max-w-sm">
+            We found this profile but couldn't load their stats right now. Check the browser console for details, or try again shortly.
+          </p>
+          <a href="#/" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
+            <ArrowLeft size={14} /> Back to Strike Journal
+          </a>
+        </div>
+      )}
 
       {status === "ready" && (
         <main className="max-w-2xl mx-auto px-4 py-10 md:py-14">
