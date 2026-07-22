@@ -11,9 +11,7 @@ export const LogoMark = ({ size = 32, rounded = "rounded-xl", className = "", ba
   if (bare) {
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" className={`shrink-0 ${className}`}>
-        <path d="M17.8 6.5 9.6 18.2h5.1l-1.1 7.3 8.8-12.4h-5.4l0.8-6.6z" fill="currentColor" />
-        <rect x="8.5" y="24.6" width="6" height="1.5" rx="0.75" fill="currentColor" opacity="0.55" />
-        <rect x="16" y="24.6" width="7.5" height="1.5" rx="0.75" fill="currentColor" opacity="0.55" />
+        <path d="M19.4 3.6 8.2 19.4h6.3l-1.5 9 12.8-15.8h-6.6l1.2-9z" fill="currentColor" />
       </svg>
     );
   }
@@ -32,10 +30,8 @@ export const LogoMark = ({ size = 32, rounded = "rounded-xl", className = "", ba
           <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="8" fill="url(#sj-grad)" />
-      <path d="M17.8 6.5 9.6 18.2h5.1l-1.1 7.3 8.8-12.4h-5.4l0.8-6.6z" fill="#09090b" />
-      <rect x="8.5" y="24.6" width="6" height="1.5" rx="0.75" fill="#09090b" opacity="0.5" />
-      <rect x="16" y="24.6" width="7.5" height="1.5" rx="0.75" fill="#09090b" opacity="0.5" />
+      <rect width="32" height="32" rx="7" fill="url(#sj-grad)" />
+      <path d="M19.4 3.6 8.2 19.4h6.3l-1.5 9 12.8-15.8h-6.6l1.2-9z" fill="#09090b" />
     </svg>
   );
 };
