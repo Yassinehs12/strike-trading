@@ -20,6 +20,7 @@ import LandingPage from "./LandingPage";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import ChangelogPage from "./ChangelogPage";
 import ReportCardPage from "./ReportCardPage";
+import { BlogListPage, BlogPostPage } from "./BlogPage";
 import CalculatorPage from "./CalculatorPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
@@ -3005,6 +3006,8 @@ export default function App() {
     if (raw === "privacy") return "privacy";
     if (raw === "terms") return "terms";
     if (raw === "changelog") return "changelog";
+    if (raw === "blog") return "blog";
+    if (raw.startsWith("blog/")) return "blog-post";
     if (raw.startsWith("u/")) return "report-card";
     return null;
   };
@@ -3181,6 +3184,11 @@ export default function App() {
   if (legalPage === "privacy") return <PrivacyPolicy />;
   if (legalPage === "terms") return <TermsOfService />;
   if (legalPage === "changelog") return <ChangelogPage />;
+  if (legalPage === "blog") return <BlogListPage />;
+  if (legalPage === "blog-post") {
+    const slug = window.location.hash.replace(/^#\/?blog\//, "").split(/[/?#]/)[0];
+    return <BlogPostPage slug={decodeURIComponent(slug)} />;
+  }
   if (legalPage === "report-card") {
     const uname = window.location.hash.replace(/^#\/?u\//, "").split(/[/?#]/)[0];
     return <ReportCardPage username={decodeURIComponent(uname)} />;

@@ -9,6 +9,7 @@ import ThemeToggle from "./ThemeToggle.jsx";
    a bolted-on page from a template.
    ============================================================ */
 const SUB_NAV = [
+  { label: "Blog", href: "#/blog" },
   { label: "Privacy Policy", href: "#/privacy" },
   { label: "Terms of Service", href: "#/terms" },
   { label: "Changelog", href: "#/changelog" },

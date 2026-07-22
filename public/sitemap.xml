@@ -6,6 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://strikejournal.com/#/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://strikejournal.com/#/changelog</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

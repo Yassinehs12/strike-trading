@@ -103,6 +103,7 @@ export default function ChangelogPage() {
         </p>
 
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
+          <a href="#/blog" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Blog</a>
           <a href="#/privacy" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
           <a href="#/terms" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
           <a href="#/changelog" className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Changelog</a>
