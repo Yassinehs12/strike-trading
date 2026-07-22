@@ -1962,7 +1962,13 @@ const CalendarCard = ({ trades, onOpenTrade }) => {
    ============================================================ */
 const PIE_COLORS = ["#10b981", "#f43f5e", "#71717a"];
 
-const AnalyticsPage = ({ trades }) => {
+const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, onEditAccount, onRemoveAccount, accountLimit = 3 }) => {
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const trades = useMemo(
+    () => (selectedAccountId ? allTrades.filter((t) => t.accountId === selectedAccountId) : allTrades),
+    [allTrades, selectedAccountId]
+  );
+
   const kpis = computeKPIs(trades);
   const streaks = computeStreaks(trades);
 
@@ -1993,11 +1999,17 @@ const AnalyticsPage = ({ trades }) => {
   }, [trades]);
 
   if (trades.length === 0) {
-    return <div className="p-4 md:p-6"><Card><EmptyState icon={BarChart3} title="No data to analyze yet" sub="Log a few trades and your analytics will appear here." /></Card></div>;
+    return (
+      <div className="p-4 md:p-6 space-y-4">
+        <AccountsBar accounts={accounts} selectedId={selectedAccountId} onSelect={setSelectedAccountId} onAdd={onAddAccount} onEdit={onEditAccount} onRemove={onRemoveAccount} limit={accountLimit} />
+        <Card><EmptyState icon={BarChart3} title={selectedAccountId ? "No trades on this account yet" : "No data to analyze yet"} sub="Log a few trades and your analytics will appear here." /></Card>
+      </div>
+    );
   }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <AccountsBar accounts={accounts} selectedId={selectedAccountId} onSelect={setSelectedAccountId} onAdd={onAddAccount} onEdit={onEditAccount} onRemove={onRemoveAccount} limit={accountLimit} />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} />
         <KPICard icon={Target} label="Profit Factor" value={kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)} />
@@ -3466,7 +3478,7 @@ export default function App() {
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "journaling" && <JournalingPage session={session} trades={trades} toast={addToast} />}
-                {active === "analytics" && <AnalyticsPage trades={trades} />}
+                {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
