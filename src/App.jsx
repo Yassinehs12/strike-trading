@@ -3061,7 +3061,14 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    // Without this, the URL stays on whatever tab was open (e.g.
+    // #/dashboard) even though the page now shows the logged-out landing
+    // page — confusing on refresh or when sharing the URL.
+    window.history.pushState(null, "", "#/");
+    setActive("dashboard");
+  };
 
   const addToast = (message, type = "success") => {
     const id = Date.now() + Math.random();
