@@ -16,6 +16,7 @@ const tradeFromDB = (r) => ({
   pnl: Number(r.pnl),
   holdingMinutes: r.holding_minutes ?? 0,
   challengeId: r.challenge_id,
+  accountId: r.account_id,
   screenshot: r.screenshot,
   notes: r.notes ?? "",
   emotion: r.emotion || "Neutral",
@@ -37,6 +38,7 @@ const tradeToDB = (t, userId) => ({
   pnl: t.pnl,
   holding_minutes: t.holdingMinutes || 0,
   challenge_id: t.challengeId || null,
+  account_id: t.accountId || null,
   screenshot: t.screenshot || null,
   notes: t.notes || "",
   emotion: t.emotion || "Neutral",
@@ -957,4 +959,60 @@ export async function fetchPublicReportCard(userId) {
     fetchPublicTradingStats(userId),
   ]);
   return { ...badges, ...stats };
+}
+
+/* ---------- trading accounts (multi-account journaling) ---------- */
+const accountFromDB = (r) => ({
+  id: r.id,
+  name: r.name,
+  broker: r.broker,
+  accountType: r.account_type,
+  startingBalance: r.starting_balance != null ? Number(r.starting_balance) : null,
+  isActive: r.is_active,
+  createdAt: r.created_at,
+});
+
+const accountToDB = (a, userId) => ({
+  user_id: userId,
+  name: a.name,
+  broker: a.broker || null,
+  account_type: a.accountType || "live",
+  starting_balance: a.startingBalance === "" || a.startingBalance == null ? null : Number(a.startingBalance),
+  is_active: a.isActive !== undefined ? a.isActive : true,
+});
+
+export async function fetchTradingAccounts(userId) {
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data || []).map(accountFromDB);
+}
+
+export async function insertTradingAccount(account, userId) {
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .insert(accountToDB(account, userId))
+    .select()
+    .single();
+  if (error) throw error;
+  return accountFromDB(data);
+}
+
+export async function updateTradingAccount(id, account, userId) {
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .update(accountToDB(account, userId))
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return accountFromDB(data);
+}
+
+export async function deleteTradingAccount(id) {
+  const { error } = await supabase.from("trading_accounts").delete().eq("id", id);
+  if (error) throw error;
 }

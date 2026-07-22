@@ -13,7 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, fetchBrokerConnections, connectBrokerAccount, disconnectBrokerAccount, deleteBrokerConnection, setShowPublicStats } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, fetchBrokerConnections, connectBrokerAccount, disconnectBrokerAccount, deleteBrokerConnection, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computeInsights, filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
@@ -877,8 +877,8 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 /* ============================================================
    LOG TRADE MODAL
    ============================================================ */
-const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
-  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", screenshot: null, pnl: "" });
+const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "" });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -907,7 +907,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
       id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
-      challengeId: form.challengeId || null, notes: form.notes, screenshot: form.screenshot,
+      challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshot: form.screenshot,
     });
     setForm(blank);
     setErrors({});
@@ -964,6 +964,12 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges }) => {
         <select className={inputCls} value={form.challengeId} onChange={(e) => set("challengeId", e.target.value)}>
           <option value="">Journal only — no challenge</option>
           {challenges.map((c) => <option key={c.id} value={c.id}>{c.firm} — {c.phase}</option>)}
+        </select>
+      </Field>
+      <Field label="Account (optional)">
+        <select className={inputCls} value={form.accountId} onChange={(e) => set("accountId", e.target.value)}>
+          <option value="">No account assigned</option>
+          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
       <Field label="Chart Screenshot (optional)">
@@ -1566,7 +1572,123 @@ const SortHeader = ({ label, sortKey, sortConfig, onSort }) => (
   </th>
 );
 
-const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile }) => {
+const ACCOUNT_TYPES = [
+  { value: "live", label: "Live" },
+  { value: "demo", label: "Demo" },
+  { value: "funded", label: "Funded" },
+  { value: "prop_challenge", label: "Prop Challenge" },
+];
+
+const AddAccountModal = ({ open, onClose, onSave, editing }) => {
+  const blank = () => ({ name: "", broker: "", accountType: "live", startingBalance: "" });
+  const [form, setForm] = useState(blank);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    if (open) setForm(editing ? { name: editing.name, broker: editing.broker || "", accountType: editing.accountType, startingBalance: editing.startingBalance ?? "" } : blank());
+    setError("");
+  }, [open, editing]);
+
+  const submit = async () => {
+    if (!form.name.trim()) { setError("Give this account a name."); return; }
+    setSaving(true);
+    const result = await onSave(form);
+    setSaving(false);
+    if (result?.limitReached) { setError("Account limit reached for your current plan."); return; }
+    if (!result?.error) onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={editing ? "Edit Account" : "Add Trading Account"}>
+      <div className="space-y-4">
+        <Field label="Account Name" error={error}>
+          <input className={inputCls} placeholder="e.g. FTMO Live, Personal MT5" value={form.name} onChange={(e) => set("name", e.target.value)} />
+        </Field>
+        <Field label="Broker / Firm (optional)">
+          <input className={inputCls} placeholder="e.g. FTMO, IC Markets" value={form.broker} onChange={(e) => set("broker", e.target.value)} />
+        </Field>
+        <Field label="Account Type">
+          <select className={inputCls} value={form.accountType} onChange={(e) => set("accountType", e.target.value)}>
+            {ACCOUNT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Starting Balance (optional)">
+          <input type="number" className={inputCls} placeholder="10000" value={form.startingBalance} onChange={(e) => set("startingBalance", e.target.value)} />
+        </Field>
+        <button onClick={submit} disabled={saving} className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:scale-[0.98] disabled:opacity-60 text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all flex items-center justify-center gap-2">
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+          {editing ? "Save Changes" : "Add Account"}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+const AccountsBar = ({ accounts, selectedId, onSelect, onAdd, onEdit, onRemove, limit }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
+  const toast = useToast();
+
+  const openAdd = () => {
+    if (accounts.length >= limit) {
+      toast(`You've reached the ${limit}-account limit on your current plan.`, "error");
+      return;
+    }
+    setEditingAccount(null);
+    setModalOpen(true);
+  };
+
+  const handleSave = async (form) => {
+    if (editingAccount) { await onEdit(editingAccount.id, form); return {}; }
+    return await onAdd(form);
+  };
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap mb-4">
+      <button
+        onClick={() => onSelect(null)}
+        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+          selectedId === null ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--text-inverse)]" : "border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-white/20"
+        }`}
+      >
+        All Accounts
+      </button>
+      {accounts.map((a) => (
+        <div key={a.id} className="group relative">
+          <button
+            onClick={() => onSelect(a.id)}
+            className={`pl-3 pr-7 py-1.5 rounded-full text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
+              selectedId === a.id ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--text-inverse)]" : "border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-white/20"
+            }`}
+          >
+            <Wallet size={11} /> {a.name}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(a.id); if (selectedId === a.id) onSelect(null); }}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-current hover:text-rose-400 transition-opacity"
+            aria-label={`Remove ${a.name}`}
+          >
+            <X size={11} />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={openAdd}
+        className="px-3 py-1.5 rounded-full text-xs font-semibold border border-dashed border-white/15 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent)]/50 transition-colors flex items-center gap-1"
+      >
+        <Plus size={11} /> Add Account
+        <span className="text-[var(--text-faint)]">({accounts.length}/{limit})</span>
+      </button>
+
+      <AddAccountModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleSave} editing={editingAccount} />
+    </div>
+  );
+};
+
+const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, accounts = [], onAddAccount, onEditAccount, onRemoveAccount, accountLimit = 3 }) => {
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [filters, setFilters] = useState({ asset: "All", setup: "All", outcome: "All", search: "" });
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
@@ -1575,13 +1697,18 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile })
   const importInputRef = useRef(null);
   const toast = useToast();
 
+  const accountFilteredTrades = useMemo(
+    () => (selectedAccountId ? trades.filter((t) => t.accountId === selectedAccountId) : trades),
+    [trades, selectedAccountId]
+  );
+
   const setupOptions = useMemo(
-    () => Array.from(new Set(trades.map((t) => t.setup).filter(Boolean))).sort(),
-    [trades]
+    () => Array.from(new Set(accountFilteredTrades.map((t) => t.setup).filter(Boolean))).sort(),
+    [accountFilteredTrades]
   );
 
   const filtered = useMemo(() => {
-    let list = trades.filter((t) => {
+    let list = accountFilteredTrades.filter((t) => {
       if (filters.asset !== "All" && t.asset !== filters.asset) return false;
       if (filters.setup !== "All" && t.setup !== filters.setup) return false;
       if (filters.outcome !== "All" && t.status !== filters.outcome) return false;
@@ -1596,7 +1723,7 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile })
       return 0;
     });
     return list;
-  }, [trades, filters, sortConfig]);
+  }, [accountFilteredTrades, filters, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -1640,6 +1767,15 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile })
 
   return (
     <div className="p-4 md:p-6 space-y-4">
+      <AccountsBar
+        accounts={accounts}
+        selectedId={selectedAccountId}
+        onSelect={setSelectedAccountId}
+        onAdd={onAddAccount}
+        onEdit={onEditAccount}
+        onRemove={onRemoveAccount}
+        limit={accountLimit}
+      />
       <Card className="p-3 md:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 flex-1 min-w-[160px]">
@@ -2986,6 +3122,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [active, setActive] = useState(tabFromHash);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -3042,8 +3179,8 @@ export default function App() {
   useEffect(() => {
     if (!session?.user) { if (session === null) setLoading(false); return; }
     setLoading(true);
-    Promise.all([fetchTrades(), fetchChallenges()])
-      .then(([t, c]) => { setTrades(t); setChallenges(c); setDataError(""); })
+    Promise.all([fetchTrades(), fetchChallenges(), fetchTradingAccounts(session.user.id)])
+      .then(([t, c, a]) => { setTrades(t); setChallenges(c); setAccounts(a); setDataError(""); })
       .catch((err) => setDataError(err.message || "Failed to load your data."))
       .finally(() => setLoading(false));
   }, [session]);
@@ -3152,6 +3289,44 @@ export default function App() {
       setChallenges((prev) => prev.filter((c) => c.id !== id));
       addToast("Challenge removed", "info");
     } catch (err) { addToast(err.message || "Failed to delete challenge", "error"); }
+  };
+
+  // Free-tier account limit. Bump this — or better, replace it with a
+  // real per-plan lookup — once membership plans exist. Every "Add
+  // Account" entry point in the app funnels through addAccount below, so
+  // this one constant is the single place that controls the gate.
+  const FREE_ACCOUNT_LIMIT = 3;
+
+  const addAccount = async (a) => {
+    if (accounts.length >= FREE_ACCOUNT_LIMIT) {
+      addToast(`You've reached the ${FREE_ACCOUNT_LIMIT}-account limit on your current plan.`, "error");
+      return { limitReached: true };
+    }
+    try {
+      const saved = await insertTradingAccount(a, session.user.id);
+      setAccounts((prev) => [...prev, saved]);
+      addToast(`${saved.name} added`, "success");
+      return { saved };
+    } catch (err) {
+      addToast(err.message || "Failed to add account", "error");
+      return { error: err };
+    }
+  };
+
+  const editAccount = async (id, a) => {
+    try {
+      const saved = await updateTradingAccount(id, a, session.user.id);
+      setAccounts((prev) => prev.map((acc) => (acc.id === id ? saved : acc)));
+      addToast("Account updated", "success");
+    } catch (err) { addToast(err.message || "Failed to update account", "error"); }
+  };
+
+  const removeAccount = async (id) => {
+    try {
+      await deleteTradingAccount(id);
+      setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+      addToast("Account removed", "info");
+    } catch (err) { addToast(err.message || "Failed to remove account", "error"); }
   };
 
   const markFunded = async (id) => {
@@ -3289,7 +3464,7 @@ export default function App() {
               <>
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
-                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} />}
+                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "journaling" && <JournalingPage session={session} trades={trades} toast={addToast} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
@@ -3308,7 +3483,7 @@ export default function App() {
             )}
           </main>
         </div>
-        <LogTradeModal open={logModalOpen} onClose={() => setLogModalOpen(false)} onCreate={addTrade} challenges={challenges} />
+        <LogTradeModal open={logModalOpen} onClose={() => setLogModalOpen(false)} onCreate={addTrade} challenges={challenges} accounts={accounts} />
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
