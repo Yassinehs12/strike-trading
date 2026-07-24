@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import posthog from "posthog-js";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -1017,6 +1018,11 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
     try {
       await submitTradeSpotlight(trade, session.user.id, profile?.username || "Trader");
       addToast?.("Submitted — an admin will review it for the weekly spotlight");
+      posthog.capture("trade_spotlight_submitted", {
+        asset: trade.asset,
+        direction: trade.direction,
+        status: trade.status,
+      });
     } catch (err) {
       addToast?.(err.message || "Failed to submit trade", "error");
     } finally {
@@ -1731,13 +1737,18 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, a
   const setFilter = (k, v) => { setFilters((f) => ({ ...f, [k]: v })); setPage(1); };
   const onSort = (key) => setSortConfig((sc) => ({ key, dir: sc.key === key && sc.dir === "desc" ? "asc" : "desc" }));
 
-  const exportCSV = () => { downloadBlob(tradesToCSV(filtered), "trade_journal_export.csv"); toast(`Exported ${filtered.length} trades to CSV`, "info"); };
+  const exportCSV = () => {
+    downloadBlob(tradesToCSV(filtered), "trade_journal_export.csv");
+    toast(`Exported ${filtered.length} trades to CSV`, "info");
+    posthog.capture("trades_exported", { format: "csv", trade_count: filtered.length });
+  };
 
   const exportPDF = async () => {
     setExportingPdf(true);
     try {
       await tradesToPDF(filtered, { username: profile?.username });
       toast(`Exported ${filtered.length} trades to PDF`, "info");
+      posthog.capture("trades_exported", { format: "pdf", trade_count: filtered.length });
     } catch (err) {
       toast(err.message || "Failed to export PDF", "error");
     } finally {
@@ -2882,6 +2893,8 @@ const ProfileSetup = ({ session, onComplete }) => {
       const profile = await createProfile(session.user.id, cleanUsername, ageNum);
       const refCode = new URLSearchParams(window.location.search).get("ref");
       if (refCode) applyReferralCode(session.user.id, refCode).catch(() => {});
+      posthog.identify(session.user.id, { username: profile.username });
+      posthog.capture("profile_setup_completed", { has_referral: !!refCode });
       onComplete(profile);
     } catch (err) {
       if (err.code === "23505" || /duplicate/i.test(err.message || "")) setError("That username is already taken — try another.");
@@ -2966,11 +2979,18 @@ const AuthPage = ({ onBack }) => {
       const { error: err } = await supabase.auth.signUp({ email, password });
       setLoading(false);
       if (err) setError(err.message);
-      else setNotice("Account created — check your email to confirm, then sign in.");
+      else {
+        posthog.capture("signed_up", { method: "email" });
+        setNotice("Account created — check your email to confirm, then sign in.");
+      }
     } else {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (err) setError(err.message);
+      else if (data?.user) {
+        posthog.identify(data.user.id);
+        posthog.capture("signed_in", { method: "email" });
+      }
     }
   };
 
@@ -3206,16 +3226,29 @@ export default function App() {
   }, [session, profileRetryKey]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    supabase.auth.getSession().then(({ data }) => {
+      const s = data.session ?? null;
+      setSession(s);
+      if (s?.user) posthog.identify(s.user.id);
+    });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (_event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if ((_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") && newSession?.user) {
+        posthog.identify(newSession.user.id);
+        const provider = newSession.user.app_metadata?.provider;
+        if (_event === "SIGNED_IN" && provider && provider !== "email") {
+          posthog.capture("signed_in", { method: provider });
+        }
+      }
+      if (_event === "SIGNED_OUT") posthog.reset();
     });
     return () => listener.subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    posthog.reset();
     // Without this, the URL stays on whatever tab was open (e.g.
     // #/dashboard) even though the page now shows the logged-out landing
     // page — confusing on refresh or when sharing the URL.
@@ -3252,6 +3285,14 @@ export default function App() {
       const saved = await insertTrade(t, session.user.id);
       setTrades((prev) => [saved, ...prev]);
       addToast("Trade logged successfully");
+      posthog.capture("trade_logged", {
+        asset: saved.asset,
+        direction: saved.direction,
+        status: saved.status,
+        setup: saved.setup,
+        session: saved.session,
+        has_challenge: !!saved.challengeId,
+      });
     } catch (err) { addToast(err.message || "Failed to save trade", "error"); }
   };
 
@@ -3267,6 +3308,12 @@ export default function App() {
     if (saved.length) setTrades((prev) => [...saved, ...prev]);
     if (saved.length < parsedTrades.length) {
       addToast(`${parsedTrades.length - saved.length} row(s) failed to import`, "error");
+    }
+    if (saved.length > 0) {
+      posthog.capture("trades_csv_imported", {
+        trades_imported: saved.length,
+        trades_failed: parsedTrades.length - saved.length,
+      });
     }
   };
 
@@ -3285,6 +3332,7 @@ export default function App() {
       setTrades((prev) => prev.filter((t) => t.id !== id));
       setSelectedTrade(null);
       addToast("Trade removed", "info");
+      posthog.capture("trade_deleted");
     } catch (err) { addToast(err.message || "Failed to delete trade", "error"); }
   };
 
@@ -3293,6 +3341,12 @@ export default function App() {
       const saved = await insertChallenge(c, session.user.id);
       setChallenges((prev) => [saved, ...prev]);
       addToast(`${saved.firm} challenge created`);
+      posthog.capture("challenge_created", {
+        firm: saved.firm,
+        phase: saved.phase,
+        stage: saved.stage,
+        account_size: saved.accountSize,
+      });
     } catch (err) { addToast(err.message || "Failed to create challenge", "error"); }
   };
 
@@ -3350,6 +3404,10 @@ export default function App() {
       const saved = await updateChallengeDB(updated, session.user.id);
       setChallenges((prev) => prev.map((x) => (x.id === id ? saved : x)));
       addToast("Challenge marked as Funded 🎉");
+      posthog.capture("challenge_marked_funded", {
+        firm: c.firm,
+        account_size: c.accountSize,
+      });
     } catch (err) { addToast(err.message || "Failed to update challenge", "error"); }
   };
 
@@ -3366,6 +3424,11 @@ export default function App() {
       const saved = await updateChallengeDB(updated, session.user.id);
       setChallenges((prev) => prev.map((x) => (x.id === id ? saved : x)));
       addToast("Payout requested");
+      posthog.capture("payout_requested", {
+        firm: c.firm,
+        payout_amount: +s.payoutAmount.toFixed(2),
+        profit_split_pct: c.profitSplitPct,
+      });
     } catch (err) { addToast(err.message || "Failed to request payout", "error"); }
   };
 
