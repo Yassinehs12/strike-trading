@@ -1081,8 +1081,14 @@ export async function markSupportConversationRead(conversationId, asRole) {
 // Realtime: new messages arriving on a specific conversation (used by
 // whichever side — user or admin — currently has that thread open).
 export function subscribeToSupportMessages(conversationId, onInsert) {
+  // Unique suffix per call — without this, calling this function twice in
+  // quick succession for the same conversation (e.g. React re-mounting the
+  // effect in development) can hand back the SAME underlying channel before
+  // the first one finishes unsubscribing, and Supabase throws "cannot add
+  // postgres_changes callbacks after subscribe()" when that happens.
+  const uniqueId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const channel = supabase
-    .channel(`support_messages_${conversationId}`)
+    .channel(`support_messages_${conversationId}_${uniqueId}`)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "support_messages", filter: `conversation_id=eq.${conversationId}` },
@@ -1119,8 +1125,9 @@ export async function fetchAllSupportConversations() {
 // Realtime: any new message across any conversation, so the admin inbox
 // can bump unread counts / reorder threads without a manual refresh.
 export function subscribeToAllSupportMessages(onInsert) {
+  const uniqueId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const channel = supabase
-    .channel("support_messages_admin_inbox")
+    .channel(`support_messages_admin_inbox_${uniqueId}`)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "support_messages" },
