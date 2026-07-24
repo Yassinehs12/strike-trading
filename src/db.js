@@ -1094,12 +1094,26 @@ export function subscribeToSupportMessages(conversationId, onInsert) {
 
 /* ---------- admin: support inbox across all users ---------- */
 export async function fetchAllSupportConversations() {
-  const { data, error } = await supabase
+  const { data: convos, error } = await supabase
     .from("support_conversations")
-    .select("*, profiles!support_conversations_user_id_fkey(username, avatar_url)")
+    .select("*")
     .order("last_message_at", { ascending: false });
   if (error) throw error;
-  return data;
+  if (!convos.length) return [];
+
+  // Joined manually rather than via PostgREST's automatic embedding —
+  // support_conversations.user_id references auth.users, not
+  // public.profiles, so there's no FK relationship for Supabase to
+  // auto-detect. This works regardless of what any FK constraint is named.
+  const userIds = [...new Set(convos.map((c) => c.user_id))];
+  const { data: profiles, error: profileErr } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .in("id", userIds);
+  if (profileErr) throw profileErr;
+
+  const profileById = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
+  return convos.map((c) => ({ ...c, profiles: profileById[c.user_id] || null }));
 }
 
 // Realtime: any new message across any conversation, so the admin inbox
