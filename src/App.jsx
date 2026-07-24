@@ -26,6 +26,7 @@ import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
 import AdminPanel from "./AdminPanel";
+import SupportChatWidget from "./SupportChatWidget";
 import AdminBadge from "./AdminBadge";
 import LeaderboardPage from "./LeaderboardPage";
 import GoalsPage from "./GoalsPage";
@@ -3499,6 +3500,7 @@ export default function App() {
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
+        <SupportChatWidget session={session} />
       </div>
     </ToastContext.Provider>
   );

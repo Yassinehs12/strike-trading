@@ -12,6 +12,7 @@ import {
 import AdminBadge from "./AdminBadge";
 import SupporterBadge from "./SupporterBadge";
 import { BADGE_CATALOG, badgeFromKey } from "./Badges";
+import SupportInbox from "./SupportInbox";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
@@ -428,6 +429,10 @@ export default function AdminPanel({ session, profile, toast }) {
           className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "audit" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
           <ScrollText size={14} /> Audit Log
         </button>
+        <button onClick={() => setTab("support")}
+          className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "support" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
+          <MessagesSquare size={14} /> Support
+        </button>
       </div>
 
       {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5">{error}</div>}
@@ -627,6 +632,8 @@ export default function AdminPanel({ session, profile, toast }) {
           )}
         </div>
       )}
+
+      {tab === "support" && <SupportInbox session={session} toast={toast} />}
     </div>
   );
 }

@@ -1016,3 +1016,102 @@ export async function deleteTradingAccount(id) {
   const { error } = await supabase.from("trading_accounts").delete().eq("id", id);
   if (error) throw error;
 }
+
+/* ---------- support chat (in-app live chat with the Strike Journal team) ---------- */
+
+// Gets the user's existing support conversation, or creates one on first
+// message. One conversation per user — kept simple, like a support inbox
+// thread rather than a multi-thread ticket system.
+export async function getOrCreateSupportConversation(userId) {
+  const { data: existing, error: fetchErr } = await supabase
+    .from("support_conversations")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (existing) return existing;
+
+  const { data: created, error: insertErr } = await supabase
+    .from("support_conversations")
+    .insert({ user_id: userId })
+    .select()
+    .single();
+  if (insertErr) throw insertErr;
+  return created;
+}
+
+export async function fetchSupportMessages(conversationId) {
+  const { data, error } = await supabase
+    .from("support_messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function sendSupportMessage(conversationId, senderId, senderRole, body) {
+  const { data, error } = await supabase
+    .from("support_messages")
+    .insert({ conversation_id: conversationId, sender_id: senderId, sender_role: senderRole, body })
+    .select()
+    .single();
+  if (error) throw error;
+
+  await supabase
+    .from("support_conversations")
+    .update({
+      last_message_at: new Date().toISOString(),
+      // A message from the user flags it unread for admins, and vice versa.
+      unread_by_admin: senderRole === "user",
+      unread_by_user: senderRole === "admin",
+      status: "open",
+    })
+    .eq("id", conversationId);
+
+  return data;
+}
+
+export async function markSupportConversationRead(conversationId, asRole) {
+  const patch = asRole === "admin" ? { unread_by_admin: false } : { unread_by_user: false };
+  const { error } = await supabase.from("support_conversations").update(patch).eq("id", conversationId);
+  if (error) throw error;
+}
+
+// Realtime: new messages arriving on a specific conversation (used by
+// whichever side — user or admin — currently has that thread open).
+export function subscribeToSupportMessages(conversationId, onInsert) {
+  const channel = supabase
+    .channel(`support_messages_${conversationId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "support_messages", filter: `conversation_id=eq.${conversationId}` },
+      (payload) => onInsert(payload.new)
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
+/* ---------- admin: support inbox across all users ---------- */
+export async function fetchAllSupportConversations() {
+  const { data, error } = await supabase
+    .from("support_conversations")
+    .select("*, profiles!support_conversations_user_id_fkey(username, avatar_url)")
+    .order("last_message_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// Realtime: any new message across any conversation, so the admin inbox
+// can bump unread counts / reorder threads without a manual refresh.
+export function subscribeToAllSupportMessages(onInsert) {
+  const channel = supabase
+    .channel("support_messages_admin_inbox")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "support_messages" },
+      (payload) => onInsert(payload.new)
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
