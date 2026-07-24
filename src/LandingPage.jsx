@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, TrendingDown, Menu, X,
-  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram,
+  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram, Plug,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -67,6 +67,7 @@ const NAV_LINKS = [
 
 const FEATURES = [
   { tag: "Journal", icon: BookOpen, title: "Trade Journal", desc: "Log every trade with entry/exit, setup tags, session, and psychology notes — plus chart screenshots attached right to the trade." },
+  { tag: "Sync", icon: Plug, title: "Broker Sync", desc: "Connect Robinhood, Schwab, Fidelity, IBKR, and 20+ other brokerages — trades and balances import automatically, no manual entry." },
   { tag: "Compliance", icon: ShieldCheck, title: "Funding Challenge Tracker", desc: "Live rule compliance for prop firm evaluations — daily loss limits, max drawdown, and profit targets monitored automatically. Optional for retail and self-funded traders." },
   { tag: "Risk", icon: Gauge, title: "Risk Gauges", desc: "Instrument-style gauges show exactly how close you are to breaching a daily or total loss limit, before it happens." },
   { tag: "Patterns", icon: CalendarDays, title: "P&L Calendar Heatmap", desc: "See your trading patterns at a glance — every day shaded by profit or loss so you can spot your best and worst days fast." },
