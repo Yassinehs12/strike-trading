@@ -925,6 +925,63 @@ export async function deleteBrokerConnection(id) {
   if (error) throw error;
 }
 
+/* ---------- SnapTrade (real brokerage sync) ---------- */
+// Brokerage credentials never touch this app — the user authenticates
+// directly with their broker inside SnapTrade's hosted Connection Portal.
+// See supabase/functions/snaptrade-connect, snaptrade-sync,
+// snaptrade-disconnect, and supabase-migrations/snaptrade.sql.
+
+export async function fetchSnapTradeAccounts(userId) {
+  const { data, error } = await supabase
+    .from("snaptrade_accounts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// Returns a SnapTrade Connection Portal URL — open it in a new tab so the
+// user can log into their brokerage. Pass a broker slug to jump straight
+// to that broker's login instead of SnapTrade's picker.
+export async function getSnapTradeConnectUrl({ broker, reconnectAuthorizationId } = {}) {
+  const { data, error } = await supabase.functions.invoke("snaptrade-connect", {
+    body: { broker, reconnectAuthorizationId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.redirectURI;
+}
+
+// Pulls fresh balances for connected accounts and imports any newly
+// closed trades into the journal (source: 'snaptrade'). Safe to call
+// repeatedly — already-imported trades are de-duplicated server-side.
+export async function syncSnapTradeAccounts() {
+  const { data, error } = await supabase.functions.invoke("snaptrade-sync", { body: {} });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data; // { accountsSynced, tradesInserted }
+}
+
+export async function disconnectSnapTradeAccount(accountId) {
+  const { data, error } = await supabase.functions.invoke("snaptrade-disconnect", {
+    body: { accountId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
+// Fully revokes SnapTrade's access to every connected brokerage for this
+// user and deletes their SnapTrade registration entirely.
+export async function disconnectAllSnapTrade() {
+  const { data, error } = await supabase.functions.invoke("snaptrade-disconnect", {
+    body: { fullDisconnect: true },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
+
 // Best-effort public counts for the landing page's social-proof section.
 // Each count is fetched independently so one failing (e.g. RLS blocking an
 // anonymous read) doesn't break the others.
