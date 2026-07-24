@@ -2858,38 +2858,70 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
 /* ============================================================
    PROFILE SETUP (mandatory username + age, once per account)
    ============================================================ */
-const ProfileSetup = ({ session, onComplete }) => {
-  const [username, setUsername] = useState("");
-  const [age, setAge] = useState("");
+const ProfileSetup = ({ session, onComplete, pendingProfile }) => {
+  const [username, setUsername] = useState(pendingProfile?.username || "");
+  const [age, setAge] = useState(pendingProfile?.age || "");
   const [loading, setLoading] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(!!pendingProfile);
   const [error, setError] = useState("");
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const create = async (u, a) => {
     setError("");
-    const cleanUsername = username.trim();
+    const cleanUsername = u.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
       setError("Username must be 3-20 characters: letters, numbers, and underscores only.");
-      return;
+      return false;
     }
-    const ageNum = Number(age);
-    if (!age || !Number.isInteger(ageNum) || ageNum < 18 || ageNum > 120) {
+    const ageNum = Number(a);
+    if (!a || !Number.isInteger(ageNum) || ageNum < 18 || ageNum > 120) {
       setError("You must enter a valid age, 18 or older, to use Strike Journal.");
-      return;
+      return false;
     }
     setLoading(true);
     try {
       const profile = await createProfile(session.user.id, cleanUsername, ageNum);
       const refCode = new URLSearchParams(window.location.search).get("ref");
       if (refCode) applyReferralCode(session.user.id, refCode).catch(() => {});
+      try { localStorage.removeItem("pendingProfile"); } catch {}
       onComplete(profile);
+      return true;
     } catch (err) {
       if (err.code === "23505" || /duplicate/i.test(err.message || "")) setError("That username is already taken — try another.");
       else setError(err.message || "Something went wrong. Please try again.");
+      return false;
     } finally {
       setLoading(false);
     }
   };
+
+  // If the username/age were already collected on the signup form, finish
+  // account setup automatically instead of asking again — this only shows
+  // the manual form as a fallback if that silently fails (e.g. someone
+  // else took the username while this person was confirming their email).
+  useEffect(() => {
+    if (!pendingProfile) return;
+    create(pendingProfile.username, pendingProfile.age).then((ok) => {
+      if (!ok) setAutoRunning(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const submit = (e) => {
+    e.preventDefault();
+    create(username, age);
+  };
+
+  if (autoRunning) {
+    return (
+      <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center justify-center p-4 gap-4">
+        <GlobalStyle />
+        <LogoFull size={34} textClass="text-xl" />
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <Loader2 size={16} className="animate-spin" /> Setting up your account...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center p-4">
@@ -2931,20 +2963,12 @@ const AuthPage = ({ onBack }) => {
   const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [age, setAge] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-
-  const signInWithGoogle = async () => {
-    setError(""); setLoading(true);
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (err) { setError(err.message); setLoading(false); }
-    // on success the browser redirects to Google, so no further action here
-  };
 
   const submitForgotPassword = async (e) => {
     e.preventDefault();
@@ -2963,9 +2987,26 @@ const AuthPage = ({ onBack }) => {
     if (password.length < 6) { setError("Password must be at least 6 characters."); setLoading(false); return; }
 
     if (mode === "signup") {
+      const cleanUsername = username.trim();
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
+        setError("Username must be 3-20 characters: letters, numbers, and underscores only.");
+        setLoading(false);
+        return;
+      }
+      const ageNum = Number(age);
+      if (!age || !Number.isInteger(ageNum) || ageNum < 18 || ageNum > 120) {
+        setError("You must enter a valid age, 18 or older, to use Strike Journal.");
+        setLoading(false);
+        return;
+      }
+      // Stashed so the post-confirmation onboarding step can pick it up
+      // and finish account setup automatically instead of asking again.
+      // See ProfileSetup's `pendingProfile` handling.
+      try { localStorage.setItem("pendingProfile", JSON.stringify({ username: cleanUsername, age: ageNum })); } catch {}
+
       const { error: err } = await supabase.auth.signUp({ email, password });
       setLoading(false);
-      if (err) setError(err.message);
+      if (err) { setError(err.message); try { localStorage.removeItem("pendingProfile"); } catch {} }
       else setNotice("Account created — check your email to confirm, then sign in.");
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
@@ -3063,27 +3104,6 @@ const AuthPage = ({ onBack }) => {
                 {mode === "signup" ? "Free to start — no credit card required." : "Sign in to get back to your journal."}
               </p>
 
-              <button
-                type="button"
-                onClick={signInWithGoogle}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-zinc-100 disabled:opacity-60 text-zinc-900 font-semibold text-sm py-2.5 rounded-lg transition-all mb-4 border border-white/10"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.57-5.17 3.57-8.82z" />
-                  <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.46 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.09A12 12 0 0 0 12 24z" />
-                  <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.63H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.37l3.99-3.09z" />
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.28 6.63l3.99 3.09C6.22 6.86 8.87 4.75 12 4.75z" />
-                </svg>
-                Continue with Google
-              </button>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-[11px] text-[var(--text-faint)] uppercase tracking-wide">or</span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-
               <form onSubmit={submitEmail}>
                 <Field label="Email">
                   <div className="relative">
@@ -3100,6 +3120,20 @@ const AuthPage = ({ onBack }) => {
                     </button>
                   </div>
                 </Field>
+
+                {mode === "signup" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Username">
+                      <div className="relative">
+                        <UserCircle size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                        <input className={`${inputCls} pl-9`} placeholder="edgehunter_23" value={username} onChange={(e) => setUsername(e.target.value)} />
+                      </div>
+                    </Field>
+                    <Field label="Age">
+                      <input type="number" className={inputCls} placeholder="18+" value={age} onChange={(e) => setAge(e.target.value)} />
+                    </Field>
+                  </div>
+                )}
 
                 {mode === "signin" && (
                   <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] -mt-2 mb-4 block transition-colors">
@@ -3495,7 +3529,12 @@ export default function App() {
   }
 
   if (profile === null) {
-    return <ProfileSetup session={session} onComplete={setProfile} />;
+    let pendingProfile = null;
+    try {
+      const raw = localStorage.getItem("pendingProfile");
+      if (raw) pendingProfile = JSON.parse(raw);
+    } catch {}
+    return <ProfileSetup session={session} onComplete={setProfile} pendingProfile={pendingProfile} />;
   }
 
   const isTimedOut = profile?.timeout_until && new Date(profile.timeout_until) > new Date();
