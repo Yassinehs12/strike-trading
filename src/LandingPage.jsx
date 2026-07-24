@@ -2,11 +2,17 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, Menu, X,
-  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap,
+  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { fetchLandingStats } from "./db";
+
+const XLogoIcon = ({ size = 14, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M18.9 2H22l-7.5 8.6L23.3 22h-6.9l-5.4-7.1L4.8 22H1.7l8-9.2L1 2h7.1l4.9 6.5L18.9 2zm-1.2 18h1.9L7.4 4H5.3l12.4 16z" />
+  </svg>
+);
 
 const LandingStyle = () => (
   <style>{`
@@ -335,7 +341,27 @@ const Footer = () => (
             <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} bare className="text-[var(--text-inverse)]" /></div>
             <span className="font-bold text-[var(--text-primary)] text-sm">Strike Journal</span>
           </div>
-          <p className="text-xs text-[var(--text-faint)] max-w-xs">A trading journal and funding challenge tracker for traders who take their edge seriously.</p>
+          <p className="text-xs text-[var(--text-faint)] max-w-xs mb-3">A trading journal and funding challenge tracker for traders who take their edge seriously.</p>
+          <div className="flex items-center justify-center md:justify-start gap-3">
+            <a
+              href="https://x.com/strikejournals?s=11"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Strike Journal on X"
+              className="w-8 h-8 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-white/20 transition-colors"
+            >
+              <XLogoIcon size={14} />
+            </a>
+            <a
+              href="https://www.instagram.com/strikejournals?igsh=MXVrbWZzMmUxZDQzZg%3D%3D&utm_source=qr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Strike Journal on Instagram"
+              className="w-8 h-8 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-white/20 transition-colors"
+            >
+              <Instagram size={15} />
+            </a>
+          </div>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {NAV_LINKS.map((l) => (
