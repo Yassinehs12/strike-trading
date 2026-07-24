@@ -90,6 +90,18 @@ export default function SupportInbox({ session, toast }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+  // Same safety net as the user-facing widget: poll while a thread is open
+  // so a missed realtime event can't leave a reply invisible.
+  useEffect(() => {
+    if (!activeConvo) return;
+    const interval = setInterval(() => {
+      fetchSupportMessages(activeConvo.id)
+        .then((fresh) => setMessages((prev) => (fresh.length !== prev.length ? fresh : prev)))
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeConvo]);
+
   const send = async () => {
     const body = draft.trim();
     if (!body || !activeConvo) return;
@@ -144,7 +156,10 @@ export default function SupportInbox({ session, toast }) {
             </div>
             <div className="flex-1 overflow-y-auto tj-scrollbar p-4 space-y-3">
               {messages.map((m) => (
-                <div key={m.id} className={`flex ${m.sender_role === "admin" ? "justify-end" : "justify-start"}`}>
+                <div key={m.id} className={`flex flex-col ${m.sender_role === "admin" ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] text-[var(--text-faint)] px-1 mb-0.5">
+                    {m.sender_role === "admin" ? "You" : (activeConvo.profiles?.username || "User")}
+                  </span>
                   <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
                     m.sender_role === "admin" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-white/[0.06] text-[var(--text-primary)]"
                   }`}>

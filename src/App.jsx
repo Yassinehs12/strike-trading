@@ -2975,98 +2975,166 @@ const AuthPage = ({ onBack }) => {
   };
 
   return (
-    <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center p-4">
+    <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex">
       <GlobalStyle />
-      <div className="w-full max-w-sm">
-        {onBack && (
-          <button onClick={onBack} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mb-4 flex items-center gap-1 transition-colors">
-            ← Back to home
-          </button>
-        )}
-        <div className="flex items-center justify-center mb-8">
-          <LogoFull size={34} textClass="text-xl" />
+
+      {/* Left — branded panel, hidden on small screens where a split layout has no room to breathe */}
+      <div className="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col justify-between p-12 bg-[#050810]">
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(59,130,246,0.2), transparent 50%)" }} />
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "44px 44px" }}
+        />
+
+        <a href="#/" className="relative flex items-center gap-2">
+          <LogoFull size={30} textClass="text-lg" />
+        </a>
+
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[var(--text-tertiary)] mb-6">
+            <Sparkles size={12} className="text-[var(--accent)]" /> Built for every kind of trader
+          </span>
+          <h1 className="text-4xl font-extrabold leading-tight mb-4">
+            Trade with a system,<br /> not a feeling.
+          </h1>
+          <p className="text-[var(--text-tertiary)] text-[15px] leading-relaxed max-w-md mb-10">
+            Log every trade, track your funding challenge rules in real time, and see the analytics that actually explain your edge.
+          </p>
+          <div className="space-y-3.5">
+            {[
+              "Trade journal with setup tags & psychology notes",
+              "Funding challenge tracker — works with any prop firm",
+              "Analytics that go past win rate and P&L",
+              "A community built around accountability",
+            ].map((line) => (
+              <div key={line} className="flex items-center gap-2.5">
+                <div className="w-4.5 h-4.5 rounded-full bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
+                  <CheckCircle size={11} className="text-[var(--accent)]" />
+                </div>
+                <span className="text-sm text-[var(--text-secondary)]">{line}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {mode === "forgot" ? (
-          <Card className="p-6 tj-animate-in">
-            <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Reset your password</h3>
-            <p className="text-xs text-[var(--text-muted)] mb-5">We'll email you a link to set a new password.</p>
-            <form onSubmit={submitForgotPassword}>
-              <Field label="Email">
-                <div className="relative">
-                  <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                  <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-              </Field>
-              {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
-              {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
-              <button type="submit" disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
-                {loading ? <Loader2 size={15} className="animate-spin" /> : null}
-                Send Reset Link
-              </button>
-            </form>
-            <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className="w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mt-4 transition-colors">
-              ← Back to sign in
-            </button>
-          </Card>
-        ) : (
-        <Card className="p-6 tj-animate-in">
-          <div className="flex rounded-lg border border-white/10 overflow-hidden mb-5">
-            <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signin" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Sign In</button>
-            <button onClick={() => { setMode("signup"); setError(""); setNotice(""); }} className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "signup" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Sign Up</button>
+        <p className="relative text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Journal. Free to start, no credit card required.</p>
+      </div>
+
+      {/* Right — the actual form */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-sm">
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <LogoFull size={32} textClass="text-lg" />
           </div>
 
-          <form onSubmit={submitEmail}>
-            <Field label="Email">
-              <div className="relative">
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-            </Field>
-            <Field label="Password">
-              <div className="relative">
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input type={showPassword ? "text" : "password"} className={`${inputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+          {onBack && (
+            <button onClick={onBack} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mb-5 flex items-center gap-1 transition-colors">
+              ← Back to home
+            </button>
+          )}
+
+          {mode === "forgot" ? (
+            <div className="tj-animate-in">
+              <h2 className="text-xl font-extrabold mb-1.5">Reset your password</h2>
+              <p className="text-sm text-[var(--text-muted)] mb-6">We'll email you a link to set a new password.</p>
+              <form onSubmit={submitForgotPassword}>
+                <Field label="Email">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
+                </Field>
+                {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+                {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
+                <button type="submit" disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+                  Send Reset Link
                 </button>
-              </div>
-            </Field>
-
-            {mode === "signin" && (
-              <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] -mt-2 mb-4 block transition-colors">
-                Forgot password?
+              </form>
+              <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className="w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mt-5 transition-colors">
+                ← Back to sign in
               </button>
-            )}
+            </div>
+          ) : (
+            <div className="tj-animate-in">
+              <h2 className="text-xl font-extrabold mb-1.5">{mode === "signup" ? "Create your account" : "Welcome back"}</h2>
+              <p className="text-sm text-[var(--text-muted)] mb-6">
+                {mode === "signup" ? "Free to start — no credit card required." : "Sign in to get back to your journal."}
+              </p>
 
-            {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
-            {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-zinc-100 disabled:opacity-60 text-zinc-900 font-semibold text-sm py-2.5 rounded-lg transition-all mb-4 border border-white/10"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.57-5.17 3.57-8.82z" />
+                  <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.46 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.09A12 12 0 0 0 12 24z" />
+                  <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.63H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.37l3.99-3.09z" />
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.28 6.63l3.99 3.09C6.22 6.86 8.87 4.75 12 4.75z" />
+                </svg>
+                Continue with Google
+              </button>
 
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
-              {loading ? <Loader2 size={15} className="animate-spin" /> : null}
-              {mode === "signup" ? "Create Account" : "Sign In"}
-            </button>
-          </form>
-        </Card>
-        )}
-        {mode !== "forgot" && (
-          <p className="text-center text-xs text-[var(--text-faint)] mt-4">
-            {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-[var(--accent)] hover:text-[var(--accent)] font-medium">
-              {mode === "signin" ? "Sign up" : "Sign in"}
-            </button>
-          </p>
-        )}
-        {mode === "signup" && (
-          <p className="text-center text-[11px] text-[var(--text-faint)] mt-3">
-            By creating an account, you agree to our{" "}
-            <a href="#/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
-            and{" "}
-            <a href="#/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
-          </p>
-        )}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-[11px] text-[var(--text-faint)] uppercase tracking-wide">or</span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+
+              <form onSubmit={submitEmail}>
+                <Field label="Email">
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
+                </Field>
+                <Field label="Password">
+                  <div className="relative">
+                    <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input type={showPassword ? "text" : "password"} className={`${inputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </Field>
+
+                {mode === "signin" && (
+                  <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] -mt-2 mb-4 block transition-colors">
+                    Forgot password?
+                  </button>
+                )}
+
+                {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+                {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
+
+                <button type="submit" disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
+                  {loading ? <Loader2 size={15} className="animate-spin" /> : null}
+                  {mode === "signup" ? "Create Account" : "Sign In"}
+                </button>
+              </form>
+
+              <p className="text-center text-xs text-[var(--text-faint)] mt-5">
+                {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+                <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setNotice(""); }} className="text-[var(--accent)] hover:text-[var(--accent)] font-medium">
+                  {mode === "signin" ? "Sign up" : "Sign in"}
+                </button>
+              </p>
+
+              {mode === "signup" && (
+                <p className="text-center text-[11px] text-[var(--text-faint)] mt-3">
+                  By creating an account, you agree to our{" "}
+                  <a href="#/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
+                  and{" "}
+                  <a href="#/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3500,7 +3568,7 @@ export default function App() {
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
-        <SupportChatWidget session={session} />
+        <SupportChatWidget session={session} profile={profile} />
       </div>
     </ToastContext.Provider>
   );

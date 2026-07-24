@@ -7,7 +7,7 @@ import {
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
-export default function SupportChatWidget({ session }) {
+export default function SupportChatWidget({ session, profile }) {
   const [open, setOpen] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -60,6 +60,23 @@ export default function SupportChatWidget({ session }) {
 
   useEffect(() => { if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open]);
 
+  // Safety net: realtime should deliver new messages instantly, but if a
+  // subscription silently fails to attach (e.g. timing edge cases with
+  // channel setup) there'd be no other sign of it — so poll for anything
+  // realtime might have missed while the widget is open. Cheap and only
+  // runs while actually looking at the chat.
+  useEffect(() => {
+    if (!open || !conversation) return;
+    const interval = setInterval(() => {
+      fetchSupportMessages(conversation.id)
+        .then((fresh) => {
+          setMessages((prev) => (fresh.length !== prev.length ? fresh : prev));
+        })
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [open, conversation]);
+
   const send = async () => {
     const body = draft.trim();
     if (!body || !conversation) return;
@@ -101,7 +118,10 @@ export default function SupportChatWidget({ session }) {
               </div>
             ) : (
               messages.map((m) => (
-                <div key={m.id} className={`flex ${m.sender_role === "user" ? "justify-end" : "justify-start"}`}>
+                <div key={m.id} className={`flex flex-col ${m.sender_role === "user" ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] text-[var(--text-faint)] px-1 mb-0.5">
+                    {m.sender_role === "user" ? (profile?.username || "You") : "Strike Journal Team"}
+                  </span>
                   <div className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-sm ${
                     m.sender_role === "user" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-white/[0.06] text-[var(--text-primary)]"
                   }`}>
