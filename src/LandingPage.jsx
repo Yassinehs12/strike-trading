@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, TrendingDown, Menu, X,
-  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram, Plug,
+  MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram, Plug, Brain,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -45,17 +45,250 @@ const LandingStyle = () => (
     @keyframes lp-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
     .lp-fade-up { animation: lp-fade-up 0.6s ease-out both; }
 
+    /* Scroll-reveal — elements start hidden/offset and transition in once
+       they cross into the viewport (see the Reveal component). JS-driven via
+       IntersectionObserver rather than pure CSS, so it triggers once per
+       element on scroll rather than only on page load. */
+    .lp-reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
+    }
+    .lp-reveal-visible { opacity: 1; transform: translateY(0); }
+
+    /* Autoplay background video — muted looping product footage with a
+       gradient scrim so overlaid text stays legible, matching the card
+       treatment used elsewhere on the page. */
+    .lp-video-frame {
+      position: relative;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      border: 1px solid var(--border-primary);
+      background: var(--bg-secondary);
+      box-shadow: 0 30px 60px -20px rgba(0,0,0,0.45);
+    }
+    .lp-video-frame video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .lp-video-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(10,14,27,0) 40%, rgba(10,14,27,0.55) 100%);
+      pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lp-float, .lp-fade-up, .lp-ticker-track { animation: none !important; }
+      .lp-reveal { opacity: 1; transform: none; transition: none; }
+    }
+
     /* Ticker tape — the page's signature element. Two copies of the same
        track back to back, animated exactly -50%, gives a seamless loop. */
     @keyframes lp-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     .lp-ticker-track { animation: lp-ticker 34s linear infinite; }
     .lp-ticker-row:hover .lp-ticker-track { animation-play-state: paused; }
-
-    @media (prefers-reduced-motion: reduce) {
-      .lp-float, .lp-fade-up, .lp-ticker-track { animation: none !important; }
-    }
   `}</style>
 );
+
+// Wraps any content so it fades/slides into place the moment it scrolls
+// into view, instead of animating on page load. Fires once per element
+// (observer disconnects after the first intersection) and respects
+// prefers-reduced-motion via the CSS above.
+const Reveal = ({ children, className = "", delay = 0, as: Tag = "div" }) => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") { setVisible(true); return; }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <Tag ref={ref} className={`lp-reveal ${visible ? "lp-reveal-visible" : ""} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </Tag>
+  );
+};
+
+// Autoplay, muted, looping background video for showcasing the product in
+// motion (screen recordings of the journal, analytics, etc). Falls back
+// gracefully to a poster image if the video source is missing or fails to
+// load, so this is safe to ship even before real footage is recorded.
+//
+// To use real footage: drop an .mp4 into /public/videos/ and pass its path
+// as `src`, e.g. <BackgroundVideo src="/videos/dashboard-demo.mp4" poster="/og-image.png" />
+const BackgroundVideo = ({ src, poster, className = "", aspect = "16 / 9", overlay = true }) => {
+  const [failed, setFailed] = useState(!src);
+
+  return (
+    <div className={`lp-video-frame ${className}`} style={{ aspectRatio: aspect }}>
+      {!failed ? (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster={poster}
+          onError={() => setFailed(true)}
+        >
+          <source src={src} type="video/mp4" />
+        </video>
+      ) : (
+        poster && <img src={poster} alt="" className="w-full h-full object-cover" />
+      )}
+      {overlay && <div className="lp-video-scrim" />}
+    </div>
+  );
+};
+
+const SHOWCASE_TABS = [
+  { key: "journal", label: "Journal" },
+  { key: "analytics", label: "Analytics" },
+  { key: "psychology", label: "Psychology" },
+];
+
+const ShowcasePanel = ({ tab }) => {
+  if (tab === "journal") {
+    return (
+      <div className="p-5 md:p-7">
+        <div className="flex items-center justify-between mb-5">
+          <span className="lp-mono text-[10px] uppercase tracking-wider text-[var(--text-faint)]">Recent trades</span>
+          <span className="lp-mono text-[10px] uppercase tracking-wider text-[var(--text-faint)]">This week</span>
+        </div>
+        <div className="space-y-2.5">
+          {[
+            { asset: "XAU/USD", setup: "CHoCH Retest", grade: "A", status: "Win", pnl: "+$412.60" },
+            { asset: "NAS100", setup: "Limit Order Entry", grade: "A", status: "Win", pnl: "+$188.20" },
+            { asset: "EUR/USD", setup: "Session Break", grade: "B", status: "Loss", pnl: "-$96.00" },
+          ].map((t, i) => (
+            <div key={i} className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className={`w-1.5 h-1.5 rounded-full ${t.status === "Win" ? "bg-emerald-400" : "bg-rose-400"}`} />
+                <div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{t.asset}</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">{t.setup} · Grade {t.grade}</div>
+                </div>
+              </div>
+              <span className={`lp-mono text-sm font-semibold ${t.status === "Win" ? "text-emerald-400" : "text-rose-400"}`}>{t.pnl}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (tab === "analytics") {
+    const bars = [42, 58, 34, 71, 49, 63, 38];
+    return (
+      <div className="p-5 md:p-7">
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {[["Win Rate", "62.7%"], ["Profit Factor", "1.94"], ["Avg R:R", "1.8"]].map(([label, val], i) => (
+            <div key={i} className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+              <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1">{label}</div>
+              <div className="lp-mono text-base font-bold text-[var(--text-primary)]">{val}</div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+          <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-3">Win rate by session</div>
+          <div className="flex items-end gap-2 h-24">
+            {bars.map((h, i) => (
+              <div key={i} className="flex-1 rounded-t-md bg-[var(--accent)]/70" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // psychology
+  const circumference = 2 * Math.PI * 26;
+  const score = 78;
+  return (
+    <div className="p-5 md:p-7">
+      <div className="flex items-center gap-4 bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4">
+        <div className="relative w-16 h-16 shrink-0">
+          <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg-primary)" strokeWidth="6" />
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#38bdf8" strokeWidth="6"
+              strokeDasharray={circumference} strokeDashoffset={circumference * (1 - score / 100)} strokeLinecap="round" />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-sm font-bold lp-mono text-[var(--text-primary)]">{score}</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-[var(--text-primary)]">Stable</div>
+          <div className="text-xs text-[var(--text-muted)]">Discipline score, based on 24 closed trades</div>
+        </div>
+      </div>
+      <div className="space-y-2.5">
+        {[
+          { icon: TrendingUp, color: "text-emerald-400", text: "Neutral-state trading wins 68% of trades — your process works." },
+          { icon: ShieldCheck, color: "text-amber-400", text: "FOMO trades underperform by 22 points — your clearest leak." },
+        ].map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+              <Icon size={14} className={`${f.color} shrink-0 mt-0.5`} />
+              <span>{f.text}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Static, professional product showcase — tabbed mockups built entirely from
+// the app's own design tokens, so it renders crisp and on-brand immediately
+// without depending on a screen recording being available yet.
+const ProductShowcase = () => {
+  const [tab, setTab] = useState("journal");
+  return (
+    <section className="py-20 md:py-28 px-4 border-t border-white/5">
+      <div className="max-w-4xl mx-auto">
+        <Reveal className="text-center max-w-xl mx-auto mb-10">
+          <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">One dashboard, your whole edge</h2>
+          <p className="text-[var(--text-tertiary)]">Every trade you log feeds your journal, your analytics, and your psychology report — automatically.</p>
+        </Reveal>
+        <Reveal delay={100}>
+          <div className="flex items-center justify-center gap-1 bg-white/[0.03] border border-white/10 rounded-xl p-1 w-fit mx-auto mb-6">
+            {SHOWCASE_TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${tab === t.key ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="lp-video-frame" style={{ aspectRatio: "auto" }}>
+            <ShowcasePanel tab={tab} />
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+};
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
@@ -72,6 +305,7 @@ const FEATURES = [
   { tag: "Risk", icon: Gauge, title: "Risk Gauges", desc: "Instrument-style gauges show exactly how close you are to breaching a daily or total loss limit, before it happens." },
   { tag: "Patterns", icon: CalendarDays, title: "P&L Calendar Heatmap", desc: "See your trading patterns at a glance — every day shaded by profit or loss so you can spot your best and worst days fast." },
   { tag: "Analytics", icon: BarChart3, title: "Analytics & Insights", desc: "Win rate, profit factor, R:R, streaks, and performance broken down by asset, session, and day of the week." },
+  { tag: "Psychology", icon: Brain, title: "Psychology Report", desc: "A discipline score plus emotional-pattern breakdowns — overtrading, revenge trades, and FOMO entries — surfaced straight from your own emotion tags." },
   { tag: "Payouts", icon: Banknote, title: "Payout Tracking", desc: "Once you're funded, track profit splits and payout history in the same place you tracked the evaluation." },
   { tag: "Community", icon: MessagesSquare, title: "Community & Live Chat", desc: "Post setups with screenshots, reply to other traders, and jump into a real-time live chat with the whole community." },
   { tag: "Profiles", icon: Users, title: "Trader Profiles & Friends", desc: "Every trader has a profile with an avatar, bio, and stats. Add friends and build your circle of trading peers." },
@@ -114,12 +348,12 @@ const FAQItem = ({ q, a }) => {
 const FAQ = () => (
   <section id="faq" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-10">
+      <Reveal className="text-center mb-10">
         <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Frequently asked questions</h2>
-      </div>
-      <div>
+      </Reveal>
+      <Reveal delay={100}>
         {FAQS.map((f, i) => <FAQItem key={i} {...f} />)}
-      </div>
+      </Reveal>
     </div>
   </section>
 );
@@ -342,17 +576,17 @@ const Testimonials = () => {
   return (
     <section className="py-20 md:py-28 px-4 border-t border-white/5">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center max-w-xl mx-auto mb-14">
+        <Reveal className="text-center max-w-xl mx-auto mb-14">
           <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">What traders are saying</h2>
-        </div>
+        </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TESTIMONIALS.map((t, i) => (
-            <div key={i} className="rounded-2xl border border-white/10 p-6">
+            <Reveal key={i} delay={i * 80} className="rounded-2xl border border-white/10 p-6">
               <Quote size={18} className="text-[var(--accent)]/60 mb-3" />
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">{t.quote}</p>
               <div className="text-sm font-semibold text-[var(--text-primary)]">{t.name}</div>
               {t.role && <div className="text-xs text-[var(--text-muted)]">{t.role}</div>}
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -363,15 +597,15 @@ const Testimonials = () => {
 const Features = () => (
   <section id="features" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-6xl mx-auto">
-      <div className="text-center max-w-xl mx-auto mb-14">
+      <Reveal className="text-center max-w-xl mx-auto mb-14">
         <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Everything you need to trade with discipline</h2>
         <p className="text-[var(--text-tertiary)]">From your first evaluation trade to a fully funded, payout-eligible account — plus a community to trade alongside.</p>
-      </div>
+      </Reveal>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map((f, i) => {
           const Icon = f.icon;
           return (
-            <div key={i} className="lp-card-glow group relative rounded-2xl border border-white/10 border-t-2 border-t-white/10 hover:border-t-[var(--accent)] p-6 transition-colors">
+            <Reveal key={i} delay={(i % 3) * 90} className="lp-card-glow group relative rounded-2xl border border-white/10 border-t-2 border-t-white/10 hover:border-t-[var(--accent)] p-6 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
                   <Icon size={18} className="text-[var(--accent)]" />
@@ -380,7 +614,7 @@ const Features = () => (
               </div>
               <h3 className="text-[var(--text-primary)] font-semibold mb-2">{f.title}</h3>
               <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{f.desc}</p>
-            </div>
+            </Reveal>
           );
         })}
       </div>
@@ -391,17 +625,17 @@ const Features = () => (
 const HowItWorks = () => (
   <section id="how-it-works" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-5xl mx-auto">
-      <div className="text-center max-w-xl mx-auto mb-14">
+      <Reveal className="text-center max-w-xl mx-auto mb-14">
         <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Up and running in minutes</h2>
-      </div>
+      </Reveal>
       <div className="grid md:grid-cols-3 gap-8 relative">
         <div className="hidden md:block absolute top-6 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         {STEPS.map((s, i) => (
-          <div key={i} className="relative">
+          <Reveal key={i} delay={i * 120} className="relative">
             <div className="lp-mono text-5xl font-bold text-[var(--accent)]/20 mb-3">{s.n}</div>
             <h3 className="text-[var(--text-primary)] font-semibold mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-[var(--accent)]" /> {s.title}</h3>
             <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{s.desc}</p>
-          </div>
+          </Reveal>
         ))}
       </div>
     </div>
@@ -410,7 +644,7 @@ const HowItWorks = () => (
 
 const FinalCTA = ({ onGetStarted }) => (
   <section className="py-20 md:py-28 px-4 border-t border-white/5">
-    <div className="relative max-w-3xl mx-auto text-center rounded-3xl border border-white/10 p-10 md:p-14 overflow-hidden">
+    <Reveal className="relative max-w-3xl mx-auto text-center rounded-3xl border border-white/10 p-10 md:p-14 overflow-hidden">
       <div className="absolute inset-0 lp-chart-grid pointer-events-none" />
       <div className="absolute inset-0 lp-card-glow pointer-events-none" />
       <TrendingUp size={28} className="relative text-[var(--accent)] mx-auto mb-5" />
@@ -419,7 +653,7 @@ const FinalCTA = ({ onGetStarted }) => (
       <button onClick={onGetStarted} className="relative inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">
         Get Started Free <ArrowRight size={16} />
       </button>
-    </div>
+    </Reveal>
   </section>
 );
 
@@ -483,6 +717,7 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
       <TickerTape />
       <Hero onGetStarted={onGetStarted} />
       <SocialProof />
+      <ProductShowcase />
       <Features />
       <Testimonials />
       <HowItWorks />
