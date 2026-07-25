@@ -3241,6 +3241,7 @@ const ResetPasswordScreen = ({ onDone }) => {
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [profile, setProfile] = useState(undefined); // undefined = checking, null = needs onboarding
+  const [authReady, setAuthReady] = useState(false); // true once the initial Supabase auth check has resolved at least once — guards against a transient null session flashing the onboarding screen
   const [profileFetchError, setProfileFetchError] = useState("");
   const [profileRetryKey, setProfileRetryKey] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
@@ -3310,16 +3311,18 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
+    if (!authReady) return; // don't trust a session of null until the initial auth check has actually resolved — otherwise a transient null during login briefly flashes the "set username & age" onboarding screen before the real session settles in
     if (!session?.user) { setProfile(session === null ? null : undefined); return; }
     fetchProfile(session.user.id)
       .then((p) => { setProfile(p); setProfileFetchError(""); })
       .catch((err) => setProfileFetchError(err.message || "Failed to load your profile."));
-  }, [session, profileRetryKey]);
+  }, [session, profileRetryKey, authReady]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session ?? null); setAuthReady(true); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      setAuthReady(true);
       if (_event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
     return () => listener.subscription.unsubscribe();
