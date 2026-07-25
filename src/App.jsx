@@ -15,7 +15,8 @@ import {
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
 import { badgeFromKey } from "./Badges";
-import { computeInsights, filterTradesByPeriod } from "./insights";
+import { computePsychologyReport } from "./psychology";
+import { filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import ChangelogPage from "./ChangelogPage";
@@ -1171,24 +1172,39 @@ const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
   );
 };
 
-const InsightsCard = ({ trades }) => {
+const SCORE_RING_COLORS = {
+  emerald: "#34d399",
+  sky: "#38bdf8",
+  amber: "#fbbf24",
+  rose: "#fb7185",
+};
+
+const PsychologyReportCard = ({ trades }) => {
   const [period, setPeriod] = useState("week"); // "week" | "month"
   const scoped = useMemo(() => filterTradesByPeriod(trades, period === "week" ? 7 : 30), [trades, period]);
-  const { insights, sampleSize, ready } = useMemo(() => computeInsights(scoped, period === "week" ? "week" : "month"), [scoped, period]);
+  const { findings, score, scoreMeta, sampleSize, ready } = useMemo(
+    () => computePsychologyReport(scoped, period === "week" ? "week" : "month"),
+    [scoped, period]
+  );
 
   const iconFor = (type) => {
     if (type === "strength") return <TrendingUp size={14} className="text-emerald-400 shrink-0 mt-0.5" />;
-    if (type === "weakness") return <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />;
+    if (type === "risk") return <ShieldAlert size={14} className="text-amber-400 shrink-0 mt-0.5" />;
     if (type === "summary") return <Sparkles size={14} className="text-[var(--accent)] shrink-0 mt-0.5" />;
-    return <Info size={14} className="text-[var(--text-tertiary)] shrink-0 mt-0.5" />;
+    return <Shield size={14} className="text-[var(--text-tertiary)] shrink-0 mt-0.5" />;
   };
+
+  const ringColor = ready ? SCORE_RING_COLORS[scoreMeta.color] : "#3378ff";
+  const ringPct = ready ? score : 0;
+  const circumference = 2 * Math.PI * 26;
+  const dashOffset = circumference * (1 - ringPct / 100);
 
   return (
     <Card className="p-4 md:p-5">
       <div className="flex items-center justify-between mb-1">
         <div>
-          <h3 className="font-bold text-[var(--text-primary)] text-sm">Performance Insights</h3>
-          <p className="text-xs text-[var(--text-muted)]">Patterns from your own trade history — not advice, just what the data shows.</p>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm">Psychology Report</h3>
+          <p className="text-xs text-[var(--text-muted)]">Emotional state and discipline patterns from your own trade history — not advice, just what the data shows.</p>
         </div>
         <div className="flex items-center bg-[var(--bg-primary)] border border-white/10 rounded-lg p-0.5 shrink-0">
           <button onClick={() => setPeriod("week")} className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${period === "week" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Week</button>
@@ -1199,17 +1215,39 @@ const InsightsCard = ({ trades }) => {
       {!ready ? (
         <div className="py-6 text-center">
           <p className="text-sm text-[var(--text-muted)]">No closed trades this {period} yet.</p>
-          <p className="text-xs text-[var(--text-faint)] mt-1">Keep logging — insights unlock once there's enough data to spot real patterns.</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1">Keep logging emotion tags — your report unlocks once there's enough data to spot real patterns.</p>
         </div>
       ) : (
-        <div className="space-y-2.5 mt-3">
-          {insights.map((ins, i) => (
-            <div key={i} className={`flex items-start gap-2 text-sm ${ins.type === "summary" ? "font-semibold text-[var(--text-primary)] pb-2 border-b border-white/10" : "text-[var(--text-secondary)]"}`}>
-              {iconFor(ins.type)}
-              <span>{ins.text}</span>
+        <>
+          <div className="flex items-center gap-4 mt-3 pb-3 border-b border-white/10">
+            <div className="relative w-16 h-16 shrink-0">
+              <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg-primary)" strokeWidth="6" />
+                <circle
+                  cx="32" cy="32" r="26" fill="none" stroke={ringColor} strokeWidth="6"
+                  strokeDasharray={circumference} strokeDashoffset={dashOffset} strokeLinecap="round"
+                  style={{ transition: "stroke-dashoffset 0.5s ease" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold tj-mono text-[var(--text-primary)]">{score}</span>
+              </div>
             </div>
-          ))}
-        </div>
+            <div>
+              <div className="text-sm font-bold text-[var(--text-primary)]">{scoreMeta.label}</div>
+              <div className="text-xs text-[var(--text-muted)]">Discipline score, based on {sampleSize} closed trades</div>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 mt-3">
+            {findings.map((f, i) => (
+              <div key={i} className={`flex items-start gap-2 text-sm ${f.type === "summary" ? "hidden" : "text-[var(--text-secondary)]"}`}>
+                {iconFor(f.type)}
+                <span><span className="font-semibold text-[var(--text-primary)]">{f.title}.</span> {f.text}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </Card>
   );
@@ -1319,7 +1357,7 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
         <KPICard icon={ShieldCheck} label="Active Challenges" value={challenges.length} accent="text-[var(--accent)]" sub="funding evaluations" />
       </div>
 
-      <InsightsCard trades={trades} />
+      <PsychologyReportCard trades={trades} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
