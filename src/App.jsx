@@ -3314,22 +3314,23 @@ export default function App() {
     if (!authReady) return; // don't trust a session of null until the initial auth check has actually resolved — otherwise a transient null during login briefly flashes the "set username & age" onboarding screen before the real session settles in
     if (!session?.user) { setProfile(session === null ? null : undefined); return; }
     let cancelled = false;
-    // A profile row can occasionally take a moment to become readable right
-    // after sign-in (replication/consistency lag), which made fetchProfile
-    // briefly return null for accounts that already have a profile — that
-    // flashed the "Complete your profile" onboarding screen before the real
-    // data arrived. Retry a couple of times before treating null as final.
+    // A profile row can take a few seconds to become reliably readable right
+    // after sign-in — this was making fetchProfile return null for accounts
+    // that already have a profile, which flashed the "Complete your profile"
+    // onboarding screen before the real data arrived a moment later. Retry
+    // repeatedly (showing the loading spinner, not the onboarding form)
+    // before ever concluding "this account has no profile."
     const load = (attemptsLeft) => {
       fetchProfile(session.user.id)
         .then((p) => {
           if (cancelled) return;
-          if (p == null && attemptsLeft > 0) { setTimeout(() => !cancelled && load(attemptsLeft - 1), 600); return; }
+          if (p == null && attemptsLeft > 0) { setTimeout(() => !cancelled && load(attemptsLeft - 1), 500); return; }
           setProfile(p);
           setProfileFetchError("");
         })
         .catch((err) => { if (!cancelled) setProfileFetchError(err.message || "Failed to load your profile."); });
     };
-    load(2);
+    load(8); // up to ~4s of retrying before treating a null result as final
     return () => { cancelled = true; };
   }, [session, profileRetryKey, authReady]);
 
