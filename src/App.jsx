@@ -3337,6 +3337,22 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session ?? null); setAuthReady(true); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Supabase fires SIGNED_OUT with newSession = null not just on a
+      // deliberate sign-out, but also when a refresh token is rejected —
+      // e.g. two tabs/devices on the same account both trying to refresh
+      // around the same time (one wins, the other gets "invalid_grant").
+      // Treating that the same as a real sign-out force-kicks the user
+      // back to the login screen for a race condition that isn't their
+      // fault. Instead, if we currently believe we have a session and the
+      // library says otherwise, try a manual refresh once before trusting
+      // it — a genuine sign-out will still resolve to null and log out.
+      if (_event === "SIGNED_OUT" && !newSession && session?.user) {
+        supabase.auth.refreshSession().then(({ data }) => {
+          setSession(data?.session ?? null);
+          setAuthReady(true);
+        });
+        return;
+      }
       setSession(newSession);
       setAuthReady(true);
       if (_event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
