@@ -3313,9 +3313,24 @@ export default function App() {
   useEffect(() => {
     if (!authReady) return; // don't trust a session of null until the initial auth check has actually resolved — otherwise a transient null during login briefly flashes the "set username & age" onboarding screen before the real session settles in
     if (!session?.user) { setProfile(session === null ? null : undefined); return; }
-    fetchProfile(session.user.id)
-      .then((p) => { setProfile(p); setProfileFetchError(""); })
-      .catch((err) => setProfileFetchError(err.message || "Failed to load your profile."));
+    let cancelled = false;
+    // A profile row can occasionally take a moment to become readable right
+    // after sign-in (replication/consistency lag), which made fetchProfile
+    // briefly return null for accounts that already have a profile — that
+    // flashed the "Complete your profile" onboarding screen before the real
+    // data arrived. Retry a couple of times before treating null as final.
+    const load = (attemptsLeft) => {
+      fetchProfile(session.user.id)
+        .then((p) => {
+          if (cancelled) return;
+          if (p == null && attemptsLeft > 0) { setTimeout(() => !cancelled && load(attemptsLeft - 1), 600); return; }
+          setProfile(p);
+          setProfileFetchError("");
+        })
+        .catch((err) => { if (!cancelled) setProfileFetchError(err.message || "Failed to load your profile."); });
+    };
+    load(2);
+    return () => { cancelled = true; };
   }, [session, profileRetryKey, authReady]);
 
   useEffect(() => {
