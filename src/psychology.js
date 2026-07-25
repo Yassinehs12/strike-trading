@@ -3,7 +3,7 @@
 // outcomes. Computed entirely client-side from data already in the journal,
 // no AI call needed.
 
-const MIN_SAMPLE = 5; // don't surface a pattern from too few trades — it's just noise
+const MIN_SAMPLE = 1; // report unlocks from the first closed trade; individual pattern checks below still require their own larger samples before claiming a "pattern"
 const NEGATIVE_EMOTIONS = ["Greed", "FOMO", "Overtrading", "Fear"];
 
 function winRate(trades) {
