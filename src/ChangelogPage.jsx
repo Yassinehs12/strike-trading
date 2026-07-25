@@ -13,6 +13,18 @@ import ThemeToggle from "./ThemeToggle.jsx";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-07-25",
+    title: "Psychology Report",
+    type: "feature",
+    items: [
+      "New Psychology Report on the dashboard, replacing Performance Insights — a discipline score plus emotional-pattern breakdowns computed from your own emotion tags and setup grades.",
+      "Detects overtrading patterns, possible revenge-trading (emotional entries right after a loss), and low-grade setups taken under emotional strain.",
+      "Surfaces which emotional state is costing you the most win rate, and calls out when your neutral-state trading is outperforming.",
+      "Report now unlocks from your very first closed trade instead of requiring a minimum sample size.",
+      "Added Psychology Report to the landing page feature list.",
+    ],
+  },
+  {
     date: "2026-07-19",
     title: "Public launch",
     type: "feature",
