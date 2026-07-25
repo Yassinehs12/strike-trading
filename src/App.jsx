@@ -3578,6 +3578,14 @@ export default function App() {
       const raw = localStorage.getItem("pendingProfile");
       if (raw) pendingProfile = JSON.parse(raw);
     } catch {}
+    // No stashed username/age from the signup form (e.g. they confirmed
+    // their email on a different browser/device than they signed up on) —
+    // rather than interrupting them with a manual form, auto-generate a
+    // placeholder username so they land straight in the app. They can
+    // change it any time from Settings.
+    if (!pendingProfile) {
+      pendingProfile = { username: `trader_${session.user.id.slice(0, 8)}`, age: 18 };
+    }
     return <ProfileSetup session={session} onComplete={setProfile} pendingProfile={pendingProfile} />;
   }
 
