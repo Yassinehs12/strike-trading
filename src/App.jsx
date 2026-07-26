@@ -3008,12 +3008,17 @@ const AuthPage = ({ onBack }) => {
         setLoading(false);
         return;
       }
-      // Stashed so the post-confirmation onboarding step can pick it up
-      // and finish account setup automatically instead of asking again.
-      // See ProfileSetup's `pendingProfile` handling.
+      // Stashed as a client-side fallback in case the DB trigger (which
+      // creates the profile row from user metadata below) doesn't fire for
+      // some reason — but the real source of truth is now the metadata
+      // passed to signUp, which a Postgres trigger reads server-side.
       try { localStorage.setItem("pendingProfile", JSON.stringify({ username: cleanUsername, age: ageNum })); } catch {}
 
-      const { error: err } = await supabase.auth.signUp({ email, password });
+      const { error: err } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username: cleanUsername, age: ageNum } },
+      });
       setLoading(false);
       if (err) { setError(err.message); try { localStorage.removeItem("pendingProfile"); } catch {} }
       else setNotice("Account created — check your email to confirm, then sign in.");
