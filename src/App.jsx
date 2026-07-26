@@ -19,6 +19,7 @@ import { computePsychologyReport } from "./psychology";
 import { filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
+import PricingPage from "./PricingPage";
 import ChangelogPage from "./ChangelogPage";
 import ReportCardPage from "./ReportCardPage";
 import { BlogListPage, BlogPostPage } from "./BlogPage";
@@ -428,6 +429,38 @@ const Card = ({ className = "", children }) => (
     {children}
   </div>
 );
+
+// A profile counts as Pro if its plan is "pro", or if it's an admin (comp'd
+// access). No billing is wired up yet, so upgrades happen by an admin
+// setting plan='pro' directly in the database — see the SQL migration.
+const isProPlan = (profile) => profile?.plan === "pro" || profile?.role === "admin" || profile?.is_admin;
+
+// Wraps a Pro-only feature. Shows a blurred/locked preview of the real
+// content behind a short upsell instead of hiding the feature entirely —
+// people convert better when they can see what they're missing.
+const UpgradeGate = ({ profile, feature, description, children }) => {
+  if (isProPlan(profile)) return children;
+  return (
+    <div className="relative">
+      <div className="pointer-events-none select-none blur-[3px] opacity-40">{children}</div>
+      <div className="absolute inset-0 flex items-center justify-center p-6">
+        <div className="max-w-sm text-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-6 shadow-lg" style={{ backgroundColor: "var(--bg-secondary)" }}>
+          <div className="w-10 h-10 rounded-full bg-[var(--accent)]/15 flex items-center justify-center mx-auto mb-3">
+            <Lock size={18} className="text-[var(--accent)]" />
+          </div>
+          <h3 className="font-bold text-[var(--text-primary)] mb-1">{feature} is a Pro feature</h3>
+          <p className="text-xs text-[var(--text-muted)] mb-4">{description}</p>
+          <a
+            href="#/pricing"
+            className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all"
+          >
+            See Pro plans
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SectionHeader = ({ title, subtitle, icon, noMargin }) => (
   <div className={noMargin ? "" : "mb-4"}>
@@ -1362,7 +1395,7 @@ const WeeklyRecapCard = ({ trades }) => {
 };
 
 
-const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
+const DashboardPage = ({ trades, challenges, onOpenTrade, profile }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
@@ -1379,7 +1412,9 @@ const DashboardPage = ({ trades, challenges, onOpenTrade }) => {
         <KPICard icon={ShieldCheck} label="Active Challenges" value={challenges.length} accent="text-[var(--accent)]" sub="funding evaluations" />
       </div>
 
-      <PsychologyReportCard trades={trades} />
+      <UpgradeGate profile={profile} feature="Psychology Report" description="Discipline scoring and emotional-pattern breakdowns computed from your trade tags.">
+        <PsychologyReportCard trades={trades} />
+      </UpgradeGate>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
@@ -1740,7 +1775,7 @@ const AccountsBar = ({ accounts, selectedId, onSelect, onAdd, onEdit, onRemove, 
         className="px-3 py-1.5 rounded-full text-xs font-semibold border border-dashed border-white/15 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent)]/50 transition-colors flex items-center gap-1"
       >
         <Plus size={11} /> Add Account
-        <span className="text-[var(--text-faint)]">({accounts.length}/{limit})</span>
+        <span className="text-[var(--text-faint)]">({accounts.length}/{limit === Infinity ? "∞" : limit})</span>
       </button>
 
       <AddAccountModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleSave} editing={editingAccount} />
@@ -1791,9 +1826,13 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, a
   const setFilter = (k, v) => { setFilters((f) => ({ ...f, [k]: v })); setPage(1); };
   const onSort = (key) => setSortConfig((sc) => ({ key, dir: sc.key === key && sc.dir === "desc" ? "asc" : "desc" }));
 
-  const exportCSV = () => { downloadBlob(tradesToCSV(filtered), "trade_journal_export.csv"); toast(`Exported ${filtered.length} trades to CSV`, "info"); };
+  const exportCSV = () => {
+    if (!isProPlan(profile)) { toast("CSV export is a Pro feature.", "error"); return; }
+    downloadBlob(tradesToCSV(filtered), "trade_journal_export.csv"); toast(`Exported ${filtered.length} trades to CSV`, "info");
+  };
 
   const exportPDF = async () => {
+    if (!isProPlan(profile)) { toast("PDF export is a Pro feature.", "error"); return; }
     setExportingPdf(true);
     try {
       await tradesToPDF(filtered, { username: profile?.username });
@@ -1846,9 +1885,9 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, a
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option><AssetOptions /></select>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
-          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> CSV</button>
+          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">{!isProPlan(profile) ? <Lock size={13} /> : <Download size={13} />} CSV</button>
           <button onClick={exportPDF} disabled={exportingPdf} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] disabled:opacity-40 text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
-            {exportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />} PDF
+            {exportingPdf ? <Loader2 size={13} className="animate-spin" /> : !isProPlan(profile) ? <Lock size={13} /> : <FileText size={13} />} PDF
           </button>
           <input ref={importInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
           <button onClick={() => importInputRef.current?.click()} disabled={importing}
@@ -2847,7 +2886,11 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
             </>
           )}
 
-          {tab === "broker" && <SnapTradeSyncTab session={session} toast={toast} />}
+          {tab === "broker" && (
+            <UpgradeGate profile={profile} feature="Broker Sync" description="Automatically sync trades from MT4/MT5 and real brokerages instead of entering them by hand.">
+              <SnapTradeSyncTab session={session} toast={toast} />
+            </UpgradeGate>
+          )}
 
           {tab === "appearance" && (
             <Card className="p-5 md:p-6">
@@ -3300,6 +3343,7 @@ export default function App() {
     if (raw === "terms") return "terms";
     if (raw === "changelog") return "changelog";
     if (raw === "blog") return "blog";
+    if (raw === "pricing") return "pricing";
     if (raw.startsWith("blog/")) return "blog-post";
     if (raw.startsWith("u/")) return "report-card";
     return null;
@@ -3485,7 +3529,7 @@ export default function App() {
   // real per-plan lookup — once membership plans exist. Every "Add
   // Account" entry point in the app funnels through addAccount below, so
   // this one constant is the single place that controls the gate.
-  const FREE_ACCOUNT_LIMIT = 3;
+  const FREE_ACCOUNT_LIMIT = isProPlan(profile) ? Infinity : 2;
 
   const addAccount = async (a) => {
     if (accounts.length >= FREE_ACCOUNT_LIMIT) {
@@ -3549,6 +3593,7 @@ export default function App() {
   if (legalPage === "privacy") return <PrivacyPolicy />;
   if (legalPage === "terms") return <TermsOfService />;
   if (legalPage === "changelog") return <ChangelogPage />;
+  if (legalPage === "pricing") return <PricingPage />;
   if (legalPage === "blog") return <BlogListPage />;
   if (legalPage === "blog-post") {
     const slug = window.location.hash.replace(/^#\/?blog\//, "").split(/[/?#]/)[0];
@@ -3665,10 +3710,14 @@ export default function App() {
           <main className="flex-1 min-w-0">
             {loading ? <LoadingScreen /> : (
               <>
-                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} />}
+                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
-                {active === "journaling" && <JournalingPage session={session} trades={trades} toast={addToast} />}
+                {active === "journaling" && (
+                  <UpgradeGate profile={profile} feature="Weekly/Monthly Review" description="Structured reflection on your trading beyond the individual trade — built automatically from your journal.">
+                    <JournalingPage session={session} trades={trades} toast={addToast} />
+                  </UpgradeGate>
+                )}
                 {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
