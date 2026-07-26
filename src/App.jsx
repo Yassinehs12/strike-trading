@@ -59,7 +59,23 @@ const GlobalStyle = () => (
 /* ============================================================
    MOCK DATA  (structured to map 1:1 onto future DB tables)
    ============================================================ */
-const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "BTCUSD", "ETHUSD", "NVDA", "US30", "NAS100"];
+const ASSET_GROUPS = {
+  Forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF"],
+  Metals: ["XAUUSD", "XAGUSD"],
+  Indices: ["US30", "NAS100", "SP500", "GER40", "UK100"],
+  Crypto: ["BTCUSD", "ETHUSD"],
+  Stocks: ["NVDA"],
+};
+const ASSETS = Object.values(ASSET_GROUPS).flat();
+const AssetOptions = () => (
+  <>
+    {Object.entries(ASSET_GROUPS).map(([group, list]) => (
+      <optgroup key={group} label={group}>
+        {list.map((a) => <option key={a} value={a}>{a}</option>)}
+      </optgroup>
+    ))}
+  </>
+);
 const SETUPS = ["Breakout", "FVG", "Trend Following", "Reversal", "Liquidity Grab", "Range"];
 const SESSIONS = ["London", "New York", "Asia"];
 const EMOTIONS = ["Neutral", "Greed", "FOMO", "Overtrading", "Fear"];
@@ -928,7 +944,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) =
         <Field label="Asset / Pair" error={errors.asset}>
           <select className={inputCls} value={form.asset} onChange={(e) => set("asset", e.target.value)}>
             <option value="">Select a pair...</option>
-            {ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
+            <AssetOptions />
           </select>
         </Field>
         <Field label="Direction">
@@ -1100,7 +1116,7 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
           <div className="grid grid-cols-2 gap-4">
             <Field label="Asset">
               <select className={inputCls} value={form.asset} onChange={(e) => set("asset", e.target.value)}>
-                {ASSETS.map((a) => <option key={a} value={a}>{a}</option>)}
+                <AssetOptions />
               </select>
             </Field>
             <Field label="Direction">
@@ -1826,7 +1842,7 @@ const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, a
             <Search size={14} className="text-[var(--text-muted)]" />
             <input placeholder="Search asset..." className="bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
           </div>
-          <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option>{ASSETS.map((a) => <option key={a}>{a}</option>)}</select>
+          <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option><AssetOptions /></select>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
           <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"><Download size={13} /> CSV</button>
