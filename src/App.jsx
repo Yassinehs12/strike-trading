@@ -1395,13 +1395,44 @@ const WeeklyRecapCard = ({ trades }) => {
 };
 
 
-const DashboardPage = ({ trades, challenges, onOpenTrade, profile }) => {
+const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {trades.length === 0 && (
+        <Card className="p-5 md:p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, var(--accent), transparent 55%)" }} />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="w-11 h-11 rounded-xl bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
+              <Sparkles size={20} className="text-[var(--accent)]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-[var(--text-primary)] mb-1">Welcome{profile?.username ? `, ${profile.username}` : ""} — let's get your first entry in</h3>
+              <p className="text-sm text-[var(--text-muted)]">
+                Log a trade to see your equity curve and analytics come alive, or set up a funding challenge if you're on a prop firm evaluation.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <button
+                onClick={() => onLogTrade && onLogTrade()}
+                className="flex items-center justify-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all active:scale-95"
+              >
+                <Plus size={15} strokeWidth={2.5} /> Log your first trade
+              </button>
+              <button
+                onClick={() => setActive && setActive("challenges")}
+                className="flex items-center justify-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] font-semibold text-sm px-4 py-2.5 rounded-lg transition-all active:scale-95"
+              >
+                <ShieldCheck size={15} /> Set up a challenge
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <WeeklyRecapCard trades={trades} />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
@@ -3710,7 +3741,7 @@ export default function App() {
           <main className="flex-1 min-w-0">
             {loading ? <LoadingScreen /> : (
               <>
-                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} />}
+                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "journaling" && (
