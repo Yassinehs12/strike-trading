@@ -60,11 +60,12 @@ const GlobalStyle = () => (
    MOCK DATA  (structured to map 1:1 onto future DB tables)
    ============================================================ */
 const ASSET_GROUPS = {
-  Forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "NZDUSD", "USDCHF"],
+  Forex: ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD", "EURJPY", "GBPJPY", "EURGBP"],
   Metals: ["XAUUSD", "XAGUSD"],
-  Indices: ["US30", "NAS100", "SP500", "GER40", "UK100"],
-  Crypto: ["BTCUSD", "ETHUSD"],
-  Stocks: ["NVDA"],
+  Energy: ["USOIL", "UKOIL", "NATGAS"],
+  Indices: ["US30", "NAS100", "SP500", "GER40", "UK100", "JPN225", "FRA40"],
+  Crypto: ["BTCUSD", "ETHUSD", "SOLUSD", "XRPUSD"],
+  Stocks: ["NVDA", "AAPL", "TSLA", "MSFT"],
 };
 const ASSETS = Object.values(ASSET_GROUPS).flat();
 const AssetOptions = () => (
