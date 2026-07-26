@@ -39,7 +39,7 @@ function groupMessages(messages) {
   return days;
 }
 
-export default function MessageThread({ currentUserId, currentUsername, otherUser, onClose, onBack, className = "" }) {
+export default function MessageThread({ currentUserId, currentUsername, otherUser, onClose, onBack, onViewProfile, className = "" }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -152,17 +152,23 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
             <ChevronLeft size={20} />
           </button>
         )}
-        {otherUser.avatar_url ? (
-          <img src={otherUser.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-        ) : (
-          <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)]">
-            {(otherUser.username || "?")[0].toUpperCase()}
+        <button
+          onClick={onViewProfile}
+          disabled={!onViewProfile}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-lg -mx-1 px-1 py-1 hover:bg-white/[0.04] transition-colors disabled:hover:bg-transparent"
+        >
+          {otherUser.avatar_url ? (
+            <img src={otherUser.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)] shrink-0">
+              {(otherUser.username || "?")[0].toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{otherUser.username}</h3>
+            <p className="text-[11px] text-[var(--text-muted)]">{onViewProfile ? "View profile" : "Direct message"}</p>
           </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{otherUser.username}</h3>
-          <p className="text-[11px] text-[var(--text-muted)]">Direct message</p>
-        </div>
+        </button>
         {onClose && (
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={20} /></button>
         )}

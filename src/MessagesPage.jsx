@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Mail, Loader2, Search, SquarePen, MessageCircle } from "lucide-react";
 import { fetchConversations, fetchProfileById, searchProfilesByUsername } from "./db";
 import MessageThread from "./MessageThread";
+import UserProfileModal from "./UserProfileModal";
 
 function timeShort(dateStr) {
   const d = new Date(dateStr);
@@ -83,6 +84,7 @@ export default function MessagesPage({ session, profile }) {
   const [activeUser, setActiveUser] = useState(null);
   const [query, setQuery] = useState("");
   const [newMsgOpen, setNewMsgOpen] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -189,6 +191,7 @@ export default function MessagesPage({ session, profile }) {
             currentUsername={profile?.username || "Trader"}
             otherUser={activeUser}
             onBack={handleThreadClose}
+            onViewProfile={() => setViewingUserId(activeUser.id)}
             className="w-full"
           />
         ) : (
@@ -201,6 +204,14 @@ export default function MessagesPage({ session, profile }) {
           </div>
         )}
       </div>
+      {viewingUserId && (
+        <UserProfileModal
+          userId={viewingUserId}
+          currentUserId={session.user.id}
+          currentUsername={profile?.username || "Trader"}
+          onClose={() => setViewingUserId(null)}
+        />
+      )}
     </div>
   );
 }
