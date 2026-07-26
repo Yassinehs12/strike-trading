@@ -3038,7 +3038,11 @@ const AuthPage = ({ onBack }) => {
     <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex">
       <GlobalStyle />
 
-      {/* Left — branded panel, hidden on small screens where a split layout has no room to breathe */}
+      {/* Left — branded panel. Intentionally always dark regardless of the
+          site theme (like Stripe/Linear auth screens) — using fixed colors
+          here instead of the theme variables, since this panel's background
+          never changes but --text-primary etc. would flip to a dark color
+          in light mode, making the text invisible against it. */}
       <div className="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col justify-between p-12 bg-[#050810]">
         <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(59,130,246,0.2), transparent 50%)" }} />
         <div
@@ -3047,17 +3051,17 @@ const AuthPage = ({ onBack }) => {
         />
 
         <a href="#/" className="relative flex items-center gap-2">
-          <LogoFull size={30} textClass="text-lg" />
+          <LogoFull size={30} textClass="text-lg" forceLight />
         </a>
 
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[var(--text-tertiary)] mb-6">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 mb-6">
             <Sparkles size={12} className="text-[var(--accent)]" /> Built for every kind of trader
           </span>
-          <h1 className="text-4xl font-extrabold leading-tight mb-4">
+          <h1 className="text-4xl font-extrabold leading-tight mb-4 text-white">
             Trade with a system,<br /> not a feeling.
           </h1>
-          <p className="text-[var(--text-tertiary)] text-[15px] leading-relaxed max-w-md mb-10">
+          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md mb-10">
             Log every trade, track your funding challenge rules in real time, and see the analytics that actually explain your edge.
           </p>
           <div className="space-y-3.5">
@@ -3071,13 +3075,13 @@ const AuthPage = ({ onBack }) => {
                 <div className="w-4.5 h-4.5 rounded-full bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
                   <CheckCircle size={11} className="text-[var(--accent)]" />
                 </div>
-                <span className="text-sm text-[var(--text-secondary)]">{line}</span>
+                <span className="text-sm text-zinc-300">{line}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="relative text-xs text-[var(--text-faint)]">© {new Date().getFullYear()} Strike Journal. Free to start, no credit card required.</p>
+        <p className="relative text-xs text-zinc-500">© {new Date().getFullYear()} Strike Journal. Free to start, no credit card required.</p>
       </div>
 
       {/* Right — the actual form */}

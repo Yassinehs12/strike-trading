@@ -36,11 +36,11 @@ export const LogoMark = ({ size = 32, rounded = "rounded-xl", className = "", ba
   );
 };
 
-export const LogoFull = ({ size = 32, textClass = "text-lg" }) => (
+export const LogoFull = ({ size = 32, textClass = "text-lg", forceLight = false }) => (
   <div className="flex items-center gap-2.5">
     <LogoMark size={size} />
     <span className={`font-extrabold tracking-tight ${textClass}`}>
-      <span className="text-[var(--text-primary)]">Strike</span><span className="text-[var(--accent)]">Journal</span>
+      <span className={forceLight ? "text-white" : "text-[var(--text-primary)]"}>Strike</span><span className="text-[var(--accent)]">Journal</span>
     </span>
   </div>
 );
