@@ -396,22 +396,32 @@ const TickerTape = () => {
 const NavBar = ({ onSignIn, onGetStarted }) => {
   const [open, setOpen] = React.useState(false);
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={17} bare className="text-[var(--text-inverse)]" /></div>
-          <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight">Strike Journal</span>
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/80 border-b border-white/10">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-[76px] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={19} bare className="text-[var(--text-inverse)]" /></div>
+          <span className="font-extrabold text-[var(--text-primary)] text-xl tracking-tight">Strike<span className="text-[var(--accent)]">Journal</span></span>
         </div>
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-1.5">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">{l.label}</a>
+            <a
+              key={l.href}
+              href={l.href}
+              className="relative text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors px-3.5 py-2.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
+            >
+              {l.label}
+            </a>
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
-          <button onClick={onSignIn} className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors px-3 py-2">Sign In</button>
-          <button onClick={onGetStarted} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold text-sm px-4 py-2 rounded-lg transition-all active:scale-95">
-            Get Started <ArrowRight size={14} />
+          <button onClick={onSignIn} className="text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors px-3.5 py-2.5">Log In</button>
+          <button
+            onClick={onGetStarted}
+            className="flex items-center gap-1.5 text-white font-bold text-[15px] px-5 py-2.5 rounded-full transition-all active:scale-95 shadow-lg shadow-[var(--accent)]/20"
+            style={{ background: "linear-gradient(90deg, var(--accent) 0%, #8b5cf6 100%)" }}
+          >
+            Get Started <ArrowRight size={15} />
           </button>
         </div>
         <div className="flex items-center gap-2 md:hidden">
@@ -422,11 +432,11 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
       {open && (
         <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3 bg-[var(--bg-primary)]">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-[var(--text-tertiary)]">{l.label}</a>
+            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1.5">{l.label}</a>
           ))}
           <div className="flex flex-col gap-2 pt-2">
-            <button onClick={onSignIn} className="w-full text-sm font-medium text-[var(--text-secondary)] border border-white/10 rounded-lg py-2">Sign In</button>
-            <button onClick={onGetStarted} className="w-full bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm py-2 rounded-lg">Get Started</button>
+            <button onClick={onSignIn} className="w-full text-sm font-semibold text-[var(--text-secondary)] border border-white/10 rounded-lg py-2">Log In</button>
+            <button onClick={onGetStarted} className="w-full text-white font-bold text-sm py-2.5 rounded-full" style={{ background: "linear-gradient(90deg, var(--accent) 0%, #8b5cf6 100%)" }}>Get Started</button>
           </div>
         </div>
       )}
