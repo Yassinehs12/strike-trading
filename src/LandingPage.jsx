@@ -559,37 +559,50 @@ const DashboardMock = () => {
   );
 };
 
-const Hero = ({ onGetStarted }) => (
-  <section className="relative overflow-hidden pt-14 md:pt-20 pb-20 md:pb-28 px-4">
-    <div className="absolute inset-0 lp-chart-grid pointer-events-none" />
-    <div className="absolute inset-0 lp-glow pointer-events-none" />
-    <div className="relative max-w-4xl mx-auto text-center">
-      <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-        <span className="lp-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">Built for every kind of trader</span>
+const Hero = ({ onGetStarted }) => {
+  const [traderCount, setTraderCount] = useState(null);
+  useEffect(() => {
+    fetchLandingStats().then((s) => setTraderCount(s?.traders ?? null)).catch(() => setTraderCount(null));
+  }, []);
+  const fmt = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : String(n));
+
+  return (
+    <section className="relative overflow-hidden pt-14 md:pt-20 pb-20 md:pb-28 px-4">
+      <div className="absolute inset-0 lp-chart-grid pointer-events-none" />
+      <div className="absolute inset-0 lp-glow pointer-events-none" />
+      <div className="relative max-w-4xl mx-auto text-center">
+        <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+          <span className="lp-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">Built for every kind of trader</span>
+        </div>
+        <h1 className="lp-fade-up lp-display text-4xl md:text-6xl font-bold text-[var(--text-primary)] leading-[1.08] mb-5" style={{ animationDelay: "0.05s" }}>
+          The trading journal built for<br className="hidden md:block" /> <span className="text-[var(--accent)]">all types of traders.</span>
+        </h1>
+        <p className="lp-fade-up text-base md:text-lg text-[var(--text-tertiary)] max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
+          Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — whether you're funded, self-funded, or just getting started.
+        </p>
+        <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-3" style={{ animationDelay: "0.15s" }}>
+          <button onClick={onGetStarted} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center shadow-lg shadow-blue-500/20">
+            Start Free <ArrowRight size={16} />
+          </button>
+        </div>
+        {traderCount >= 50 && (
+          <div className="lp-fade-up flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] mb-1" style={{ animationDelay: "0.18s" }}>
+            <Users size={12} className="text-[var(--accent)]" /> Join {fmt(traderCount)}+ traders already tracking their edge
+          </div>
+        )}
+        <div className="lp-fade-up flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-2 text-xs text-[var(--text-tertiary)]" style={{ animationDelay: "0.22s" }}>
+          <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Free to start — 30 seconds</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> No credit card</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Cancel anytime</span>
+        </div>
       </div>
-      <h1 className="lp-fade-up lp-display text-4xl md:text-6xl font-bold text-[var(--text-primary)] leading-[1.08] mb-5" style={{ animationDelay: "0.05s" }}>
-        The trading journal built for<br className="hidden md:block" /> <span className="text-[var(--accent)]">all types of traders.</span>
-      </h1>
-      <p className="lp-fade-up text-base md:text-lg text-[var(--text-tertiary)] max-w-xl mx-auto mb-8" style={{ animationDelay: "0.1s" }}>
-        Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — whether you're funded, self-funded, or just getting started.
-      </p>
-      <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-4" style={{ animationDelay: "0.15s" }}>
-        <button onClick={onGetStarted} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center shadow-lg shadow-blue-500/20">
-          Start Free <ArrowRight size={16} />
-        </button>
+      <div className="relative mt-14 md:mt-16 px-2 lp-fade-up" style={{ animationDelay: "0.25s" }}>
+        <DashboardMock />
       </div>
-      <div className="lp-fade-up flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-2 text-xs text-[var(--text-tertiary)]" style={{ animationDelay: "0.22s" }}>
-        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Free to start</span>
-        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> No credit card</span>
-        <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald-400" /> Cancel anytime</span>
-      </div>
-    </div>
-    <div className="relative mt-14 md:mt-16 px-2 lp-fade-up" style={{ animationDelay: "0.25s" }}>
-      <DashboardMock />
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const SocialProof = () => {
   const [stats, setStats] = useState(null); // null = loading/unavailable
