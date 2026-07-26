@@ -3,6 +3,7 @@ import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, TrendingDown, Menu, X,
   MessagesSquare, Users, Send, Quote, Sparkles, ChevronDown, Lock, Zap, Instagram, Plug, Brain,
+  AlertTriangle, XCircle, Flame,
 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -657,6 +658,43 @@ const Testimonials = () => {
   );
 };
 
+const PAIN_POINTS = [
+  { icon: Flame, title: "Revenge trading after a loss", desc: "You take an emotional entry to \"win it back\" instead of sticking to your plan." },
+  { icon: XCircle, title: "Breaking your own rules", desc: "No daily loss limit, no max drawdown check — until it's too late and the challenge is over." },
+  { icon: AlertTriangle, title: "No idea what's actually costing you", desc: "You know your win rate, but not which setup, session, or emotional state is bleeding your account." },
+];
+
+const PainPoints = () => (
+  <section className="py-20 md:py-28 px-4 border-t border-white/5">
+    <div className="max-w-5xl mx-auto">
+      <Reveal className="text-center max-w-xl mx-auto mb-14">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 mb-4">
+          <AlertTriangle size={12} /> Why most traders fail their challenge
+        </span>
+        <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">It's rarely the strategy. It's the discipline.</h2>
+        <p className="text-[var(--text-tertiary)]">Most funded-account failures come down to a small set of repeatable mistakes — the kind that are invisible until you're tracking them.</p>
+      </Reveal>
+      <div className="grid sm:grid-cols-3 gap-4 mb-10">
+        {PAIN_POINTS.map((p, i) => {
+          const Icon = p.icon;
+          return (
+            <Reveal key={i} delay={i * 90} className="rounded-2xl border border-rose-500/15 bg-rose-500/[0.03] p-6">
+              <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4">
+                <Icon size={18} className="text-rose-400" />
+              </div>
+              <h3 className="text-[var(--text-primary)] font-semibold mb-2">{p.title}</h3>
+              <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{p.desc}</p>
+            </Reveal>
+          );
+        })}
+      </div>
+      <Reveal className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--text-muted)]">
+        <span className="h-px w-10 bg-white/10" /> That's exactly what Strike Journal is built to catch <span className="h-px w-10 bg-white/10" />
+      </Reveal>
+    </div>
+  </section>
+);
+
 const Features = () => (
   <section id="features" className="py-20 md:py-28 px-4 border-t border-white/5">
     <div className="max-w-6xl mx-auto">
@@ -781,6 +819,7 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
       <Hero onGetStarted={onGetStarted} />
       <SocialProof />
       <ProductShowcase />
+      <PainPoints />
       <Features />
       <Testimonials />
       <HowItWorks />
