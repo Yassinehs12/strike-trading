@@ -292,11 +292,14 @@ const ProductShowcase = () => {
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
-  { label: "How it works", href: "#how-it-works" },
   { label: "Pricing", href: "#/pricing" },
   { label: "FAQ", href: "#faq" },
-  { label: "Blog", href: "#/blog" },
-  { label: "Changelog", href: "#/changelog" },
+];
+
+const RESOURCES_LINKS = [
+  { label: "How it works", href: "#how-it-works", desc: "See the workflow in a few steps." },
+  { label: "Blog", href: "#/blog", desc: "Guides and ideas for serious traders." },
+  { label: "Changelog", href: "#/changelog", desc: "See what's new in Strike Journal." },
 ];
 
 const FEATURES = [
@@ -393,6 +396,48 @@ const TickerTape = () => {
   );
 };
 
+const ResourcesDropdown = () => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onClick); document.removeEventListener("keydown", onEsc); };
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors px-3.5 py-2.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
+      >
+        Resources <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div
+          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-72 rounded-xl border p-2 shadow-xl"
+          style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)" }}
+        >
+          {RESOURCES_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              className="block px-3.5 py-2.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+            >
+              <div className="text-sm font-semibold text-[var(--text-primary)]">{l.label}</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5">{l.desc}</div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NavBar = ({ onSignIn, onGetStarted }) => {
   const [open, setOpen] = React.useState(false);
   return (
@@ -412,6 +457,7 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
               {l.label}
             </a>
           ))}
+          <ResourcesDropdown />
         </nav>
         <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
@@ -434,6 +480,12 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
           {NAV_LINKS.map((l) => (
             <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1.5">{l.label}</a>
           ))}
+          <div className="pt-1 border-t border-white/10">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)] pt-3 pb-1">Resources</div>
+            {RESOURCES_LINKS.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-[15px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1.5">{l.label}</a>
+            ))}
+          </div>
           <div className="flex flex-col gap-2 pt-2">
             <button onClick={onSignIn} className="w-full text-sm font-semibold text-[var(--text-secondary)] border border-white/10 rounded-lg py-2">Log In</button>
             <button onClick={onGetStarted} className="w-full text-white font-bold text-sm py-2.5 rounded-full" style={{ background: "linear-gradient(90deg, var(--accent) 0%, #8b5cf6 100%)" }}>Get Started</button>
@@ -700,7 +752,7 @@ const Footer = () => (
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
-          {NAV_LINKS.map((l) => (
+          {[...NAV_LINKS, ...RESOURCES_LINKS].map((l) => (
             <a key={l.href} href={l.href} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">{l.label}</a>
           ))}
         </div>
