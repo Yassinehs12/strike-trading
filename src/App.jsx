@@ -404,7 +404,12 @@ const ToastContainer = ({ toasts }) => (
    SMALL UI PRIMITIVES
    ============================================================ */
 const Card = ({ className = "", children }) => (
-  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
+  <div
+    className={`rounded-xl border ${className}`}
+    style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)", boxShadow: "var(--card-shadow)" }}
+  >
+    {children}
+  </div>
 );
 
 const SectionHeader = ({ title, subtitle, icon, noMargin }) => (
