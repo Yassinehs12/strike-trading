@@ -7,7 +7,7 @@ import {
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
-export default function SupportChatWidget({ session, profile }) {
+export default function SupportChatWidget({ session, profile, hideLauncher = false }) {
   const [open, setOpen] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -73,7 +73,7 @@ export default function SupportChatWidget({ session, profile }) {
           setMessages((prev) => (fresh.length !== prev.length ? fresh : prev));
         })
         .catch(() => {});
-    }, 4000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [open, conversation]);
 
@@ -91,6 +91,8 @@ export default function SupportChatWidget({ session, profile }) {
       setSending(false);
     }
   };
+
+  useEffect(() => { if (hideLauncher) setOpen(false); }, [hideLauncher]);
 
   if (!session?.user?.id) return null;
 
@@ -149,16 +151,18 @@ export default function SupportChatWidget({ session, profile }) {
         </div>
       )}
 
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-[60] w-14 h-14 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:scale-95 text-[var(--text-inverse)] shadow-lg flex items-center justify-center transition-all"
-        aria-label="Open support chat"
-      >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
-        {!open && hasUnread && (
-          <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-[var(--bg-primary)]" />
-        )}
-      </button>
+      {!hideLauncher && (
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="fixed bottom-5 right-5 z-[60] w-14 h-14 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:scale-95 text-[var(--text-inverse)] shadow-lg flex items-center justify-center transition-all"
+          aria-label="Open support chat"
+        >
+          {open ? <X size={22} /> : <MessageCircle size={22} />}
+          {!open && hasUnread && (
+            <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-[var(--bg-primary)]" />
+          )}
+        </button>
+      )}
     </>
   );
 }

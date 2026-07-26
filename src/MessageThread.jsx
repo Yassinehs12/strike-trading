@@ -83,6 +83,27 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
     return unsubscribe;
   }, [otherUser?.id, currentUserId]);
 
+  // Safety net: realtime should deliver new messages instantly, but if the
+  // channel silently fails to attach (e.g. a Supabase Realtime hiccup), the
+  // thread would otherwise sit stale until the page is reloaded. Poll
+  // lightly while a thread is actually open to catch anything realtime
+  // missed — merges by id so it never duplicates messages already shown.
+  useEffect(() => {
+    if (!otherUser) return;
+    const interval = setInterval(() => {
+      fetchDirectMessages(currentUserId, otherUser.id)
+        .then((fresh) => {
+          const newOnes = fresh.filter((m) => !seenIds.current.has(m.id));
+          if (newOnes.length === 0) return;
+          newOnes.forEach((m) => seenIds.current.add(m.id));
+          setMessages(fresh);
+          setTimeout(() => scrollToBottom("smooth"), 0);
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [otherUser?.id, currentUserId]);
+
   if (!otherUser) return null;
 
   const handleImageSelect = (e) => {

@@ -3855,7 +3855,7 @@ export default function App() {
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
-        <SupportChatWidget session={session} profile={profile} />
+        <SupportChatWidget session={session} profile={profile} hideLauncher={active === "messages"} />
       </div>
     </ToastContext.Provider>
   );
