@@ -13,6 +13,19 @@ import ThemeToggle from "./ThemeToggle.jsx";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-07-26",
+    title: "Expanded asset list, theme polish, and more reliable signups",
+    type: "improvement",
+    items: [
+      "Asset dropdown is now grouped by category — Forex, Metals, Energy, Indices, Crypto, and Stocks — instead of one long flat list.",
+      "Added a bunch of new symbols: USOIL, UKOIL, NATGAS, SP500, GER40, UK100, JPN225, FRA40, plus more forex pairs (USDCHF, EURJPY, GBPJPY, EURGBP), crypto (SOLUSD, XRPUSD), and stocks (AAPL, TSLA, MSFT).",
+      "Light theme redesigned with a proper professional palette instead of a flat black/white inversion — softer background, refined card shadows, and fixed several spots where cards and the sign-in page were nearly invisible in light mode.",
+      "Dark theme softened from pure black to a richer near-black for a less harsh, more premium look.",
+      "New accounts now get their username and age saved to the database immediately at signup, instead of depending on a temporary local save that could get lost if you confirmed your email on a different browser or device.",
+      "Fixed an issue where a temporary connection hiccup could force-sign-out a user instead of quietly retrying.",
+    ],
+  },
+  {
     date: "2026-07-25",
     title: "Psychology Report",
     type: "feature",
