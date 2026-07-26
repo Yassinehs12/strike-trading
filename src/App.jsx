@@ -11,9 +11,10 @@ import {
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw,
+  AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computePsychologyReport } from "./psychology";
 import { filterTradesByPeriod } from "./insights";
@@ -661,6 +662,51 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
   );
 };
 
+// Synthesized two-tone chime via Web Audio API — no audio file to host or
+// load, works instantly, and is easy to keep short/subtle/professional.
+const playNotificationChime = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const now = ctx.currentTime;
+    [[880, 0], [1318.5, 0.09]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.16, now + delay + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.32);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.34);
+    });
+    setTimeout(() => ctx.close(), 700);
+  } catch {
+    // Audio isn't critical — never let a sound failure break notifications.
+  }
+};
+
+const timeAgo = (dateStr) => {
+  const diff = Math.max(0, (Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return "now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+  return new Date(dateStr).toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
+const NOTIF_ICON = {
+  reply: { icon: MessageCircle, className: "bg-blue-500/15 text-blue-400" },
+  message: { icon: Mail, className: "bg-blue-500/15 text-blue-400" },
+  friend_accepted: { icon: UserPlus, className: "bg-emerald-500/15 text-emerald-400" },
+  mention: { icon: AtSign, className: "bg-violet-500/15 text-violet-400" },
+  spotlight: { icon: Star, className: "bg-amber-500/15 text-amber-400" },
+  leaderboard_reset: { icon: Trophy, className: "bg-amber-500/15 text-amber-400" },
+  badge_granted: { icon: Trophy, className: "bg-amber-500/15 text-amber-400" },
+};
+
 const NotificationBell = ({ session, profile, setActive }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("requests"); // "requests" | "activity"
@@ -669,13 +715,22 @@ const NotificationBell = ({ session, profile, setActive }) => {
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
   const ref = useRef(null);
+  const knownIds = useRef(null); // null until first load, so we never chime on initial page load
 
   const load = () => {
     setLoading(true);
     Promise.all([
       fetchPendingFriendRequests(session.user.id).catch(() => []),
       fetchNotifications(session.user.id).catch(() => []),
-    ]).then(([reqs, notifs]) => { setRequests(reqs); setActivity(notifs); }).finally(() => setLoading(false));
+    ]).then(([reqs, notifs]) => {
+      setRequests(reqs);
+      setActivity(notifs);
+      if (knownIds.current !== null) {
+        const isNew = notifs.some((n) => !knownIds.current.has(n.id));
+        if (isNew) playNotificationChime();
+      }
+      knownIds.current = new Set(notifs.map((n) => n.id));
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -715,6 +770,11 @@ const NotificationBell = ({ session, profile, setActive }) => {
     else if (n.type === "badge_granted") setActive("profile");
   };
 
+  const markAllRead = async () => {
+    setActivity((prev) => prev.map((n) => ({ ...n, read: true })));
+    try { await markAllNotificationsRead(session.user.id); } catch {}
+  };
+
   const unreadActivity = activity.filter((n) => !n.read).length;
   const totalBadge = requests.length + unreadActivity;
 
@@ -731,35 +791,49 @@ const NotificationBell = ({ session, profile, setActive }) => {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((o) => !o)} className="relative text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1.5">
+      <button onClick={() => setOpen((o) => !o)} className="relative text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]">
         <Bell size={20} />
         {totalBadge > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-[var(--text-primary)] text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-            {totalBadge}
+          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 ring-2 ring-[var(--bg-primary)]">
+            {totalBadge > 9 ? "9+" : totalBadge}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-[var(--bg-secondary)] border border-white/10 rounded-xl shadow-xl overflow-hidden z-30">
-          <div className="flex items-center gap-1 px-3 pt-3 border-b border-white/10">
+        <div
+          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-30 border"
+          style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)", boxShadow: "0 20px 45px -12px rgba(0,0,0,0.45)" }}
+        >
+          <div className="flex items-center justify-between px-4 pt-3.5 pb-1">
+            <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-1.5"><Inbox size={15} className="text-[var(--accent)]" /> Notifications</h3>
+            {tab === "activity" && unreadActivity > 0 && (
+              <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+                <CheckCheck size={12} /> Mark all read
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1 px-3 pt-1 border-b" style={{ borderColor: "var(--border-primary)" }}>
             <button onClick={() => setTab("requests")}
-              className={`flex-1 text-xs font-semibold px-2 py-2 rounded-t-md transition-colors ${tab === "requests" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
+              className={`flex-1 text-xs font-semibold px-2 py-2.5 rounded-t-md transition-colors ${tab === "requests" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
               Friend Requests{requests.length > 0 ? ` (${requests.length})` : ""}
             </button>
             <button onClick={() => setTab("activity")}
-              className={`flex-1 text-xs font-semibold px-2 py-2 rounded-t-md transition-colors ${tab === "activity" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
+              className={`flex-1 text-xs font-semibold px-2 py-2.5 rounded-t-md transition-colors ${tab === "activity" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
               Activity{unreadActivity > 0 ? ` (${unreadActivity})` : ""}
             </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
-              <div className="flex justify-center py-8"><Loader2 size={16} className="text-[var(--accent)] animate-spin" /></div>
+              <div className="flex justify-center py-10"><Loader2 size={16} className="text-[var(--accent)] animate-spin" /></div>
             ) : tab === "requests" ? (
               requests.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] text-center py-8 px-4">No pending requests.</p>
+                <div className="flex flex-col items-center text-center py-10 px-6">
+                  <div className="w-10 h-10 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mb-3"><UserPlus size={16} className="text-[var(--text-faint)]" /></div>
+                  <p className="text-xs text-[var(--text-muted)]">No pending friend requests.</p>
+                </div>
               ) : (
                 requests.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.03]">
+                  <div key={r.id} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-[var(--bg-tertiary)] transition-colors">
                     {r.requester?.avatar_url ? (
                       <img src={r.requester.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
                     ) : (
@@ -769,25 +843,36 @@ const NotificationBell = ({ session, profile, setActive }) => {
                     )}
                     <span className="text-sm text-[var(--text-primary)] flex-1 truncate">{r.requester?.username || "Someone"}</span>
                     <button onClick={() => accept(r.id)} disabled={acceptingId === r.id}
-                      className="flex items-center gap-1 bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-[var(--text-inverse)] text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all shrink-0">
+                      className="flex items-center gap-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all shrink-0">
                       {acceptingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Accept
                     </button>
                   </div>
                 ))
               )
             ) : activity.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)] text-center py-8 px-4">No activity yet.</p>
+              <div className="flex flex-col items-center text-center py-10 px-6">
+                <div className="w-10 h-10 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mb-3"><Bell size={16} className="text-[var(--text-faint)]" /></div>
+                <p className="text-xs text-[var(--text-muted)]">You're all caught up.</p>
+              </div>
             ) : (
-              activity.map((n) => (
-                <button key={n.id} onClick={() => openActivityItem(n)}
-                  className={`w-full text-left flex items-start gap-2.5 px-4 py-2.5 hover:bg-white/[0.03] transition-colors ${!n.read ? "bg-[var(--accent)]/5" : ""}`}>
-                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] mt-1.5 shrink-0" />}
-                  <div className={n.read ? "pl-3.5" : ""}>
-                    <p className="text-sm text-[var(--text-primary)]">{activityLabel(n)}</p>
-                    {n.body && <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{n.body}</p>}
-                  </div>
-                </button>
-              ))
+              activity.map((n) => {
+                const meta = NOTIF_ICON[n.type] || { icon: Megaphone, className: "bg-[var(--bg-tertiary)] text-[var(--text-muted)]" };
+                const Icon = meta.icon;
+                return (
+                  <button key={n.id} onClick={() => openActivityItem(n)}
+                    className={`w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-[var(--bg-tertiary)] transition-colors ${!n.read ? "bg-[var(--accent)]/[0.06]" : ""}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${meta.className}`}>
+                      <Icon size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-[var(--text-primary)] leading-snug">{activityLabel(n)}</p>
+                      {n.body && n.type !== "badge_granted" && <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{n.body}</p>}
+                      <p className="text-[11px] text-[var(--text-faint)] mt-1">{timeAgo(n.created_at)}</p>
+                    </div>
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--accent)] mt-1.5 shrink-0" />}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
