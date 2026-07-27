@@ -3483,7 +3483,7 @@ export default function App() {
     if (legalFromHash()) return;
     const target = `#/${active}`;
     if (window.location.hash !== target) window.history.pushState(null, "", target);
-  }, [active, session]);
+  }, [active, session?.user?.id]);
 
   // Support the browser's back/forward buttons switching tabs too.
   useEffect(() => {
@@ -3499,7 +3499,14 @@ export default function App() {
       .then(([t, c, a]) => { setTrades(t); setChallenges(c); setAccounts(a); setDataError(""); })
       .catch((err) => setDataError(err.message || "Failed to load your data."))
       .finally(() => setLoading(false));
-  }, [session]);
+    // Deliberately keyed on the user id, not the whole session object.
+    // Supabase's client silently re-validates/refreshes the session every
+    // time the tab regains focus, which produces a new session object even
+    // when the logged-in user hasn't changed. Keying this on [session]
+    // caused every page's data to visibly refetch/reload each time you
+    // switched back to the tab. Keying on the id means this only reruns on
+    // an actual login/logout/account switch.
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!authReady) return; // don't trust a session of null until the initial auth check has actually resolved — otherwise a transient null during login briefly flashes the "set username & age" onboarding screen before the real session settles in
@@ -3523,7 +3530,11 @@ export default function App() {
     };
     load(8); // up to ~4s of retrying before treating a null result as final
     return () => { cancelled = true; };
-  }, [session, profileRetryKey, authReady]);
+    // Same reasoning as the trades/challenges effect above — keyed on the
+    // user id so a focus-triggered session refresh doesn't restart this
+    // whole retry sequence and re-flash the loading state on every tab
+    // switch back.
+  }, [session?.user?.id, profileRetryKey, authReady]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session ?? null); setAuthReady(true); });
