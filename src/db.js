@@ -151,6 +151,17 @@ export async function fetchProfileById(userId) {
   return data;
 }
 
+// Bulk lookup used to attach current avatars/usernames to chat messages and
+// forum posts, which only store a denormalized username snapshot at send
+// time — not a live-updating avatar reference.
+export async function fetchProfilesByIds(userIds) {
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (ids.length === 0) return {};
+  const { data, error } = await supabase.from("profiles").select("id, username, avatar_url, is_admin").in("id", ids);
+  if (error) throw error;
+  return Object.fromEntries(data.map((p) => [p.id, p]));
+}
+
 export async function updateProfileDetails(userId, { bio, avatarUrl }) {
   const patch = {};
   if (bio !== undefined) patch.bio = bio;
@@ -512,7 +523,7 @@ export async function amIOwner() {
 export async function fetchAllProfilesAdmin() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, is_admin, is_supporter, is_banned, ban_reason, timeout_until, created_at")
+    .select("id, username, avatar_url, is_admin, is_supporter, plan, is_banned, ban_reason, timeout_until, created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
@@ -520,6 +531,12 @@ export async function fetchAllProfilesAdmin() {
 
 export async function setUserAdmin(userId, isAdmin) {
   const { data, error } = await supabase.from("profiles").update({ is_admin: isAdmin }).eq("id", userId).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setUserPlan(userId, plan) {
+  const { data, error } = await supabase.from("profiles").update({ plan }).eq("id", userId).select().single();
   if (error) throw error;
   return data;
 }

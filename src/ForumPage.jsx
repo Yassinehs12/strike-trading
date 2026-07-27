@@ -7,7 +7,7 @@ import {
   fetchForumReplies, insertForumReply, deleteForumReply, updateForumReply,
   fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage,
   fetchBlockedUserIds, fetchAdminUserIds, notifyMentions,
-  fetchReactions, toggleReaction, fetchActiveSpotlight,
+  fetchReactions, toggleReaction, fetchActiveSpotlight, fetchProfilesByIds,
 } from "./db";
 import UserProfileModal from "./UserProfileModal";
 import AdminBadge from "./AdminBadge";
@@ -166,14 +166,15 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
-  const replyInputRef = useRef(null);
   const [reactions, setReactions] = useState([]);
+  const [threadProfiles, setThreadProfiles] = useState({});
 
   const [editingPost, setEditingPost] = useState(false);
   const [editTitle, setEditTitle] = useState(post.title);
   const [editBody, setEditBody] = useState(post.body);
   const [editingReplyId, setEditingReplyId] = useState(null);
   const [editReplyText, setEditReplyText] = useState("");
+  const replyInputRef = useRef(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -181,6 +182,7 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
       .then((r) => {
         setReplies(r);
         fetchReactions({ postIds: [post.id], replyIds: r.map((x) => x.id) }).then(setReactions).catch(() => {});
+        fetchProfilesByIds([post.user_id, ...r.map((x) => x.user_id)]).then(setThreadProfiles).catch(() => {});
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -285,7 +287,13 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
           </div>
         )}
         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-4">
-          <User size={12} />
+          {threadProfiles[post.user_id]?.avatar_url ? (
+            <img src={threadProfiles[post.user_id].avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[9px] font-bold text-[var(--accent)]">
+              {(post.username || "?")[0].toUpperCase()}
+            </div>
+          )}
           <button onClick={() => onViewProfile(post.user_id)} className="hover:text-[var(--accent)] hover:underline transition-colors">{post.username}</button>
           {adminIds.includes(post.user_id) && <AdminBadge />}
           <span className="text-[var(--text-faint)]">·</span> <Clock size={12} /> {timeAgo(post.created_at)}
@@ -314,7 +322,14 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
               <Card key={r.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-2">
-                    <User size={11} /> <button onClick={() => onViewProfile(r.user_id)} className="font-medium text-[var(--text-secondary)] hover:text-[var(--accent)] hover:underline transition-colors">{r.username}</button>
+                    {threadProfiles[r.user_id]?.avatar_url ? (
+                      <img src={threadProfiles[r.user_id].avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[9px] font-bold text-[var(--accent)]">
+                        {(r.username || "?")[0].toUpperCase()}
+                      </div>
+                    )}
+                    <button onClick={() => onViewProfile(r.user_id)} className="font-medium text-[var(--text-secondary)] hover:text-[var(--accent)] hover:underline transition-colors">{r.username}</button>
                     {adminIds.includes(r.user_id) && <AdminBadge />}
                     <span className="text-[var(--text-faint)]">·</span> {timeAgo(r.created_at)}
                     {r.edited_at && <span className="text-[var(--text-faint)]">· edited</span>}
@@ -365,15 +380,24 @@ const ThreadView = ({ post, currentUserId, onBack, onDeletePost, autoFocusReply,
 
 const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminIds = [] }) => {
   const [messages, setMessages] = useState([]);
+  const [profiles, setProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef(null);
   const seenIds = useRef(new Set());
+  const knownProfileIds = useRef(new Set());
 
   const scrollToBottom = (behavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
+  };
+
+  const loadProfilesFor = (userIds) => {
+    const missing = userIds.filter((id) => !knownProfileIds.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => knownProfileIds.current.add(id));
+    fetchProfilesByIds(missing).then((map) => setProfiles((prev) => ({ ...prev, ...map }))).catch(() => {});
   };
 
   useEffect(() => {
@@ -382,6 +406,7 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
       .then((msgs) => {
         msgs.forEach((m) => seenIds.current.add(m.id));
         setMessages(msgs);
+        loadProfilesFor(msgs.map((m) => m.user_id));
       })
       .catch((err) => setError(err.message || "Failed to load chat."))
       .finally(() => {
@@ -393,6 +418,7 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
       if (seenIds.current.has(msg.id)) return;
       seenIds.current.add(msg.id);
       setMessages((prev) => [...prev, msg]);
+      loadProfilesFor([msg.user_id]);
       setTimeout(() => scrollToBottom("smooth"), 0);
     });
 
@@ -430,44 +456,77 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
     }
   };
 
+  const visible = messages.filter((m) => !blockedIds.includes(m.user_id));
+
   return (
     <div className="flex flex-col h-[calc(100vh-220px)] min-h-[420px]">
-      <div className="flex items-center gap-2 mb-3 text-xs text-emerald-400">
+      <div className="flex items-center gap-2 mb-3 text-xs font-medium text-emerald-400">
         <Radio size={12} className="animate-pulse" /> Live — messages appear in real time
       </div>
 
       {error && <div className="text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5 mb-3">{error}</div>}
 
-      <Card className="flex-1 overflow-y-auto p-4 space-y-3 mb-3">
+      <Card className="flex-1 overflow-y-auto py-2 mb-3">
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
-        ) : messages.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto mb-3"><MessageCircle size={20} className="text-[var(--text-muted)]" /></div>
             <p className="text-sm font-semibold text-[var(--text-secondary)]">No messages yet</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">Say hello to the community.</p>
           </div>
         ) : (
-          messages.filter((m) => !blockedIds.includes(m.user_id)).map((m) => {
+          visible.map((m, i) => {
+            const prev = visible[i - 1];
+            // Group consecutive messages from the same person within 4 minutes
+            // — a proper Slack/Discord-style layout instead of a wall of
+            // repeated avatars and names for a back-to-back sender.
+            const grouped = prev && prev.user_id === m.user_id && !blockedIds.includes(prev.user_id)
+              && (new Date(m.created_at) - new Date(prev.created_at)) < 4 * 60 * 1000;
+            const p = profiles[m.user_id];
             const mine = m.user_id === currentUser.userId;
             return (
-              <div key={m.id} className={`group flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
-                {isAdmin && (
-                  <button onClick={() => removeMessage(m.id)}
-                    className={`opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-all shrink-0 ${mine ? "order-first" : "order-last"}`}
-                    title="Delete message">
-                    <Trash2 size={13} />
+              <div key={m.id} className={`group flex items-start gap-3 px-4 hover:bg-white/[0.025] transition-colors ${grouped ? "py-0.5" : "pt-3 pb-0.5"}`}>
+                {grouped ? (
+                  <div className="w-9 shrink-0 flex items-start justify-center pt-0.5">
+                    <span className="text-[10px] text-[var(--text-faint)] opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
+                      {new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    </span>
+                  </div>
+                ) : (
+                  <button onClick={() => !mine && onViewProfile(m.user_id)} className="shrink-0" disabled={mine}>
+                    {p?.avatar_url ? (
+                      <img src={p.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-xs font-bold text-[var(--accent)]">
+                        {(m.username || "?")[0].toUpperCase()}
+                      </div>
+                    )}
                   </button>
                 )}
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${mine ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-white/[0.06] text-[var(--text-primary)]"}`}>
-                  <button
-                    onClick={() => !mine && onViewProfile(m.user_id)}
-                    className={`text-xs font-semibold mb-0.5 flex items-center gap-1 ${mine ? "text-[var(--text-inverse)]/70 cursor-default" : "text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:underline transition-colors"}`}
-                  >
-                    {mine ? "You" : m.username} {adminIds.includes(m.user_id) && <AdminBadge />}
-                  </button>
-                  <p className="text-sm whitespace-pre-wrap leading-snug">{m.body}</p>
-                  <div className={`text-[10px] mt-1 ${mine ? "text-[var(--text-inverse)]/60" : "text-[var(--text-muted)]"}`}>{timeAgo(m.created_at)}</div>
+                <div className="min-w-0 flex-1">
+                  {!grouped && (
+                    <div className="flex items-baseline gap-2">
+                      <button
+                        onClick={() => !mine && onViewProfile(m.user_id)}
+                        className={`text-sm font-semibold ${mine ? "text-[var(--text-primary)] cursor-default" : "text-[var(--text-primary)] hover:underline"}`}
+                      >
+                        {mine ? "You" : (p?.username || m.username)}
+                      </button>
+                      {adminIds.includes(m.user_id) && <AdminBadge />}
+                      <span className="text-[11px] text-[var(--text-faint)]">{timeAgo(m.created_at)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-[var(--text-secondary)] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
+                    {isAdmin && (
+                      <button onClick={() => removeMessage(m.id)}
+                        className="opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-all shrink-0"
+                        title="Delete message">
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -480,7 +539,7 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
         <input className={`${inputCls} flex-1`} placeholder="Type a message..." value={text}
           onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
         <button onClick={send} disabled={sending || !text.trim()}
-          className="flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 text-[var(--text-inverse)] p-2.5 rounded-lg transition-all shrink-0">
+          className="flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-white p-2.5 rounded-lg transition-all shrink-0">
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </Card>
@@ -502,6 +561,7 @@ export default function ForumPage({ session, profile }) {
   const [adminIds, setAdminIds] = useState([]);
   const [postReactions, setPostReactions] = useState([]);
   const [spotlight, setSpotlight] = useState(null);
+  const [authorProfiles, setAuthorProfiles] = useState({});
 
   const currentUser = { userId: session?.user?.id, username: profile?.username || session?.user?.email || "Trader" };
   const isAdmin = !!profile?.is_admin;
@@ -512,6 +572,7 @@ export default function ForumPage({ session, profile }) {
       .then(([p, blocked, admins]) => {
         setPosts(p); setBlockedIds(blocked); setAdminIds(admins);
         if (p.length) fetchReactions({ postIds: p.map((x) => x.id) }).then(setPostReactions).catch(() => {});
+        if (p.length) fetchProfilesByIds(p.map((x) => x.user_id)).then(setAuthorProfiles).catch(() => {});
       })
       .catch((err) => setError(err.message || "Failed to load the forum."))
       .finally(() => setLoading(false));
@@ -651,7 +712,9 @@ export default function ForumPage({ session, profile }) {
             </Card>
           ) : (
             <div className="space-y-3">
-              {visiblePosts.map((p) => (
+              {visiblePosts.map((p) => {
+                const author = authorProfiles[p.user_id];
+                return (
                 <Card key={p.id} className="p-4 cursor-pointer hover:border-[var(--accent)]/30 transition-colors" onClick={() => openThread(p)}>
                   <h3 className="font-semibold text-[var(--text-primary)] mb-1">{p.title}{p.edited_at && <span className="text-xs font-normal text-[var(--text-faint)]"> (edited)</span>}</h3>
                   <p className="text-sm text-[var(--text-tertiary)] line-clamp-2 mb-2">{p.body}</p>
@@ -660,7 +723,13 @@ export default function ForumPage({ session, profile }) {
                   )}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                      <User size={11} />
+                      {author?.avatar_url ? (
+                        <img src={author.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[9px] font-bold text-[var(--accent)]">
+                          {(p.username || "?")[0].toUpperCase()}
+                        </div>
+                      )}
                       <button onClick={(e) => { e.stopPropagation(); setViewingUserId(p.user_id); }} className="hover:text-[var(--accent)] hover:underline transition-colors">{p.username}</button>
                       {adminIds.includes(p.user_id) && <AdminBadge />}
                       <span className="text-[var(--text-faint)]">·</span> <Clock size={11} /> {timeAgo(p.created_at)}
@@ -684,7 +753,7 @@ export default function ForumPage({ session, profile }) {
                     </div>
                   </div>
                 </Card>
-              ))}
+              );})}
             </div>
           )}
         </>
