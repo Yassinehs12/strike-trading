@@ -11,7 +11,7 @@ import {
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw,
-  AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox,
+  AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
@@ -636,26 +636,6 @@ const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, profile, 
           </div>
         ))}
       </nav>
-      <div className="p-4 border-t border-white/10">
-        <button onClick={() => setActive("profile")} className="w-full flex items-center gap-3 px-2 mb-2 rounded-lg hover:bg-[var(--bg-secondary)] py-1.5 transition-colors text-left">
-          {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
-            <img src={profile?.avatar_url || user.user_metadata.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)]">
-              {(profile?.username || user?.email || "?")[0].toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="text-sm font-medium text-[var(--text-primary)] truncate">{profile?.username || user?.email || "Trader"}</div>
-              {profile?.is_admin && <AdminBadge />}
-            </div>
-          </div>
-        </button>
-        <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--bg-secondary)] transition-colors">
-          <LogOut size={14} /> Sign Out
-        </button>
-      </div>
     </aside>
     {mobileOpen && <div className="fixed inset-0 bg-[var(--bg-primary)]/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
   </>
@@ -881,7 +861,84 @@ const NotificationBell = ({ session, profile, setActive }) => {
   );
 };
 
-const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, profile, setActive }) => (
+const UserMenu = ({ user, profile, setActive, onSignOut }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onClickOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const name = profile?.username || user?.email || "Trader";
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-[var(--bg-tertiary)] transition-colors"
+      >
+        {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
+          <img src={profile?.avatar_url || user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-xs font-bold text-[var(--accent)]">
+            {name[0].toUpperCase()}
+          </div>
+        )}
+        <ChevronDown size={14} className={`hidden sm:block text-[var(--text-faint)] transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-2 w-60 rounded-2xl overflow-hidden z-30 border"
+          style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)", boxShadow: "0 20px 45px -12px rgba(0,0,0,0.45)" }}
+        >
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: "var(--border-primary)" }}>
+            {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
+              <img src={profile?.avatar_url || user.user_metadata.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-sm font-bold text-[var(--accent)] shrink-0">
+                {name[0].toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{name}</span>
+                {profile?.is_admin && <AdminBadge />}
+              </div>
+              {user?.email && <span className="text-xs text-[var(--text-muted)] truncate block">{user.email}</span>}
+            </div>
+          </div>
+          <div className="p-1.5">
+            <button
+              onClick={() => { setActive("profile"); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            >
+              <UserCircle size={16} /> View Profile
+            </button>
+            <button
+              onClick={() => { setActive("settings"); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            >
+              <Palette size={16} /> Settings
+            </button>
+          </div>
+          <div className="p-1.5 border-t" style={{ borderColor: "var(--border-primary)" }}>
+            <button
+              onClick={onSignOut}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+            >
+              <LogOut size={16} /> Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, profile, setActive, onSignOut }) => (
   <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-[var(--bg-primary)]/80 backdrop-blur z-20">
     <div className="flex items-center gap-3">
       <button className="md:hidden text-[var(--text-tertiary)]" onClick={onMenu}><Menu size={22} /></button>
@@ -893,6 +950,8 @@ const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, session, pr
     <div className="flex items-center gap-2 md:gap-3">
       <ThemeToggle />
       <NotificationBell session={session} profile={profile} setActive={setActive} />
+      <div className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+      <UserMenu user={session?.user} profile={profile} setActive={setActive} onSignOut={onSignOut} />
       {showLogTrade && (
         <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] active:scale-95 text-[var(--text-inverse)] font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
           <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
@@ -3828,7 +3887,7 @@ export default function App() {
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
-          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} profile={profile} setActive={setActive} />
+          <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} profile={profile} setActive={setActive} onSignOut={signOut} />
           {dataError && (
             <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
               <AlertTriangle size={14} /> Couldn't load your data: {dataError}
