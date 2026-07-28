@@ -14,6 +14,17 @@ import ThemeToggle from "./ThemeToggle.jsx";
 export const CHANGELOG = [
   {
     date: "2026-07-28",
+    title: "Drawdown Heat Bar, prop-firm presets, and a pace projection for your challenges",
+    type: "feature",
+    items: [
+      "Daily Loss and Max Total Loss bars on the Challenges page are now live heat gradients — green through amber to red — with a glowing marker that pulses as you approach a breach, instead of a flat progress bar.",
+      "New Challenge form now has a prop-firm preset dropdown (FTMO, MyFundedFX, Apex Trader Funding, The5%ers, Alpha Capital Group) that auto-fills profit target, daily/total loss limits, minimum trading days, and profit split.",
+      "Added an editable Minimum Trading Days field to the New Challenge form instead of a fixed default.",
+      "In-progress challenges now show a pace projection — \"at your current pace (~$X/trading day), you'll hit the profit target in ~Y trading days\" — computed from your own logged trades.",
+    ],
+  },
+  {
+    date: "2026-07-28",
     title: "Notebook, a smarter Weekly/Monthly Review, and an Admin Panel fix",
     type: "feature",
     items: [

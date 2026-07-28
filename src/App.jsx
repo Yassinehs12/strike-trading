@@ -289,6 +289,65 @@ function computeChallengeStats(challenge, allTrades) {
   };
 }
 
+/* ---------- prop-firm rule presets (approximate — firms adjust rules over time,
+   always confirm against the firm's current terms before relying on these) ---------- */
+const PROP_FIRM_PRESETS = {
+  ftmo: {
+    label: "FTMO",
+    phases: {
+      "Phase 1": { profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 4 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 4 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  mff: {
+    label: "MyFundedFX (MFF)",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 12, profitSplitPct: 85 },
+    },
+  },
+  apex: {
+    label: "Apex Trader Funding",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 3, maxTotalLossPct: 5, minTradingDays: 7 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 3, maxTotalLossPct: 5, minTradingDays: 7 },
+      "Live": { maxDailyLossPct: 3, maxTotalLossPct: 5, profitSplitPct: 90 },
+    },
+  },
+  the5ers: {
+    label: "The5%ers",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  alphaCapital: {
+    label: "Alpha Capital Group",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+};
+
+// Projects, at the account's current average daily pace, roughly how many trading
+// days out the profit target is. Returns null when there's not enough signal yet
+// (no trades, flat/negative pace, target already reached, or the account failed).
+function computePaceProjection(stats) {
+  if (!stats || stats.targetReached || stats.totalLossBreached || stats.dailyLossBreached) return null;
+  const daysCounted = Math.max(stats.tradingDaysCount, 1);
+  const avgDailyPnl = stats.netPnl / daysCounted;
+  if (avgDailyPnl <= 0 || stats.tradingDaysCount === 0) return { avgDailyPnl, projectedDays: null };
+  const remaining = stats.targetBalance - stats.currentBalance;
+  const projectedDays = Math.max(1, Math.ceil(remaining / avgDailyPnl));
+  const projectedDate = new Date(TODAY.getTime() + projectedDays * 86400000);
+  return { avgDailyPnl, projectedDays, projectedDate };
+}
+
 function downloadBlob(content, filename, type = "text/csv") {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -512,18 +571,28 @@ const StatusPill = ({ status }) => {
 };
 
 const GaugeBar = ({ label, usedPct, breached, rightLabel, danger = true }) => {
-  const barColor = breached ? "bg-rose-500" : usedPct > 75 ? "bg-amber-400" : "bg-emerald-500";
+  const pct = clamp(usedPct, 0, 100);
+  const critical = pct >= 85 && !breached;
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1"><Gauge size={12} className="text-[var(--text-muted)]" /> {label}</span>
-        <span className={`tj-mono text-xs font-semibold ${breached ? "text-rose-400" : "text-[var(--text-secondary)]"}`}>{rightLabel}</span>
+        <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
+          <Flame size={12} className={breached ? "text-rose-400" : critical ? "text-amber-400" : "text-[var(--text-muted)]"} /> {label}
+        </span>
+        <span className={`tj-mono text-xs font-semibold ${breached ? "text-rose-400" : critical ? "text-amber-400" : "text-[var(--text-secondary)]"}`}>{rightLabel}</span>
       </div>
-      <div className="relative h-2.5 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
-        {danger && <div className="absolute right-0 top-0 h-full w-1/5 bg-rose-500/20" />}
-        <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${clamp(usedPct, 2, 100)}%` }} />
-        <div className="absolute inset-0 flex justify-between px-[1px]">
-          {Array.from({ length: 10 }).map((_, i) => <div key={i} className="w-px h-full bg-[var(--bg-primary)]/40" />)}
+      <div className="relative h-3 rounded-full overflow-hidden bg-[var(--bg-tertiary)]">
+        {/* full heat gradient track — green (safe) through amber to red (near/at breach) */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #10b981 0%, #10b981 40%, #fbbf24 65%, #fb923c 82%, #f43f5e 100%)" }} />
+        {/* dim everything beyond the current position so only the reached heat level shows */}
+        <div className="absolute inset-y-0 right-0 bg-[var(--bg-tertiary)] transition-all duration-500" style={{ left: `${pct}%` }} />
+        {/* position marker */}
+        <div
+          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-4 rounded-full bg-white shadow-[0_0_6px_rgba(0,0,0,0.5)] transition-all duration-500 ${critical || breached ? "animate-pulse" : ""}`}
+          style={{ left: `${clamp(pct, 1.5, 98.5)}%` }}
+        />
+        <div className="absolute inset-0 flex justify-between px-[1px] pointer-events-none">
+          {Array.from({ length: 10 }).map((_, i) => <div key={i} className="w-px h-full bg-[var(--bg-primary)]/30" />)}
         </div>
       </div>
     </div>
@@ -1014,10 +1083,36 @@ const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:bor
    CREATE CHALLENGE MODAL
    ============================================================ */
 const CreateChallengeModal = ({ open, onClose, onCreate }) => {
-  const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", profitSplitPct: "80" });
+  const [form, setForm] = useState({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", minTradingDays: "10", profitSplitPct: "80" });
   const [errors, setErrors] = useState({});
+  const [presetKey, setPresetKey] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const isLive = form.phase === "Live";
+
+  const applyPreset = (key, phase) => {
+    const preset = PROP_FIRM_PRESETS[key];
+    if (!preset) return;
+    const vals = preset.phases[phase] || preset.phases["Phase 1"];
+    setForm((f) => ({
+      ...f,
+      firm: preset.label,
+      profitTargetPct: vals.profitTargetPct != null ? String(vals.profitTargetPct) : f.profitTargetPct,
+      maxDailyLossPct: vals.maxDailyLossPct != null ? String(vals.maxDailyLossPct) : f.maxDailyLossPct,
+      maxTotalLossPct: vals.maxTotalLossPct != null ? String(vals.maxTotalLossPct) : f.maxTotalLossPct,
+      minTradingDays: vals.minTradingDays != null ? String(vals.minTradingDays) : f.minTradingDays,
+      profitSplitPct: vals.profitSplitPct != null ? String(vals.profitSplitPct) : f.profitSplitPct,
+    }));
+  };
+
+  const onPresetChange = (key) => {
+    setPresetKey(key);
+    if (key) applyPreset(key, form.phase);
+  };
+
+  const onPhaseChange = (p) => {
+    set("phase", p);
+    if (presetKey) applyPreset(presetKey, p);
+  };
 
   const submit = () => {
     const errs = {};
@@ -1033,23 +1128,31 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
       id: Date.now(), firm: form.firm, phase: isLive ? "Funded" : form.phase, stage: isLive ? "funded" : "evaluation",
       accountSize: Number(form.accountSize), profitTargetPct: Number(form.profitTargetPct || 0),
       maxDailyLossPct: Number(form.maxDailyLossPct), maxTotalLossPct: Number(form.maxTotalLossPct),
-      minTradingDays: 10, startDate: "2026-07-10",
+      minTradingDays: Number(form.minTradingDays) || 10, startDate: "2026-07-10",
       ...(isLive ? { profitSplitPct: Number(form.profitSplitPct), lastPayoutNetProfit: 0, payoutHistory: [] } : {}),
     });
-    setForm({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", profitSplitPct: "80" });
+    setForm({ firm: "", phase: "Phase 1", accountSize: "", profitTargetPct: "", maxDailyLossPct: "", maxTotalLossPct: "", minTradingDays: "10", profitSplitPct: "80" });
+    setPresetKey("");
     setErrors({});
     onClose();
   };
 
   return (
     <Modal open={open} onClose={onClose} title="Create New Challenge" wide>
+      <Field label="Prop Firm Preset (optional)">
+        <select className={inputCls} value={presetKey} onChange={(e) => onPresetChange(e.target.value)}>
+          <option value="">Custom / enter manually...</option>
+          {Object.entries(PROP_FIRM_PRESETS).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+        </select>
+        {presetKey && <p className="text-xs text-[var(--text-faint)] mt-1.5">Rules auto-filled for {PROP_FIRM_PRESETS[presetKey].label} — approximate, always double-check against the firm's current terms before relying on them.</p>}
+      </Field>
       <Field label="Prop Firm Name" error={errors.firm}>
         <input className={inputCls} placeholder="e.g. FTMO, Alpha Capital, MyFundedFX" value={form.firm} onChange={(e) => set("firm", e.target.value)} />
       </Field>
       <Field label="Phase">
         <div className="flex rounded-lg overflow-hidden border border-white/10">
           {["Phase 1", "Phase 2", "Live"].map((p) => (
-            <button key={p} type="button" onClick={() => set("phase", p)}
+            <button key={p} type="button" onClick={() => onPhaseChange(p)}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${form.phase === p ? (p === "Live" ? "bg-emerald-500/20 text-emerald-400" : "bg-[var(--accent)]/20 text-[var(--accent)]") : "bg-[var(--bg-primary)] text-[var(--text-muted)]"}`}>
               {p}
             </button>
@@ -1064,6 +1167,9 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
         )}
         <Field label="Max Daily Loss (%)" error={errors.maxDailyLossPct}><input type="number" className={inputCls} placeholder="5" value={form.maxDailyLossPct} onChange={(e) => set("maxDailyLossPct", e.target.value)} /></Field>
         <Field label="Max Total Loss (%)" error={errors.maxTotalLossPct}><input type="number" className={inputCls} placeholder="10" value={form.maxTotalLossPct} onChange={(e) => set("maxTotalLossPct", e.target.value)} /></Field>
+        {!isLive && (
+          <Field label="Min Trading Days"><input type="number" className={inputCls} placeholder="10" value={form.minTradingDays} onChange={(e) => set("minTradingDays", e.target.value)} /></Field>
+        )}
       </div>
 
       {isLive && (
@@ -1704,6 +1810,29 @@ const FundedPanel = ({ challenge, stats, onRequestPayout }) => (
   </div>
 );
 
+const PaceProjectionBanner = ({ stats }) => {
+  const p = computePaceProjection(stats);
+  if (!p) return null;
+  if (p.projectedDays == null) {
+    return (
+      <div className="mt-2 flex items-start gap-2 bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2.5">
+        <Clock size={14} className="text-[var(--text-muted)] mt-0.5 shrink-0" />
+        <p className="text-xs text-[var(--text-muted)]">Not enough winning pace yet to project a target date — net P&L per trading day is flat or negative so far.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-start gap-2 bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded-lg px-3 py-2.5">
+      <Clock size={14} className="text-[var(--accent)] mt-0.5 shrink-0" />
+      <p className="text-xs text-[var(--text-secondary)]">
+        At your current pace (<span className="tj-mono font-semibold text-[var(--text-primary)]">{fmtUSD2(p.avgDailyPnl)}/trading day</span>), you're on track to hit the profit target in
+        <span className="font-semibold text-[var(--accent)]"> ~{p.projectedDays} trading day{p.projectedDays === 1 ? "" : "s"}</span>
+        {p.projectedDate && <> (around {p.projectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</>}.
+      </p>
+    </div>
+  );
+};
+
 const ChallengeDetailCard = ({ challenge, trades, onDelete, onMarkFunded, onRequestPayout, onExport }) => {
   const s = computeChallengeStats(challenge, trades);
   const isFunded = challenge.stage === "funded";
@@ -1748,6 +1877,7 @@ const ChallengeDetailCard = ({ challenge, trades, onDelete, onMarkFunded, onRequ
           <RuleRow ok={!s.dailyLossBreached} label="Daily Loss Limit Safe" detail={s.dailyLossBreached ? "Daily loss limit breached on worst trading day." : "No single day has exceeded the daily loss limit."} />
           <RuleRow ok={!s.totalLossBreached} label="Max Total Loss Safe" detail={s.totalLossBreached ? "Account drawdown breached the max total loss floor." : `${(100 - s.totalDrawdownUsed).toFixed(0)}% of drawdown buffer remaining.`} />
           <RuleRow ok={s.minDaysMet} label="Minimum Trading Days Met" detail={`${s.tradingDaysCount} / ${challenge.minTradingDays} required trading days logged.`} />
+          {s.status === "In Progress" && <PaceProjectionBanner stats={s} />}
           {s.status === "Passed" && (
             <button onClick={() => onMarkFunded(challenge.id)} className="w-full mt-2 flex items-center justify-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-sm py-2 rounded-lg hover:bg-emerald-500/20 transition-all">
               <Award size={14} /> Mark as Funded — Start Payouts
