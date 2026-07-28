@@ -9,10 +9,10 @@ import ThemeToggle from "./ThemeToggle.jsx";
    a bolted-on page from a template.
    ============================================================ */
 const SUB_NAV = [
-  { label: "Blog", href: "#/blog" },
-  { label: "Privacy Policy", href: "#/privacy" },
-  { label: "Terms of Service", href: "#/terms" },
-  { label: "Changelog", href: "#/changelog" },
+  { label: "Blog", href: "/blog" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Changelog", href: "/changelog" },
 ];
 
 const LegalShell = ({ title, updated, children }) => (
@@ -24,13 +24,13 @@ const LegalShell = ({ title, updated, children }) => (
 
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
       <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-        <a href="#/" className="flex items-center gap-2">
+        <a href="/" className="flex items-center gap-2">
           <LogoFull size={26} textClass="text-sm" />
         </a>
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <a
-            href="#/"
+            href="/"
             className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <ArrowLeft size={14} /> Back to site
@@ -45,7 +45,7 @@ const LegalShell = ({ title, updated, children }) => (
 
       <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
         {SUB_NAV.map((l) => {
-          const isActive = typeof window !== "undefined" && window.location.hash.replace(/^#\/?/, "") === l.href.replace("#/", "");
+          const isActive = typeof window !== "undefined" && window.location.pathname.replace(/^\/+/, "") === l.href.replace(/^\//, "");
           return (
             <a
               key={l.href}

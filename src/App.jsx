@@ -630,7 +630,7 @@ const UpgradeGate = ({ profile, feature, description, children }) => {
           <h3 className="font-bold text-[var(--text-primary)] mb-1">{feature} is a Pro feature</h3>
           <p className="text-xs text-[var(--text-muted)] mb-4">{description}</p>
           <a
-            href="#/pricing"
+            href="/pricing"
             className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all"
           >
             See Pro plans
@@ -783,11 +783,10 @@ const VALID_TAB_IDS = [
   "profile",
 ];
 
-// Reads the tab out of the URL hash (e.g. "#/settings" -> "settings") on
-// first load. Anything unrecognized — including Supabase's own auth hash
-// like "#access_token=..." — falls back to the dashboard.
-const tabFromHash = () => {
-  const raw = window.location.hash.replace(/^#\/?/, "");
+// Reads the tab out of the URL path (e.g. "/settings" -> "settings") on
+// first load. Anything unrecognized falls back to the dashboard.
+const tabFromPath = () => {
+  const raw = window.location.pathname.replace(/^\/+/, "").split(/[/?#]/)[0];
   return VALID_TAB_IDS.includes(raw) ? raw : "dashboard";
 };
 
@@ -1908,6 +1907,77 @@ const PreMarketChecklistCard = () => {
   );
 };
 
+// Live prop-firm rule violation alerts. Reuses computeChallengeStats (same
+// numbers already driving the challenge progress bars) so there's no second
+// source of truth — a challenge that's failed here is failed everywhere else
+// too. Only renders when there's something worth flagging: a breach, or a
+// challenge that's used 80%+ of its daily or total loss allowance.
+const RuleViolationAlerts = ({ challenges, trades }) => {
+  const alerts = [];
+  challenges.forEach((c) => {
+    const s = computeChallengeStats(c, trades);
+    if (s.status === "Failed") {
+      alerts.push({
+        id: `${c.id}-failed`,
+        level: "critical",
+        title: `${c.firm} — ${s.dailyLossBreached ? "daily loss limit breached" : "max drawdown breached"}`,
+        text: s.dailyLossBreached
+          ? `Worst logged day lost ${fmtUSD(Math.abs(s.worstDay))}, past the ${fmtUSD(s.dailyLossLimit)} daily limit.`
+          : `Balance fell to ${fmtUSD(s.currentBalance)}, at or past the ${fmtUSD(s.floorBalance)} floor.`,
+      });
+      return; // don't also show "approaching" warnings for an already-failed challenge
+    }
+    if (s.status === "Passed" || s.status === "Funded") return;
+    if (s.dailyLossUsed >= 80) {
+      alerts.push({
+        id: `${c.id}-daily`,
+        level: "warning",
+        title: `${c.firm} — approaching daily loss limit`,
+        text: `Worst logged day has used ${Math.round(s.dailyLossUsed)}% of your ${fmtUSD(s.dailyLossLimit)} daily loss limit.`,
+      });
+    }
+    if (s.totalDrawdownUsed >= 80) {
+      alerts.push({
+        id: `${c.id}-total`,
+        level: "warning",
+        title: `${c.firm} — approaching max drawdown`,
+        text: `You've used ${Math.round(s.totalDrawdownUsed)}% of your total drawdown allowance (floor ${fmtUSD(s.floorBalance)}).`,
+      });
+    }
+  });
+
+  if (!alerts.length) return null;
+
+  const hasCritical = alerts.some((a) => a.level === "critical");
+
+  return (
+    <Card className={`p-4 md:p-5 border-l-4 ${hasCritical ? "border-l-rose-500" : "border-l-amber-500"}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <ShieldAlert size={16} className={hasCritical ? "text-rose-400" : "text-amber-400"} />
+        <h3 className="font-bold text-[var(--text-primary)] text-sm">Rule Violation Alerts</h3>
+      </div>
+      <div className="space-y-2">
+        {alerts.map((a) => (
+          <div
+            key={a.id}
+            className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${
+              a.level === "critical" ? "bg-rose-500/10 border-rose-500/30" : "bg-amber-500/10 border-amber-500/30"
+            }`}
+          >
+            {a.level === "critical"
+              ? <XCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
+              : <AlertTriangle size={15} className="text-amber-400 shrink-0 mt-0.5" />}
+            <div>
+              <div className={`text-sm font-semibold ${a.level === "critical" ? "text-rose-400" : "text-amber-400"}`}>{a.title}</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5">{a.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -1955,6 +2025,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, s
         <KPICard icon={Activity} label="Total Trades" value={kpis.total} sub="logged entries" />
         <KPICard icon={ShieldCheck} label="Active Challenges" value={challenges.length} accent="text-[var(--accent)]" sub="funding evaluations" />
       </div>
+
+      <RuleViolationAlerts challenges={challenges} trades={trades} />
 
       <UpgradeGate profile={profile} feature="Psychology Report" description="Discipline scoring and emotional-pattern breakdowns computed from your trade tags.">
         <PsychologyReportCard trades={trades} />
@@ -3408,9 +3480,9 @@ const SettingsPage = ({ settings, onSave, session, profile, onProfileUpdate, onS
                 </div>
                 {profile?.show_public_stats && profile?.username && (
                   <div className="mt-3 flex items-center gap-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3 py-2">
-                    <code className="text-xs text-[var(--text-tertiary)] flex-1 truncate">strikejournal.com/#/u/{profile.username}</code>
+                    <code className="text-xs text-[var(--text-tertiary)] flex-1 truncate">strikejournal.com/u/{profile.username}</code>
                     <button
-                      onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/#/u/${profile.username}`); toast("Link copied", "success"); }}
+                      onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/u/${profile.username}`); toast("Link copied", "success"); }}
                       className="text-xs font-semibold text-[var(--accent)] hover:underline shrink-0"
                     >
                       Copy
@@ -3680,7 +3752,7 @@ const AuthPage = ({ onBack }) => {
           style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "44px 44px" }}
         />
 
-        <a href="#/" className="relative flex items-center gap-2">
+        <a href="/" className="relative flex items-center gap-2">
           <LogoFull size={30} textClass="text-lg" forceLight />
         </a>
 
@@ -3814,9 +3886,9 @@ const AuthPage = ({ onBack }) => {
               {mode === "signup" && (
                 <p className="text-center text-[11px] text-[var(--text-faint)] mt-3">
                   By creating an account, you agree to our{" "}
-                  <a href="#/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
+                  <a href="/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
                   and{" "}
-                  <a href="#/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
+                  <a href="/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
                 </p>
               )}
             </div>
@@ -3892,7 +3964,7 @@ export default function App() {
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [active, setActive] = useState(tabFromHash);
+  const [active, setActive] = useState(tabFromPath);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
@@ -3904,11 +3976,12 @@ export default function App() {
   const [dataError, setDataError] = useState("");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
 
-  // Standalone legal pages (Privacy Policy / Terms) are accessible via
-  // #/privacy and #/terms regardless of auth state, so they render before
-  // any of the session/auth branching below.
-  const legalFromHash = () => {
-    const raw = window.location.hash.replace(/^#\/?/, "");
+  // Standalone pages (Privacy Policy, Terms, Blog, Pricing, public report
+  // cards) are accessible via plain paths like /privacy or /u/username,
+  // regardless of auth state, so they render before any of the
+  // session/auth branching below.
+  const legalFromPath = () => {
+    const raw = window.location.pathname.replace(/^\/+/, "").split(/[?#]/)[0];
     if (raw === "privacy") return "privacy";
     if (raw === "terms") return "terms";
     if (raw === "changelog") return "changelog";
@@ -3918,14 +3991,32 @@ export default function App() {
     if (raw.startsWith("u/")) return "report-card";
     return null;
   };
-  const [legalPage, setLegalPage] = useState(legalFromHash);
+  const [legalPage, setLegalPage] = useState(legalFromPath);
+
+  // Intercept clicks on same-origin, path-based links (href="/somewhere")
+  // and route them through pushState instead of letting the browser do a
+  // full page reload — this is what makes plain "/pricing"-style URLs work
+  // as an SPA without a router dependency. Hash-fragment anchors like
+  // "#features" on the landing page are left alone.
   useEffect(() => {
-    const onHashChange = () => setLegalPage(legalFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const onClick = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest("a");
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (!href || !href.startsWith("/") || href.startsWith("//")) return;
+      if (a.target && a.target !== "_self") return;
+      e.preventDefault();
+      if (window.location.pathname + window.location.search !== href) {
+        window.history.pushState(null, "", href);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
   }, []);
 
-  // Keep the URL hash in sync with the active tab, so refreshing (or sharing
+  // Keep the URL path in sync with the active tab, so refreshing (or sharing
   // a link) lands back on the same page instead of resetting to dashboard.
   // Only applies once signed in — on the logged-out landing page, the hash
   // is used for anchor links (#features, #faq, etc.) instead.
@@ -3934,14 +4025,16 @@ export default function App() {
     if (/access_token|type=recovery|error=/.test(window.location.hash)) return;
     // Standalone routes (public report cards, legal pages, changelog) manage
     // their own URL — don't let the dashboard-tab sync stomp on them.
-    if (legalFromHash()) return;
-    const target = `#/${active}`;
-    if (window.location.hash !== target) window.history.pushState(null, "", target);
+    if (legalFromPath()) return;
+    const target = `/${active}`;
+    if (window.location.pathname !== target) window.history.pushState(null, "", target);
   }, [active, session?.user?.id]);
 
-  // Support the browser's back/forward buttons switching tabs too.
+  // Support the browser's back/forward buttons switching tabs (and legal
+  // pages) too, plus the synthetic popstate dispatched by the click
+  // interceptor above.
   useEffect(() => {
-    const onPopState = () => setActive(tabFromHash());
+    const onPopState = () => { setActive(tabFromPath()); setLegalPage(legalFromPath()); };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -4019,9 +4112,9 @@ export default function App() {
   const signOut = async () => {
     await supabase.auth.signOut();
     // Without this, the URL stays on whatever tab was open (e.g.
-    // #/dashboard) even though the page now shows the logged-out landing
+    // /dashboard) even though the page now shows the logged-out landing
     // page — confusing on refresh or when sharing the URL.
-    window.history.pushState(null, "", "#/");
+    window.history.pushState(null, "", "/");
     setActive("dashboard");
   };
 
@@ -4178,11 +4271,11 @@ export default function App() {
   if (legalPage === "pricing") return <PricingPage />;
   if (legalPage === "blog") return <BlogListPage />;
   if (legalPage === "blog-post") {
-    const slug = window.location.hash.replace(/^#\/?blog\//, "").split(/[/?#]/)[0];
+    const slug = window.location.pathname.replace(/^\/?blog\//, "").split(/[/?#]/)[0];
     return <BlogPostPage slug={decodeURIComponent(slug)} />;
   }
   if (legalPage === "report-card") {
-    const uname = window.location.hash.replace(/^#\/?u\//, "").split(/[/?#]/)[0];
+    const uname = window.location.pathname.replace(/^\/?u\//, "").split(/[/?#]/)[0];
     return <ReportCardPage username={decodeURIComponent(uname)} />;
   }
 

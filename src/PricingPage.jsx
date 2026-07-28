@@ -26,10 +26,10 @@ export default function PricingPage() {
   return (
     <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <header className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">
-        <a href="#/"><LogoFull size={28} textClass="text-base" /></a>
+        <a href="/"><LogoFull size={28} textClass="text-base" /></a>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <a href="#/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Back to home</a>
+          <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Back to home</a>
         </div>
       </header>
 

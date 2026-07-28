@@ -24,7 +24,7 @@ const NotFoundState = ({ username }) => (
     <p className="text-sm text-[var(--text-muted)] max-w-sm">
       Either this trader hasn't turned on their public report card yet, or the username doesn't exist.
     </p>
-    <a href="#/" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
+    <a href="/" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
       <ArrowLeft size={14} /> Back to Strike Journal
     </a>
   </div>
@@ -83,12 +83,12 @@ export default function ReportCardPage({ username }) {
 
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <a href="#/" className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2">
             <LogoFull size={26} textClass="text-sm" />
           </a>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <a href="#/" className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+            <a href="/" className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
               <ArrowLeft size={14} /> Back to site
             </a>
           </div>
@@ -112,7 +112,7 @@ export default function ReportCardPage({ username }) {
           <p className="text-sm text-[var(--text-muted)] max-w-sm">
             We found this profile but couldn't load their stats right now. Check the browser console for details, or try again shortly.
           </p>
-          <a href="#/" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
+          <a href="/" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
             <ArrowLeft size={14} /> Back to Strike Journal
           </a>
         </div>
@@ -169,7 +169,7 @@ export default function ReportCardPage({ username }) {
               {copied ? <Check size={14} /> : <Share2 size={14} />}
               {copied ? "Copied" : "Share this report card"}
             </button>
-            <a href="#/" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+            <a href="/" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
               Start your own →
             </a>
           </div>

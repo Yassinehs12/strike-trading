@@ -6,7 +6,7 @@ import ThemeToggle from "./ThemeToggle.jsx";
 /* ============================================================
    BLOG POSTS
    Add a new object to the TOP of this array to publish a post.
-   `slug` becomes the URL: #/blog/your-slug-here
+   `slug` becomes the URL: /blog/your-slug-here
    `content` is a list of simple blocks — no markdown needed:
      { type: "p", text: "..." }
      { type: "h2", text: "..." }
@@ -61,12 +61,12 @@ const Shell = ({ children, maxW = "max-w-2xl" }) => (
 
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
       <div className={`${maxW} mx-auto px-4 h-16 flex items-center justify-between`}>
-        <a href="#/" className="flex items-center gap-2">
+        <a href="/" className="flex items-center gap-2">
           <LogoFull size={26} textClass="text-sm" />
         </a>
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <a href="#/" className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+          <a href="/" className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
             <ArrowLeft size={14} /> Back to site
           </a>
         </div>
@@ -84,7 +84,7 @@ const Shell = ({ children, maxW = "max-w-2xl" }) => (
 );
 
 const PostCard = ({ post }) => (
-  <a href={`#/blog/${post.slug}`} className="block group">
+  <a href={`/blog/${post.slug}`} className="block group">
     <div className="border border-white/10 rounded-xl p-5 hover:border-[var(--accent)]/40 hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         {post.tags?.map((t) => (
@@ -112,10 +112,10 @@ export const BlogListPage = () => (
     <p className="text-sm text-[var(--text-faint)] mb-8">Notes on trading, building Strike Journal, and the community.</p>
 
     <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
-      <a href="#/blog" className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Blog</a>
-      <a href="#/changelog" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Changelog</a>
-      <a href="#/privacy" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
-      <a href="#/terms" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
+      <a href="/blog" className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Blog</a>
+      <a href="/changelog" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Changelog</a>
+      <a href="/privacy" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
+      <a href="/terms" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
     </nav>
 
     {POSTS.length === 0 ? (
@@ -160,7 +160,7 @@ export const BlogPostPage = ({ slug }) => {
         <div className="flex flex-col items-center text-center py-16">
           <h1 className="text-lg font-bold mb-1.5">Post not found</h1>
           <p className="text-sm text-[var(--text-muted)] mb-6">This post may have been moved or doesn't exist.</p>
-          <a href="#/blog" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
+          <a href="/blog" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
             <ArrowLeft size={14} /> Back to Blog
           </a>
         </div>
@@ -170,7 +170,7 @@ export const BlogPostPage = ({ slug }) => {
 
   return (
     <Shell>
-      <a href="#/blog" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors mb-6">
+      <a href="/blog" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors mb-6">
         <ArrowLeft size={12} /> All posts
       </a>
 
@@ -194,10 +194,10 @@ export const BlogPostPage = ({ slug }) => {
       </article>
 
       <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
-        <a href="#/blog" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+        <a href="/blog" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
           ← All posts
         </a>
-        <a href="#/" className="text-sm font-semibold text-[var(--accent)] hover:underline">
+        <a href="/" className="text-sm font-semibold text-[var(--accent)] hover:underline">
           Start your journal →
         </a>
       </div>

@@ -28,9 +28,32 @@ function groupBy(trades, keyFn) {
   return map;
 }
 
+// A trade counts as "checklist-complete" only when all three pre-trade
+// checks were confirmed. Trades logged before this feature existed have no
+// checklist object at all — those are excluded from the rate rather than
+// counted as incomplete, so old history doesn't drag the score down.
+function isChecklistComplete(t) {
+  const c = t.checklist;
+  return !!(c && c.setupConfirmed && c.riskSized && c.newsChecked);
+}
+
+function hasChecklistData(t) {
+  return !!t.checklist;
+}
+
+function checklistCompletionRate(closed) {
+  const withData = closed.filter(hasChecklistData);
+  if (!withData.length) return null;
+  return withData.filter(isChecklistComplete).length / withData.length;
+}
+
 // Discipline score: 100 minus penalties for tilt-flagged trades, oversized
-// losing streaks tagged with negative emotion, and low-grade setups taken
-// under emotional strain. Purely descriptive — not a judgment call.
+// losing streaks tagged with negative emotion, low-grade setups taken under
+// emotional strain, and trades fired off without completing the pre-trade
+// checklist (setup confirmed, risk sized, news checked). This is what
+// separates the score from raw P&L — a trade can be a winner and still cost
+// discipline points if it skipped the checklist. Purely descriptive — not a
+// judgment call.
 function disciplineScore(closed) {
   if (!closed.length) return null;
   const negTagged = closed.filter((t) => NEGATIVE_EMOTIONS.includes(t.emotion));
@@ -41,7 +64,13 @@ function disciplineScore(closed) {
   ).length;
   const lowGradePenalty = closed.length ? (lowGradeUnderEmotion / closed.length) * 100 * 0.5 : 0;
 
-  let score = 100 - negRate * 60 - lowGradePenalty;
+  const withChecklist = closed.filter(hasChecklistData);
+  const incompleteChecklist = withChecklist.filter((t) => !isChecklistComplete(t)).length;
+  const checklistPenalty = withChecklist.length
+    ? (incompleteChecklist / withChecklist.length) * 100 * 0.35
+    : 0;
+
+  let score = 100 - negRate * 60 - lowGradePenalty - checklistPenalty;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
@@ -115,6 +144,40 @@ export function computePsychologyReport(trades, periodLabel = "period") {
     });
   }
 
+  // Checklist adherence vs outcome — did skipping the pre-trade checklist
+  // actually cost anything, or is it "just paperwork"?
+  const withChecklist = closed.filter(hasChecklistData);
+  const checklistRate = checklistCompletionRate(closed);
+  if (withChecklist.length >= 3) {
+    const complete = withChecklist.filter(isChecklistComplete);
+    const incomplete = withChecklist.filter((t) => !isChecklistComplete(t));
+    const completeWr = winRate(complete);
+    const incompleteWr = winRate(incomplete);
+    if (incomplete.length >= 3 && complete.length >= 1 && completeWr != null && incompleteWr != null) {
+      const gap = completeWr - incompleteWr;
+      if (gap >= 8) {
+        findings.push({
+          type: "risk",
+          title: "Skipping the checklist is costing you",
+          text: `Trades with the full pre-trade checklist (setup confirmed, risk sized, news checked) win ${Math.round(completeWr)}% of the time, versus ${Math.round(incompleteWr)}% when a step was skipped — a ${Math.round(gap)}-point gap across ${withChecklist.length} checklist-tracked trades.`,
+        });
+      } else if (complete.length >= 3) {
+        findings.push({
+          type: "strength",
+          title: "Checklist trades hold up",
+          text: `No meaningful edge lost when the checklist is skipped so far (${Math.round(completeWr)}% vs ${Math.round(incompleteWr)}% win rate) — but the sample is still small, so keep tracking it.`,
+        });
+      }
+    }
+    if (checklistRate != null && checklistRate < 0.6) {
+      findings.push({
+        type: "risk",
+        title: "Checklist completion is low",
+        text: `Only ${Math.round(checklistRate * 100)}% of checklist-tracked trades had all three pre-trade checks confirmed. Incomplete checklists are weighed directly into your discipline score below.`,
+      });
+    }
+  }
+
   // Setup grade vs emotion — discipline under pressure
   const lowGradeEmotional = closed.filter(
     (t) => NEGATIVE_EMOTIONS.includes(t.emotion) && (t.setupGrade === "C" || t.setupGrade === "D")
@@ -157,7 +220,7 @@ export function computePsychologyReport(trades, periodLabel = "period") {
   findings.unshift({
     type: "summary",
     title: "Discipline Score",
-    text: `${score}/100 — ${scoreMeta.label}. Based on ${closed.length} closed trades this ${periodLabel}, weighing emotionally-tagged trades and low-grade setups taken under strain.`,
+    text: `${score}/100 — ${scoreMeta.label}. Based on ${closed.length} closed trades this ${periodLabel}, weighing emotionally-tagged trades, low-grade setups taken under strain, and incomplete pre-trade checklists — not just win/loss.`,
   });
 
   return {
@@ -165,6 +228,7 @@ export function computePsychologyReport(trades, periodLabel = "period") {
     score,
     scoreMeta,
     emotionRows,
+    checklistRate,
     sampleSize: closed.length,
     ready: true,
   };

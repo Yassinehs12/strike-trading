@@ -21,6 +21,11 @@ const tradeFromDB = (r) => ({
   notes: r.notes ?? "",
   emotion: r.emotion || "Neutral",
   setupGrade: r.setup_grade || "A",
+  checklist: {
+    setupConfirmed: !!r.checklist_setup_confirmed,
+    riskSized: !!r.checklist_risk_sized,
+    newsChecked: !!r.checklist_news_checked,
+  },
 });
 
 const tradeToDB = (t, userId) => ({
@@ -43,6 +48,9 @@ const tradeToDB = (t, userId) => ({
   notes: t.notes || "",
   emotion: t.emotion || "Neutral",
   setup_grade: t.setupGrade || "A",
+  checklist_setup_confirmed: !!t.checklist?.setupConfirmed,
+  checklist_risk_sized: !!t.checklist?.riskSized,
+  checklist_news_checked: !!t.checklist?.newsChecked,
 });
 
 const challengeFromDB = (r) => ({
