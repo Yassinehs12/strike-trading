@@ -445,7 +445,7 @@ const NavBar = ({ onSignIn, onGetStarted }) => {
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/80 border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-[76px] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-[var(--accent)] flex items-center justify-center"><LogoMark size={19} bare className="text-[var(--text-inverse)]" /></div>
+          <LogoMark size={32} />
           <span className="font-extrabold text-[var(--text-primary)] text-xl tracking-tight">Strike<span className="text-[var(--accent)]">Journal</span></span>
         </div>
         <nav className="hidden md:flex items-center gap-1.5">
@@ -777,7 +777,7 @@ const Footer = () => (
       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 mb-8">
         <div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-            <div className="w-6 h-6 rounded-md bg-[var(--accent)] flex items-center justify-center"><LogoMark size={14} bare className="text-[var(--text-inverse)]" /></div>
+            <LogoMark size={24} />
             <span className="font-bold text-[var(--text-primary)] text-sm">Strike Journal</span>
           </div>
           <p className="text-xs text-[var(--text-faint)] max-w-xs mb-3">A trading journal and funding challenge tracker for traders who take their edge seriously.</p>
