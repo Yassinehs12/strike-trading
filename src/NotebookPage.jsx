@@ -17,7 +17,6 @@ const COLORS = {
 const STARTER_TEMPLATES = [
   { title: "Trading Playbook", content: "Setup criteria:\n- \n\nEntry rules:\n- \n\nExit rules:\n- \n\nRisk per trade:\n- \n\nWhen NOT to take this setup:\n- ", tags: ["playbook"] },
   { title: "Mistakes To Avoid", content: "1. \n2. \n3. ", tags: ["psychology"] },
-  { title: "Pre-Market Checklist", content: "☐ Reviewed economic calendar\n☐ Checked higher timeframe bias\n☐ Marked key levels\n☐ Defined max loss for the day\n☐ Mentally ready — no revenge trading", tags: ["checklist"] },
 ];
 
 function timeAgo(iso) {

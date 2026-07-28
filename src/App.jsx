@@ -127,6 +127,14 @@ function genTrades() {
       : +(entry - (pnl > 0 ? 1 : -1) * (Math.abs(pnl) / (lots * 1000))).toFixed(4);
     const roll = rand();
     const challengeId = roll > 0.55 ? 1 : roll > 0.3 ? 2 : null;
+    // Losing trades skip a checklist step more often — gives the discipline
+    // score/finding something real to point at in the demo data.
+    const skipChance = status === "Loss" ? 0.45 : 0.12;
+    const checklist = {
+      setupConfirmed: rand() > skipChance,
+      riskSized: rand() > skipChance,
+      newsChecked: rand() > skipChance,
+    };
 
     trades.push({
       id: id++,
@@ -134,6 +142,7 @@ function genTrades() {
       asset, direction, entry, exit, lots, fees, setup, session, status, pnl,
       holdingMinutes: Math.floor(5 + rand() * 240),
       challengeId,
+      checklist,
       screenshot: null,
       notes:
         status === "Win"
@@ -1187,6 +1196,53 @@ const Field = ({ label, error, children }) => (
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
+const CHECKLIST_ITEMS = [
+  { key: "setupConfirmed", label: "Setup confirmed", hint: "Matches a setup on your plan, not a hunch" },
+  { key: "riskSized", label: "Risk sized", hint: "Position size matches your risk rules" },
+  { key: "newsChecked", label: "News checked", hint: "No high-impact news/calendar risk into the trade" },
+];
+
+// Pre-trade discipline checklist. Deliberately just three checks — the goal
+// is a 5-second habit before hitting submit, not a form. Feeds directly into
+// the discipline score in psychology.js, separate from setup grade/emotion.
+const ChecklistToggles = ({ checklist, onChange }) => {
+  const c = checklist || { setupConfirmed: false, riskSized: false, newsChecked: false };
+  const checkedCount = CHECKLIST_ITEMS.filter((i) => c[i.key]).length;
+  return (
+    <div className="space-y-1.5">
+      {CHECKLIST_ITEMS.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => onChange({ ...c, [item.key]: !c[item.key] })}
+          className={`w-full flex items-start gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
+            c[item.key]
+              ? "bg-emerald-500/10 border-emerald-500/40"
+              : "bg-[var(--bg-primary)] border-white/10 hover:border-white/20"
+          }`}
+        >
+          <span
+            className={`mt-0.5 shrink-0 w-4 h-4 rounded flex items-center justify-center border ${
+              c[item.key] ? "bg-emerald-500 border-emerald-500" : "border-white/20"
+            }`}
+          >
+            {c[item.key] && <Check size={11} className="text-white" />}
+          </span>
+          <span>
+            <span className={`block text-sm font-medium ${c[item.key] ? "text-emerald-400" : "text-[var(--text-secondary)]"}`}>{item.label}</span>
+            <span className="block text-xs text-[var(--text-faint)]">{item.hint}</span>
+          </span>
+        </button>
+      ))}
+      {checkedCount < CHECKLIST_ITEMS.length && (
+        <p className="text-xs text-amber-400/90 flex items-center gap-1 pt-0.5">
+          <AlertTriangle size={11} /> {checkedCount}/{CHECKLIST_ITEMS.length} confirmed — incomplete checklists count against your discipline score
+        </p>
+      )}
+    </div>
+  );
+};
+
 /* ============================================================
    CREATE CHALLENGE MODAL
    ============================================================ */
@@ -1301,7 +1357,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    LOG TRADE MODAL
    ============================================================ */
 const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
-  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "" });
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -1331,6 +1387,7 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) =
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
       challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshot: form.screenshot,
+      checklist: form.checklist,
     });
     setForm(blank);
     setErrors({});
@@ -1383,6 +1440,9 @@ const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) =
         </Field>
         <Field label="Holding Time (minutes)"><input type="number" className={inputCls} placeholder="45" value={form.holdingMinutes} onChange={(e) => set("holdingMinutes", e.target.value)} /></Field>
       </div>
+      <Field label="Pre-Trade Checklist">
+        <ChecklistToggles checklist={form.checklist} onChange={(c) => set("checklist", c)} />
+      </Field>
       <Field label="Link to Challenge (optional)">
         <select className={inputCls} value={form.challengeId} onChange={(e) => set("challengeId", e.target.value)}>
           <option value="">Journal only — no challenge</option>
@@ -1429,7 +1489,11 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
   const [form, setForm] = useState(trade);
   const [editing, setEditing] = useState(false);
   const [submittingSpotlight, setSubmittingSpotlight] = useState(false);
-  useEffect(() => { setForm(trade); setEditing(false); setSubmittingSpotlight(false); }, [trade]);
+  useEffect(() => {
+    setForm(trade ? { checklist: { setupConfirmed: false, riskSized: false, newsChecked: false }, ...trade } : trade);
+    setEditing(false);
+    setSubmittingSpotlight(false);
+  }, [trade]);
   if (!trade) return null;
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -1477,6 +1541,15 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
               {trade.emotion && trade.emotion !== "Neutral" && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">{trade.emotion}</span>
               )}
+              {trade.checklist && (() => {
+                const n = CHECKLIST_ITEMS.filter((i) => trade.checklist[i.key]).length;
+                const complete = n === CHECKLIST_ITEMS.length;
+                return (
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${complete ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-white/5 text-[var(--text-tertiary)] border-white/10"}`}>
+                    Checklist {n}/{CHECKLIST_ITEMS.length}
+                  </span>
+                );
+              })()}
             </div>
             <span className={`tj-mono text-lg font-bold ${trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{trade.pnl >= 0 ? "+" : ""}{fmtUSD2(trade.pnl)}</span>
           </div>
@@ -1553,6 +1626,9 @@ const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addTo
                 </button>
               ))}
             </div>
+          </Field>
+          <Field label="Pre-Trade Checklist">
+            <ChecklistToggles checklist={form.checklist} onChange={(c) => set("checklist", c)} />
           </Field>
           <Field label="Chart Screenshot">
             <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
@@ -1761,6 +1837,77 @@ const WeeklyRecapCard = ({ trades }) => {
 };
 
 
+const PRE_MARKET_CHECKLIST_ITEMS = [
+  "Reviewed economic calendar",
+  "Checked higher timeframe bias",
+  "Marked key levels",
+  "Defined max loss for the day",
+  "Mentally ready — no revenge trading",
+];
+
+// Dashboard pre-market checklist. Keyed by today's date in localStorage, so
+// it reads back empty the moment the calendar day changes — no server
+// round-trip needed, and it won't bleed into tomorrow's session.
+const PreMarketChecklistCard = () => {
+  const storageKey = (d) => `strike_premarket_checklist_${d}`;
+  const readForToday = () => {
+    try {
+      const raw = localStorage.getItem(storageKey(todayISO()));
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  };
+
+  const [day, setDay] = useState(todayISO());
+  const [checked, setChecked] = useState(readForToday);
+
+  // If the tab is left open across midnight, roll over to a fresh checklist
+  // without needing a page refresh.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = todayISO();
+      if (now !== day) { setDay(now); setChecked({}); }
+    }, 60 * 1000);
+    return () => clearInterval(id);
+  }, [day]);
+
+  useEffect(() => {
+    try { localStorage.setItem(storageKey(day), JSON.stringify(checked)); } catch {}
+  }, [checked, day]);
+
+  const toggle = (i) => setChecked((c) => ({ ...c, [i]: !c[i] }));
+  const doneCount = PRE_MARKET_CHECKLIST_ITEMS.filter((_, i) => checked[i]).length;
+  const allDone = doneCount === PRE_MARKET_CHECKLIST_ITEMS.length;
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-bold text-[var(--text-primary)] text-sm">Pre-Market Checklist</h3>
+          <p className="text-xs text-[var(--text-muted)]">Resets automatically every day · {doneCount}/{PRE_MARKET_CHECKLIST_ITEMS.length} done today</p>
+        </div>
+        <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
+      </div>
+      <div className="space-y-1.5">
+        {PRE_MARKET_CHECKLIST_ITEMS.map((label, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => toggle(i)}
+            className={`w-full flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
+              checked[i] ? "bg-emerald-500/10 border-emerald-500/40" : "bg-[var(--bg-primary)] border-white/10 hover:border-white/20"
+            }`}
+          >
+            <span className={`shrink-0 w-4 h-4 rounded flex items-center justify-center border ${checked[i] ? "bg-emerald-500 border-emerald-500" : "border-white/20"}`}>
+              {checked[i] && <Check size={11} className="text-white" />}
+            </span>
+            <span className={`text-sm ${checked[i] ? "text-emerald-400 line-through decoration-emerald-400/50" : "text-[var(--text-secondary)]"}`}>{label}</span>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
@@ -1812,6 +1959,8 @@ const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, s
       <UpgradeGate profile={profile} feature="Psychology Report" description="Discipline scoring and emotional-pattern breakdowns computed from your trade tags.">
         <PsychologyReportCard trades={trades} />
       </UpgradeGate>
+
+      <PreMarketChecklistCard />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
