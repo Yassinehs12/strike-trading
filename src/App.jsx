@@ -290,34 +290,134 @@ function computeChallengeStats(challenge, allTrades) {
 }
 
 /* ---------- prop-firm rule presets (approximate — firms adjust rules over time,
-   always confirm against the firm's current terms before relying on these) ---------- */
+   always confirm against the firm's current terms before relying on these).
+   Firm lists sourced from propfirmmatch.com's Futures and CFD/Forex rankings,
+   split by market so the picker below can group them. ---------- */
 const PROP_FIRM_PRESETS = {
+  // ---- Futures firms ----
+  topstep: {
+    label: "Topstep", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 2 },
+      "Phase 2": { profitTargetPct: 4, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 2 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  apex: {
+    label: "Apex Trader Funding", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 5, minTradingDays: 7 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 5, minTradingDays: 7 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 5, profitSplitPct: 90 },
+    },
+  },
+  myFundedFutures: {
+    label: "My Funded Futures", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  tradeify: {
+    label: "Tradeify", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  lucidTrading: {
+    label: "Lucid Trading", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  alphaFutures: {
+    label: "Alpha Futures", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  takeProfitTrader: {
+    label: "Take Profit Trader", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  fundedFuturesFamily: {
+    label: "Funded Futures Family", market: "futures",
+    phases: {
+      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 100, maxTotalLossPct: 4, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 100, maxTotalLossPct: 4, profitSplitPct: 90 },
+    },
+  },
+  // ---- CFD / Forex firms ----
   ftmo: {
-    label: "FTMO",
+    label: "FTMO", market: "cfd",
     phases: {
       "Phase 1": { profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 4 },
       "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 4 },
       "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
     },
   },
-  mff: {
-    label: "MyFundedFX (MFF)",
+  fundedNext: {
+    label: "FundedNext", market: "cfd",
     phases: {
-      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
-      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
-      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 12, profitSplitPct: 85 },
+      "Phase 1": { profitTargetPct: 10, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 5 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 5 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
     },
   },
-  apex: {
-    label: "Apex Trader Funding",
+  fundingPips: {
+    label: "FundingPips", market: "cfd",
     phases: {
-      "Phase 1": { profitTargetPct: 6, maxDailyLossPct: 3, maxTotalLossPct: 5, minTradingDays: 7 },
-      "Phase 2": { profitTargetPct: 6, maxDailyLossPct: 3, maxTotalLossPct: 5, minTradingDays: 7 },
-      "Live": { maxDailyLossPct: 3, maxTotalLossPct: 5, profitSplitPct: 90 },
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
     },
   },
   the5ers: {
-    label: "The5%ers",
+    label: "The5%ers", market: "cfd",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  tradeThePool: {
+    label: "Trade The Pool", market: "cfd",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  goatFundedTrader: {
+    label: "Goat Funded Trader", market: "cfd",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  e8Markets: {
+    label: "E8 Markets", market: "cfd",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 8, minTradingDays: 3 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 8, minTradingDays: 3 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 8, profitSplitPct: 80 },
+    },
+  },
+  holaPrime: {
+    label: "Hola Prime", market: "cfd",
     phases: {
       "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
       "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
@@ -325,11 +425,19 @@ const PROP_FIRM_PRESETS = {
     },
   },
   alphaCapital: {
-    label: "Alpha Capital Group",
+    label: "Alpha Capital Group", market: "cfd",
     phases: {
       "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
       "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 10, minTradingDays: 3 },
       "Live": { maxDailyLossPct: 5, maxTotalLossPct: 10, profitSplitPct: 80 },
+    },
+  },
+  mff: {
+    label: "MyFundedFX (MFF)", market: "cfd",
+    phases: {
+      "Phase 1": { profitTargetPct: 8, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
+      "Phase 2": { profitTargetPct: 5, maxDailyLossPct: 5, maxTotalLossPct: 12, minTradingDays: 1 },
+      "Live": { maxDailyLossPct: 5, maxTotalLossPct: 12, profitSplitPct: 85 },
     },
   },
 };
@@ -1116,7 +1224,7 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
   const submit = () => {
     const errs = {};
-    if (!form.firm.trim()) errs.firm = "Prop firm name is required";
+    if (!presetKey) errs.preset = "Select a prop firm";
     ["accountSize", "maxDailyLossPct", "maxTotalLossPct"].forEach((k) => {
       if (!form[k] || Number(form[k]) <= 0) errs[k] = "Enter a valid positive number";
     });
@@ -1139,15 +1247,17 @@ const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
   return (
     <Modal open={open} onClose={onClose} title="Create New Challenge" wide>
-      <Field label="Prop Firm Preset (optional)">
+      <Field label="Prop Firm" error={errors.preset}>
         <select className={inputCls} value={presetKey} onChange={(e) => onPresetChange(e.target.value)}>
-          <option value="">Custom / enter manually...</option>
-          {Object.entries(PROP_FIRM_PRESETS).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+          <option value="">Select a prop firm...</option>
+          <optgroup label="Futures">
+            {Object.entries(PROP_FIRM_PRESETS).filter(([, p]) => p.market === "futures").map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+          </optgroup>
+          <optgroup label="CFDs">
+            {Object.entries(PROP_FIRM_PRESETS).filter(([, p]) => p.market === "cfd").map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+          </optgroup>
         </select>
         {presetKey && <p className="text-xs text-[var(--text-faint)] mt-1.5">Rules auto-filled for {PROP_FIRM_PRESETS[presetKey].label} — approximate, always double-check against the firm's current terms before relying on them.</p>}
-      </Field>
-      <Field label="Prop Firm Name" error={errors.firm}>
-        <input className={inputCls} placeholder="e.g. FTMO, Alpha Capital, MyFundedFX" value={form.firm} onChange={(e) => set("firm", e.target.value)} />
       </Field>
       <Field label="Phase">
         <div className="flex rounded-lg overflow-hidden border border-white/10">
