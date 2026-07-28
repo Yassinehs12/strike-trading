@@ -13,6 +13,16 @@ import ThemeToggle from "./ThemeToggle.jsx";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-07-28",
+    title: "Notebook, a smarter Weekly/Monthly Review, and an Admin Panel fix",
+    type: "feature",
+    items: [
+      "New Notebook — a free-form space for playbooks, psychology notes, checklists, and anything worth remembering, separate from your trade log. Supports pinned notes, color labels, tags, search, and starter templates.",
+      "Weekly/Monthly Review upgraded with an equity curve for the period, a fuller stat grid (profit factor, avg win, avg loss), period-over-period comparison arrows, auto-generated insights, and a one-click Copy Summary button.",
+      "Fixed a bug where the Admin Panel's Users tab failed to load with \"column profiles.plan does not exist.\"",
+    ],
+  },
+  {
     date: "2026-07-26",
     title: "Expanded asset list, theme polish, and more reliable signups",
     type: "improvement",
