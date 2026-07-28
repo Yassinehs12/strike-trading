@@ -19,6 +19,7 @@ import { badgeFromKey } from "./Badges";
 import { computePsychologyReport } from "./psychology";
 import { filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
+import { InstallBanner, InstallMenuItem, IOSInstallModal } from "./InstallPrompt";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import PricingPage from "./PricingPage";
 import ChangelogPage from "./ChangelogPage";
@@ -863,6 +864,7 @@ const NotificationBell = ({ session, profile, setActive }) => {
 
 const UserMenu = ({ user, profile, setActive, onSignOut }) => {
   const [open, setOpen] = useState(false);
+  const [showIOSHelp, setShowIOSHelp] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -923,6 +925,7 @@ const UserMenu = ({ user, profile, setActive, onSignOut }) => {
             >
               <Palette size={16} /> Settings
             </button>
+            <InstallMenuItem onOpenIOSHelp={() => { setShowIOSHelp(true); setOpen(false); }} />
           </div>
           <div className="p-1.5 border-t" style={{ borderColor: "var(--border-primary)" }}>
             <button
@@ -934,6 +937,7 @@ const UserMenu = ({ user, profile, setActive, onSignOut }) => {
           </div>
         </div>
       )}
+      {showIOSHelp && <IOSInstallModal onClose={() => setShowIOSHelp(false)} />}
     </div>
   );
 };
@@ -3887,6 +3891,7 @@ export default function App() {
         <GlobalStyle />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
+          <InstallBanner />
           <TopBar title={titles[active][0]} subtitle={titles[active][1]} onMenu={() => setMobileOpen(true)} onLogTrade={() => setLogModalOpen(true)} showLogTrade={active === "dashboard" || active === "journal"} session={session} profile={profile} setActive={setActive} onSignOut={signOut} />
           {dataError && (
             <div className="mx-4 md:mx-6 mt-4 flex items-center gap-2 bg-rose-950/60 border border-rose-900 text-rose-300 text-sm px-4 py-2.5 rounded-lg">
