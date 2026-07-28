@@ -829,6 +829,60 @@ export async function deleteJournalEntry(id) {
   if (error) throw error;
 }
 
+/* ---------- notebook (freeform notes — playbooks, psychology, mistakes to avoid, etc.) ---------- */
+const notebookNoteFromDB = (r) => ({
+  id: r.id,
+  title: r.title ?? "Untitled note",
+  content: r.content ?? "",
+  tags: r.tags ?? [],
+  pinned: !!r.pinned,
+  color: r.color ?? "default",
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+export async function fetchNotebookNotes(userId) {
+  const { data, error } = await supabase
+    .from("notebook_notes")
+    .select("*")
+    .eq("user_id", userId)
+    .order("pinned", { ascending: false })
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return data.map(notebookNoteFromDB);
+}
+
+export async function createNotebookNote(note, userId) {
+  const payload = {
+    user_id: userId,
+    title: note.title || "Untitled note",
+    content: note.content || "",
+    tags: note.tags || [],
+    pinned: !!note.pinned,
+    color: note.color || "default",
+  };
+  const { data, error } = await supabase.from("notebook_notes").insert(payload).select().single();
+  if (error) throw error;
+  return notebookNoteFromDB(data);
+}
+
+export async function updateNotebookNote(id, patch) {
+  const payload = { updated_at: new Date().toISOString() };
+  if (patch.title !== undefined) payload.title = patch.title || "Untitled note";
+  if (patch.content !== undefined) payload.content = patch.content || "";
+  if (patch.tags !== undefined) payload.tags = patch.tags || [];
+  if (patch.pinned !== undefined) payload.pinned = !!patch.pinned;
+  if (patch.color !== undefined) payload.color = patch.color || "default";
+  const { data, error } = await supabase.from("notebook_notes").update(payload).eq("id", id).select().single();
+  if (error) throw error;
+  return notebookNoteFromDB(data);
+}
+
+export async function deleteNotebookNote(id) {
+  const { error } = await supabase.from("notebook_notes").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /* ---------- personal goals ---------- */
 const goalFromDB = (r) => ({
   id: r.id,

@@ -10,7 +10,7 @@ import {
   Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
-  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw,
+  ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw, NotebookPen,
   AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -35,6 +35,7 @@ import AdminBadge from "./AdminBadge";
 import LeaderboardPage from "./LeaderboardPage";
 import GoalsPage from "./GoalsPage";
 import JournalingPage from "./JournalingPage";
+import NotebookPage from "./NotebookPage";
 import UserProfileModal from "./UserProfileModal";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -557,6 +558,7 @@ const NAV_GROUPS = [
       { id: "challenges", label: "Challenges", icon: ShieldCheck },
       { id: "journal", label: "Trade Journal", icon: BookOpen },
       { id: "journaling", label: "Weekly/Monthly Review", icon: BookMarked },
+      { id: "notebook", label: "Notebook", icon: NotebookPen },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "goals", label: "Goals", icon: Target },
       { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
@@ -3645,6 +3647,7 @@ export default function App() {
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     journaling: ["Weekly & Monthly Review", "Reflect on your trading beyond the individual trade"],
+    notebook: ["Notebook", "Playbooks, psychology notes, and anything worth remembering"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
@@ -3909,6 +3912,7 @@ export default function App() {
                     <JournalingPage session={session} trades={trades} toast={addToast} />
                   </UpgradeGate>
                 )}
+                {active === "notebook" && <NotebookPage session={session} toast={addToast} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
