@@ -1844,11 +1844,13 @@ const PRE_MARKET_CHECKLIST_ITEMS = [
   "Mentally ready — no revenge trading",
 ];
 
-// Dashboard pre-market checklist. Keyed by today's date in localStorage, so
-// it reads back empty the moment the calendar day changes — no server
-// round-trip needed, and it won't bleed into tomorrow's session.
-const PreMarketChecklistCard = () => {
-  const storageKey = (d) => `strike_premarket_checklist_${d}`;
+// Dashboard pre-market checklist. Keyed by user + today's date in
+// localStorage, so it reads back empty the moment the calendar day changes
+// — no server round-trip needed, and it won't bleed into tomorrow's session.
+// Scoping by userId also keeps it from bleeding across accounts that share
+// a browser/device.
+const PreMarketChecklistCard = ({ userId }) => {
+  const storageKey = (d) => `strike_premarket_checklist_${userId || "anon"}_${d}`;
   const readForToday = () => {
     try {
       const raw = localStorage.getItem(storageKey(todayISO()));
@@ -1858,6 +1860,14 @@ const PreMarketChecklistCard = () => {
 
   const [day, setDay] = useState(todayISO());
   const [checked, setChecked] = useState(readForToday);
+
+  // Re-read from storage whenever the logged-in user changes (e.g. sign out
+  // then sign in as someone else in the same tab) so state never bleeds
+  // from one account to another.
+  useEffect(() => {
+    setChecked(readForToday());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // If the tab is left open across midnight, roll over to a fresh checklist
   // without needing a page refresh.
@@ -1870,8 +1880,9 @@ const PreMarketChecklistCard = () => {
   }, [day]);
 
   useEffect(() => {
+    if (!userId) return; // don't persist under the "anon" bucket
     try { localStorage.setItem(storageKey(day), JSON.stringify(checked)); } catch {}
-  }, [checked, day]);
+  }, [checked, day, userId]);
 
   const toggle = (i) => setChecked((c) => ({ ...c, [i]: !c[i] }));
   const doneCount = PRE_MARKET_CHECKLIST_ITEMS.filter((_, i) => checked[i]).length;
@@ -1978,7 +1989,7 @@ const RuleViolationAlerts = ({ challenges, trades }) => {
   );
 };
 
-const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive }) => {
+const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive, userId }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
@@ -2032,7 +2043,7 @@ const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, s
         <PsychologyReportCard trades={trades} />
       </UpgradeGate>
 
-      <PreMarketChecklistCard />
+      <PreMarketChecklistCard userId={userId} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
@@ -4386,7 +4397,7 @@ export default function App() {
           <main className="flex-1 min-w-0">
             {loading ? <LoadingScreen /> : (
               <>
-                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} />}
+                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} userId={session?.user?.id} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "journaling" && (
