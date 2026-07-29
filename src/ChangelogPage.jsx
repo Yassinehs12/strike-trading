@@ -13,6 +13,16 @@ import ThemeToggle from "./ThemeToggle.jsx";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-07-29",
+    title: "Risk of Ruin calculator, Position Size added to Pips Calculator, and Keep me signed in",
+    type: "feature",
+    items: [
+      "New Risk of Ruin tool under Tools — enter your win rate, average reward:risk, risk per trade, and drawdown threshold to see your expectancy per trade and estimated probability of ruin before it costs you money.",
+      "Pips Calculator now also does Position Size — enter account balance, risk %, stop distance, and pair to get the exact lot size to trade.",
+      "Added a \"Keep me signed in\" option to the login page. Leave it checked to stay signed in across browser restarts, or uncheck it to be signed out automatically when you close the browser.",
+    ],
+  },
+  {
     date: "2026-07-28",
     title: "Drawdown Heat Bar, prop-firm presets, and a pace projection for your challenges",
     type: "feature",
