@@ -13,7 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw, NotebookPen,
   AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
-import { supabase } from "./supabaseClient";
+import { supabase, setKeepSignedIn } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computePsychologyReport } from "./psychology";
@@ -3693,6 +3693,7 @@ const AuthPage = ({ onBack }) => {
   const [username, setUsername] = useState("");
   const [age, setAge] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedInState] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -3732,6 +3733,9 @@ const AuthPage = ({ onBack }) => {
       // passed to signUp, which a Postgres trigger reads server-side.
       try { localStorage.setItem("pendingProfile", JSON.stringify({ username: cleanUsername, age: ageNum })); } catch {}
 
+      // Set which storage the session token lands in before Supabase
+      // actually writes it, so the choice takes effect on this sign-up.
+      setKeepSignedIn(keepSignedIn);
       const { error: err } = await supabase.auth.signUp({
         email,
         password,
@@ -3741,6 +3745,9 @@ const AuthPage = ({ onBack }) => {
       if (err) { setError(err.message || "Something went wrong creating your account. Please try again."); try { localStorage.removeItem("pendingProfile"); } catch {} }
       else setNotice("Account created — check your email to confirm, then sign in.");
     } else {
+      // Same idea for sign-in: pick the storage target first, then let
+      // Supabase persist the session into it.
+      setKeepSignedIn(keepSignedIn);
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (err) setError(err.message || "Something went wrong signing in. Please try again.");
@@ -3872,9 +3879,20 @@ const AuthPage = ({ onBack }) => {
                 )}
 
                 {mode === "signin" && (
-                  <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] -mt-2 mb-4 block transition-colors">
-                    Forgot password?
-                  </button>
+                  <div className="flex items-center justify-between -mt-2 mb-4">
+                    <label className="flex items-center gap-2 text-xs text-[var(--text-muted)] cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={keepSignedIn}
+                        onChange={(e) => setKeepSignedInState(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded border-white/20 accent-[var(--accent)]"
+                      />
+                      Keep me signed in
+                    </label>
+                    <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                      Forgot password?
+                    </button>
+                  </div>
                 )}
 
                 {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
