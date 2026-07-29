@@ -131,17 +131,68 @@ const PipsBetweenPrices = () => {
   );
 };
 
+// Mode 3: how many lots to trade to risk exactly X% of the account on a
+// given stop distance.
+const PositionSizeCalculator = () => {
+  const [pair, setPair] = useState("EURUSD");
+  const [balance, setBalance] = useState("10000");
+  const [riskPct, setRiskPct] = useState("1");
+  const [stopPips, setStopPips] = useState("20");
+
+  const result = useMemo(() => {
+    const p = PAIRS[pair];
+    const riskAmount = num(balance) * (num(riskPct) / 100);
+    const pips = num(stopPips);
+    if (!p || pips <= 0) return { riskAmount, lots: 0, perPip: 0 };
+    // pipValue is quoted per 1.00 (standard) lot, so lots = risk / (stop * pip value per lot)
+    const lots = riskAmount / (pips * p.pipValue);
+    return { riskAmount, lots, perPip: p.pipValue * lots };
+  }, [pair, balance, riskPct, stopPips]);
+
+  return (
+    <div>
+      <div className="grid sm:grid-cols-2 gap-x-4">
+        <Field label="Pair">
+          <select className={inputCls} value={pair} onChange={(e) => setPair(e.target.value)}>
+            {Object.keys(PAIRS).map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+        <Field label="Stop Distance (pips)">
+          <input type="number" step="any" className={inputCls} value={stopPips} onChange={(e) => setStopPips(e.target.value)} />
+        </Field>
+        <Field label="Account Balance ($)">
+          <input type="number" step="any" className={inputCls} value={balance} onChange={(e) => setBalance(e.target.value)} />
+        </Field>
+        <Field label="Risk (%)">
+          <input type="number" step="any" className={inputCls} value={riskPct} onChange={(e) => setRiskPct(e.target.value)} />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg p-4">
+          <div className="text-xs text-[var(--text-muted)] mb-1">Amount at Risk</div>
+          <div className="text-xl font-bold text-[var(--text-primary)] tabular-nums">${fmt(result.riskAmount)}</div>
+        </div>
+        <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg p-4">
+          <div className="text-xs text-[var(--accent)] mb-1">Position Size</div>
+          <div className="text-xl font-bold text-[var(--accent)] tabular-nums">{fmt(result.lots, 2)} lots</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function CalculatorPage() {
-  const [mode, setMode] = useState("value"); // "value" | "distance"
+  const [mode, setMode] = useState("value"); // "value" | "distance" | "size"
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5">
       <Card className="p-5 md:p-6">
         <div className="flex items-center gap-2 mb-1">
           <Calculator size={16} className="text-[var(--accent)]" />
-          <h2 className="font-bold text-[var(--text-primary)] text-sm">Pips Calculator</h2>
+          <h2 className="font-bold text-[var(--text-primary)] text-sm">Pips & Position Size Calculator</h2>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">Work out what a pip is worth on a given pair and lot size, or measure the pip distance between two prices — before you place the trade.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">Work out what a pip is worth, measure pip distance between two prices, or size a position to risk exactly what you intend — before you place the trade.</p>
 
         <div className="flex rounded-lg overflow-hidden border border-white/10 mb-5">
           <button onClick={() => setMode("value")}
@@ -152,9 +203,13 @@ export default function CalculatorPage() {
             className={`flex-1 py-2 text-sm font-medium transition-colors ${mode === "distance" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
             Pips Between Prices
           </button>
+          <button onClick={() => setMode("size")}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${mode === "size" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>
+            Position Size
+          </button>
         </div>
 
-        {mode === "value" ? <PipValueCalculator /> : <PipsBetweenPrices />}
+        {mode === "value" ? <PipValueCalculator /> : mode === "distance" ? <PipsBetweenPrices /> : <PositionSizeCalculator />}
 
         <p className="text-xs text-[var(--text-faint)] mt-4 flex items-start gap-1.5"><Info size={13} className="shrink-0 mt-0.5" /> Pip sizes and values are standard approximations (JPY pairs use 0.01 as one pip, most others use 0.0001). Always confirm against your broker's exact contract specs before sizing a real position.</p>
       </Card>

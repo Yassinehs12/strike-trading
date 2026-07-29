@@ -4163,7 +4163,7 @@ export default function App() {
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
-    calculator: ["Pips Calculator", "Know what a pip is worth before you're in the trade"],
+    calculator: ["Pips & Position Size Calculator", "Know what a pip is worth, and how big to trade, before you're in it"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Journal"],
