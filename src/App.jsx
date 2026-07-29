@@ -26,6 +26,7 @@ import ChangelogPage from "./ChangelogPage";
 import ReportCardPage from "./ReportCardPage";
 import { BlogListPage, BlogPostPage } from "./BlogPage";
 import CalculatorPage from "./CalculatorPage";
+import RiskToolsPage from "./RiskToolsPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
@@ -755,6 +756,7 @@ const NAV_GROUPS = [
     label: "Tools",
     items: [
       { id: "calculator", label: "Pips Calculator", icon: Calculator },
+      { id: "risk-tools", label: "Risk Tools", icon: Gauge },
     ],
   },
   {
@@ -4164,6 +4166,7 @@ export default function App() {
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     calculator: ["Pips & Position Size Calculator", "Know what a pip is worth, and how big to trade, before you're in it"],
+    "risk-tools": ["Risk Tools", "Risk of ruin and R-multiple, before you're in the trade"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Journal"],
@@ -4429,6 +4432,7 @@ export default function App() {
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "calculator" && <CalculatorPage />}
+                {active === "risk-tools" && <RiskToolsPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "leaderboard" && <LeaderboardPage session={session} profile={profile} onViewProfile={setViewingUserId} onGoToSettings={() => setActive("settings")} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
