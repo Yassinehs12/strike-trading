@@ -3692,7 +3692,7 @@ const AuthPage = ({ onBack }) => {
     if (!email) { setError("Enter your email address."); setLoading(false); return; }
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
     setLoading(false);
-    if (err) setError(err.message);
+    if (err) setError(err.message || "Something went wrong sending the reset link. Please try again.");
     else setNotice("Check your email for a password reset link.");
   };
 
@@ -3727,12 +3727,12 @@ const AuthPage = ({ onBack }) => {
         options: { data: { username: cleanUsername, age: ageNum } },
       });
       setLoading(false);
-      if (err) { setError(err.message); try { localStorage.removeItem("pendingProfile"); } catch {} }
+      if (err) { setError(err.message || "Something went wrong creating your account. Please try again."); try { localStorage.removeItem("pendingProfile"); } catch {} }
       else setNotice("Account created — check your email to confirm, then sign in.");
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
-      if (err) setError(err.message);
+      if (err) setError(err.message || "Something went wrong signing in. Please try again.");
     }
   };
 
