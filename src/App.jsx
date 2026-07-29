@@ -756,7 +756,7 @@ const NAV_GROUPS = [
     label: "Tools",
     items: [
       { id: "calculator", label: "Pips Calculator", icon: Calculator },
-      { id: "risk-tools", label: "Risk Tools", icon: Gauge },
+      { id: "risk-tools", label: "Risk of Ruin", icon: Gauge },
     ],
   },
   {
@@ -4166,7 +4166,7 @@ export default function App() {
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     calculator: ["Pips & Position Size Calculator", "Know what a pip is worth, and how big to trade, before you're in it"],
-    "risk-tools": ["Risk Tools", "Risk of ruin and R-multiple, before you're in the trade"],
+    "risk-tools": ["Risk of Ruin", "Sanity-check your edge before it costs you money"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Journal"],
