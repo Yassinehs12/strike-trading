@@ -8,6 +8,8 @@ import { FAQS } from "./faqData";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
+const QUICK_TOPICS = ["Billing question", "Report a bug", "Pro plan help", "Account access", "Feature request"];
+
 const FaqPreviewItem = ({ q, a }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -157,6 +159,26 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
                       onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) send(); }}
                     />
                   </div>
+                </div>
+
+                <div className="pt-2">
+                  <p className="text-[11px] font-medium text-[var(--text-faint)] uppercase tracking-wide mb-2">Popular topics</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {QUICK_TOPICS.map((topic) => (
+                      <button
+                        key={topic}
+                        onClick={() => send(topic)}
+                        className="text-xs text-[var(--text-secondary)] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3 py-1.5 transition-colors"
+                      >
+                        {topic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 pb-1 flex items-center gap-2 text-[11px] text-[var(--text-faint)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Support team online — replies within a day
                 </div>
               </div>
             </>
