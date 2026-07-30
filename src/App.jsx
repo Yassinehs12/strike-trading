@@ -1856,7 +1856,6 @@ const ONBOARDING_STEPS = [
   { id: "trade", label: "Log your first trade", auto: true },
   { id: "risk", label: "Check your Risk of Ruin", tab: "risk-tools" },
   { id: "calculator", label: "Try the Pips & Position Size Calculator", tab: "calculator" },
-  { id: "pro", label: "See what's included with Pro", href: "/pricing" },
 ];
 
 const OnboardingChecklistCard = ({ userId, hasTrades, setActive }) => {
