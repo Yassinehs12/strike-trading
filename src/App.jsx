@@ -1846,7 +1846,83 @@ const PRE_MARKET_CHECKLIST_ITEMS = [
   "Mentally ready — no revenge trading",
 ];
 
-// Dashboard pre-market checklist. Keyed by user + today's date in
+// Dashboard onboarding checklist for new users. Surfaces the features that
+// are otherwise easy to miss in the sidebar (Risk Tools, Pips Calculator,
+// Pro plans) instead of leaving discovery to chance. Scoped per-user in
+// localStorage (same pattern/bug-fix as PreMarketChecklistCard — never key
+// this by date alone, or accounts sharing a browser bleed into each
+// other's progress). Fully dismissible so it doesn't linger forever.
+const ONBOARDING_STEPS = [
+  { id: "trade", label: "Log your first trade", auto: true },
+  { id: "risk", label: "Check your Risk of Ruin", tab: "risk-tools" },
+  { id: "calculator", label: "Try the Pips & Position Size Calculator", tab: "calculator" },
+  { id: "pro", label: "See what's included with Pro", href: "/pricing" },
+];
+
+const OnboardingChecklistCard = ({ userId, hasTrades, setActive }) => {
+  const key = `strike_onboarding_${userId || "anon"}`;
+  const [dismissed, setDismissed] = useState(false);
+  const [done, setDone] = useState({});
+
+  useEffect(() => {
+    if (!userId) return;
+    try {
+      const raw = localStorage.getItem(key);
+      const saved = raw ? JSON.parse(raw) : {};
+      setDismissed(!!saved.dismissed);
+      setDone(saved.done || {});
+    } catch { setDismissed(false); setDone({}); }
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // First step completes itself once a trade actually exists — no click
+  // needed, matches what the person is already doing.
+  useEffect(() => {
+    if (hasTrades) setDone((d) => (d.trade ? d : { ...d, trade: true }));
+  }, [hasTrades]);
+
+  useEffect(() => {
+    if (!userId) return;
+    try { localStorage.setItem(key, JSON.stringify({ dismissed, done })); } catch {}
+  }, [dismissed, done, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const completedCount = ONBOARDING_STEPS.filter((s) => done[s.id]).length;
+  if (dismissed || completedCount === ONBOARDING_STEPS.length) return null;
+
+  const markDone = (step) => {
+    setDone((d) => ({ ...d, [step.id]: true }));
+    if (step.tab) setActive(step.tab);
+  };
+
+  return (
+    <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/25 rounded-xl p-5 mb-6">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold text-[var(--text-primary)]">Get set up</h3>
+        <button onClick={() => setDismissed(true)} className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors">Dismiss</button>
+      </div>
+      <p className="text-xs text-[var(--text-muted)] mb-4">{completedCount}/{ONBOARDING_STEPS.length} done — a quick tour of what's here, free vs Pro included.</p>
+      <div className="space-y-2">
+        {ONBOARDING_STEPS.map((step) => {
+          const isDone = !!done[step.id];
+          const Wrapper = step.href && !isDone ? "a" : "button";
+          return (
+            <Wrapper
+              key={step.id}
+              {...(step.href && !isDone ? { href: step.href } : {})}
+              onClick={step.auto ? undefined : () => !isDone && markDone(step)}
+              disabled={step.auto}
+              className={`w-full flex items-center gap-2.5 text-left text-sm rounded-lg px-3 py-2 transition-colors ${isDone ? "text-[var(--text-faint)]" : "text-[var(--text-secondary)] hover:bg-white/5 cursor-pointer"}`}
+            >
+              <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isDone ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/25"}`}>
+                {isDone && <Check size={11} className="text-[var(--text-inverse)]" />}
+              </span>
+              <span className={isDone ? "line-through" : ""}>{step.label}</span>
+            </Wrapper>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 // localStorage, so it reads back empty the moment the calendar day changes
 // — no server round-trip needed, and it won't bleed into tomorrow's session.
 // Scoping by userId also keeps it from bleeding across accounts that share
@@ -1998,6 +2074,7 @@ const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, s
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <OnboardingChecklistCard userId={userId} hasTrades={trades.length > 0} setActive={setActive} />
       {trades.length === 0 && (
         <Card className="p-5 md:p-6 relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, var(--accent), transparent 55%)" }} />
