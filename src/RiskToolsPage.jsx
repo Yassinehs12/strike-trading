@@ -19,14 +19,6 @@ const num = (v) => (v === "" || v == null || isNaN(Number(v)) ? 0 : Number(v));
 const fmt = (n, d = 2) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-// ---------------------------------------------------------------------
-// Risk of Ruin: probability of hitting a given drawdown threshold before
-// hitting a given profit target, given win rate, R:R, and risk per trade.
-// Uses the classic gambler's-ruin approximation applied to R-multiples,
-// which is the standard practical estimate traders use (not a full Monte
-// Carlo simulation) — good for gut-checking a strategy's risk profile, not
-// a guarantee of outcomes.
-// ---------------------------------------------------------------------
 const RiskOfRuinCalculator = () => {
   const [winRate, setWinRate] = useState("50");
   const [rr, setRr] = useState("2");
@@ -34,11 +26,11 @@ const RiskOfRuinCalculator = () => {
   const [ruinPct, setRuinPct] = useState("20");
 
   const result = useMemo(() => {
-    const p = clamp(num(winRate) / 100, 0.0001, 0.9999); // win probability
+    const p = clamp(num(winRate) / 100, 0.0001, 0.9999);
     const q = 1 - p;
-    const b = Math.max(num(rr), 0.0001); // reward per unit risked
-    const riskFrac = Math.max(num(riskPct) / 100, 0.0001); // fraction of account risked per trade
-    const ruinFrac = Math.max(num(ruinPct) / 100, 0.0001); // fraction of account counted as "ruin"
+    const b = Math.max(num(rr), 0.0001);
+    const riskFrac = Math.max(num(riskPct) / 100, 0.0001);
+    const ruinFrac = Math.max(num(ruinPct) / 100, 0.0001);
 
     const unitsToRuin = ruinFrac / riskFrac;
     const edgeR = p * b - q;

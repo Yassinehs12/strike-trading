@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Plus, X, Search,
   TrendingUp, Percent, Target, Activity, CheckCircle2,
   XCircle, AlertTriangle, ChevronLeft, ChevronRight, Filter,
-  Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge,
+  Wallet, Flame, Menu, ArrowUpRight, ArrowDownRight, Trash2, Gauge, Link2,
   Table2, LayoutGrid, Download, Settings as SettingsIcon, Banknote,
   Award, Clock, CalendarDays, CalendarClock, Loader2, Upload, Image as ImageIcon, Folder, Grid3x3, FileText, Sparkles,
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw, NotebookPen,
@@ -27,6 +27,7 @@ import ReportCardPage from "./ReportCardPage";
 import { BlogListPage, BlogPostPage } from "./BlogPage";
 import CalculatorPage from "./CalculatorPage";
 import RiskToolsPage from "./RiskToolsPage";
+import CorrelationPage from "./CorrelationPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
@@ -757,6 +758,7 @@ const NAV_GROUPS = [
     items: [
       { id: "calculator", label: "Pips Calculator", icon: Calculator },
       { id: "risk-tools", label: "Risk of Ruin", icon: Gauge },
+      { id: "correlation", label: "Correlation Checker", icon: Link2 },
     ],
   },
   {
@@ -4167,6 +4169,7 @@ export default function App() {
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     calculator: ["Pips & Position Size Calculator", "Know what a pip is worth, and how big to trade, before you're in it"],
     "risk-tools": ["Risk of Ruin", "Sanity-check your edge before it costs you money"],
+    correlation: ["Correlation Checker", "See which pairs move together before you stack positions"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
     settings: ["Settings", "Personalize Strike Journal"],
@@ -4433,6 +4436,7 @@ export default function App() {
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "calculator" && <CalculatorPage />}
                 {active === "risk-tools" && <RiskToolsPage />}
+                {active === "correlation" && <CorrelationPage />}
                 {active === "forum" && <ForumPage session={session} profile={profile} />}
                 {active === "leaderboard" && <LeaderboardPage session={session} profile={profile} onViewProfile={setViewingUserId} onGoToSettings={() => setActive("settings")} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
