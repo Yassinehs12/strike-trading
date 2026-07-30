@@ -13,6 +13,14 @@ import ThemeToggle from "./ThemeToggle.jsx";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-07-30",
+    title: "Correlation Checker added to Risk Tools",
+    type: "feature",
+    items: [
+      "New Correlation Checker under Risk Tools — look up how two pairs typically move together, or view the full correlation matrix across majors, JPY crosses, gold, and indices, before stacking positions that are secretly the same trade.",
+    ],
+  },
+  {
     date: "2026-07-29",
     title: "Risk of Ruin calculator, Position Size added to Pips Calculator, and Keep me signed in",
     type: "feature",
