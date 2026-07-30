@@ -1,27 +1,38 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Loader2, ChevronRight, HelpCircle, Home as HomeIcon, Search } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, ChevronRight, ChevronDown, HelpCircle, Home as HomeIcon, Search, ArrowLeft } from "lucide-react";
 import {
   getOrCreateSupportConversation, fetchSupportMessages, sendSupportMessage,
   markSupportConversationRead, subscribeToSupportMessages,
 } from "./db";
+import { FAQS } from "./faqData";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
+const FaqPreviewItem = ({ q, a }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-white/10 last:border-b-0">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between gap-3 text-left py-2.5">
+        <span className="text-[13px] font-medium text-[var(--text-secondary)]">{q}</span>
+        <ChevronDown size={13} className={`shrink-0 text-[var(--text-faint)] transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <p className="text-xs text-[var(--text-muted)] leading-relaxed pb-3 pr-5">{a}</p>}
+    </div>
+  );
+};
+
 export default function SupportChatWidget({ session, profile, hideLauncher = false }) {
   const [open, setOpen] = useState(false);
-  // "home" = greeting screen (Wave-style), "chat" = the actual conversation.
+  // "home" = overview screen, "faq" = inline FAQ list, "chat" = the conversation.
   const [screen, setScreen] = useState("home");
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [draft, setDraft] = useState(""); // used both for chat input and the home-screen "ask a question" box
+  const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const bottomRef = useRef(null);
 
-  // Lazily create/fetch the conversation the first time it's actually
-  // needed (opening the widget), rather than on every page load — most
-  // visits never touch support.
   useEffect(() => {
     if (!open || !session?.user?.id || conversation) return;
     setLoading(true);
@@ -39,8 +50,6 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
       .finally(() => setLoading(false));
   }, [open, session, conversation]);
 
-  // Poll lightly for unread replies even while the widget is closed, so the
-  // badge dot can appear without the user having to open it first.
   useEffect(() => {
     if (!session?.user?.id) return;
     getOrCreateSupportConversation(session.user.id)
@@ -62,9 +71,6 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
 
   useEffect(() => { if (open && screen === "chat") bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open, screen]);
 
-  // Safety net: realtime should deliver new messages instantly, but poll
-  // lightly while the chat screen is actually open in case a subscription
-  // silently failed to attach.
   useEffect(() => {
     if (!open || screen !== "chat" || !conversation) return;
     const interval = setInterval(() => {
@@ -101,49 +107,51 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-5 z-[60] w-[340px] max-w-[calc(100vw-2.5rem)] h-[500px] bg-[var(--bg-secondary)] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-5 z-[60] w-[352px] max-w-[calc(100vw-2.5rem)] h-[520px] bg-[var(--bg-secondary)] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
-          {screen === "home" ? (
+          {screen === "home" && (
             <>
-              {/* Greeting header — gradient banner, matches the "Hi there" style but in the app's own accent color rather than copying anyone's brand. */}
-              <div className="relative shrink-0 px-5 pt-6 pb-8" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-hover))" }}>
+              <div className="relative shrink-0 px-5 pt-6 pb-8 border-b border-white/10" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-hover))" }}>
                 <button onClick={() => setOpen(false)} className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors" aria-label="Close support">
                   <X size={14} />
                 </button>
-                <p className="text-white/80 text-sm">Hi{profile?.username ? ` ${profile.username}` : ""} 👋</p>
-                <p className="text-white text-xl font-bold mt-0.5">How can we help?</p>
+                <p className="text-white/75 text-xs font-medium tracking-wide uppercase">Support</p>
+                <p className="text-white text-lg font-bold mt-1">
+                  {profile?.username ? `Welcome back, ${profile.username}` : "How can we help?"}
+                </p>
+                <p className="text-white/70 text-xs mt-1">Our team typically replies within a day.</p>
               </div>
 
-              <div className="flex-1 overflow-y-auto tj-scrollbar px-4 -mt-4 space-y-2.5">
+              <div className="flex-1 overflow-y-auto tj-scrollbar px-4 -mt-4 space-y-2.5 pb-2">
                 <button onClick={goToMessages} className="w-full bg-[var(--bg-secondary)] border border-white/10 hover:border-[var(--accent)]/40 rounded-xl p-3.5 flex items-center gap-3 text-left shadow-lg transition-colors">
-                  <div className="w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-[var(--accent)]/12 flex items-center justify-center shrink-0">
                     <MessageCircle size={16} className="text-[var(--accent)]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">Ask a question</p>
-                    <p className="text-xs text-[var(--text-muted)]">We usually reply within a day</p>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">Contact support</p>
+                    <p className="text-xs text-[var(--text-muted)]">Send our team a message directly</p>
                   </div>
-                  <ChevronRight size={16} className="text-[var(--text-faint)] shrink-0" />
                   {hasUnread && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
+                  <ChevronRight size={16} className="text-[var(--text-faint)] shrink-0" />
                 </button>
 
-                <a href="/#faq" onClick={() => setOpen(false)} className="w-full bg-[var(--bg-secondary)] border border-white/10 hover:border-[var(--accent)]/40 rounded-xl p-3.5 flex items-center gap-3 text-left shadow-lg transition-colors">
-                  <div className="w-9 h-9 rounded-full bg-[var(--accent)]/15 flex items-center justify-center shrink-0">
+                <button onClick={() => setScreen("faq")} className="w-full bg-[var(--bg-secondary)] border border-white/10 hover:border-[var(--accent)]/40 rounded-xl p-3.5 flex items-center gap-3 text-left shadow-lg transition-colors">
+                  <div className="w-9 h-9 rounded-lg bg-[var(--accent)]/12 flex items-center justify-center shrink-0">
                     <HelpCircle size={16} className="text-[var(--accent)]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">Browse FAQ</p>
-                    <p className="text-xs text-[var(--text-muted)]">Common questions, answered</p>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">Frequently asked questions</p>
+                    <p className="text-xs text-[var(--text-muted)]">{FAQS.length} answers to common questions</p>
                   </div>
                   <ChevronRight size={16} className="text-[var(--text-faint)] shrink-0" />
-                </a>
+                </button>
 
-                <div className="pt-1 pb-3">
+                <div className="pt-1">
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
                     <input
                       className="w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 outline-none rounded-lg pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)]"
-                      placeholder="Search for help or ask anything..."
+                      placeholder="Describe your issue..."
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) send(); }}
@@ -152,11 +160,39 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {screen === "faq" && (
             <>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 shrink-0">
                 <button onClick={() => setScreen("home")} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors" aria-label="Back">
-                  <ChevronRight size={18} className="rotate-180" />
+                  <ArrowLeft size={17} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">Frequently Asked Questions</p>
+                </div>
+                <button onClick={() => setOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" aria-label="Close support">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto tj-scrollbar px-4 py-1">
+                {FAQS.map((f, i) => <FaqPreviewItem key={i} {...f} />)}
+              </div>
+
+              <div className="p-3 border-t border-white/10 shrink-0">
+                <button onClick={goToMessages} className="w-full text-center text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] py-1 transition-colors">
+                  Didn't find your answer? Contact support →
+                </button>
+              </div>
+            </>
+          )}
+
+          {screen === "chat" && (
+            <>
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 shrink-0">
+                <button onClick={() => setScreen("home")} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors" aria-label="Back">
+                  <ArrowLeft size={17} />
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-[var(--text-primary)]">Strike Journal Support</p>
@@ -208,16 +244,20 @@ export default function SupportChatWidget({ session, profile, hideLauncher = fal
             </>
           )}
 
-          {/* Bottom nav — Home / Messages, matching the two screens above. */}
+          {/* Bottom nav */}
           <div className="flex items-center border-t border-white/10 shrink-0">
             <button onClick={() => setScreen("home")} className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${screen === "home" ? "text-[var(--accent)]" : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"}`}>
               <HomeIcon size={16} />
               Home
             </button>
+            <button onClick={() => setScreen("faq")} className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${screen === "faq" ? "text-[var(--accent)]" : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"}`}>
+              <HelpCircle size={16} />
+              FAQ
+            </button>
             <button onClick={goToMessages} className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium relative transition-colors ${screen === "chat" ? "text-[var(--accent)]" : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"}`}>
               <MessageCircle size={16} />
               Messages
-              {hasUnread && <span className="absolute top-1 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-rose-500" />}
+              {hasUnread && <span className="absolute top-1 right-[calc(50%-20px)] w-1.5 h-1.5 rounded-full bg-rose-500" />}
             </button>
           </div>
         </div>
