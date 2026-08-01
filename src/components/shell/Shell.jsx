@@ -3,6 +3,7 @@ import {
   Plus, Activity, Menu, Loader2, LogOut, UserCircle, Bell, Check, Palette, CheckCheck, UserPlus, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
 import { fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications } from "../../db";
+import ThemeToggle from "../../ThemeToggle.jsx";
 import { badgeFromKey } from "../../Badges";
 import { LogoFull } from "../../Logo";
 import { ADMIN_NAV_ITEM, NAV_GROUPS, NOTIF_ICON } from "../../constants";

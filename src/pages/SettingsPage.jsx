@@ -3,6 +3,7 @@ import {
   ShieldCheck, Target, AlertTriangle, Wallet, Trash2, Award, Loader2, LogOut, Eye, EyeOff, Check, Ban, Copy, KeyRound, Palette, BellRing, Plug, Share2, RefreshCw,
 } from "lucide-react";
 import { updateProfileUsername, setLeaderboardOptIn, setShowPublicStats, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "../db";
+import ThemeToggle from "../ThemeToggle.jsx";
 import { supabase } from "../supabaseClient";
 import { Card, EmptyState, Field, SectionHeader, UpgradeGate, useToast } from "../components/ui/Primitives";
 import { SETTINGS_TABS, inputCls } from "../constants";
