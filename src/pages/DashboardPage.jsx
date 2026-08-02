@@ -220,7 +220,7 @@ export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
             <select
               value={accountId || ""}
               onChange={(e) => setAccountId(e.target.value || null)}
-              className="text-xs font-semibold rounded-lg border px-2 py-1.5 bg-[var(--bg-primary)] border-white/10 text-[var(--text-secondary)] focus:outline-none"
+              className="text-xs font-semibold rounded-lg border px-2.5 py-1.5 bg-[var(--bg-tertiary)] border-[var(--border-primary)] text-[var(--text-secondary)] hover:border-[var(--border-secondary)] focus:outline-none focus:border-[var(--accent)]/60 cursor-pointer transition-colors"
             >
               <option value="">All Accounts</option>
               {accounts.map((a) => (
