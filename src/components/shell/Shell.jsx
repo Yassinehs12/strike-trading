@@ -183,7 +183,7 @@ export const NotificationBell = ({ session, profile, setActive }) => {
       </button>
       {open && (
         <div
-          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden z-30 border"
+          className="fixed sm:absolute right-3 sm:right-0 left-auto mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden z-30 border"
           style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)", boxShadow: "0 20px 45px -12px rgba(0,0,0,0.45)" }}
         >
           <div className="flex items-center justify-between px-4 pt-3.5 pb-1">
