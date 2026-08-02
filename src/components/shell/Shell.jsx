@@ -4,6 +4,8 @@ import {
 } from "lucide-react";
 import { fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications } from "../../db";
 import ThemeToggle from "../../ThemeToggle.jsx";
+import AdminBadge from "../../AdminBadge.jsx";
+import { InstallMenuItem, IOSInstallModal } from "../../InstallPrompt";
 import { badgeFromKey } from "../../Badges";
 import { LogoFull } from "../../Logo";
 import { ADMIN_NAV_ITEM, NAV_GROUPS, NOTIF_ICON } from "../../constants";
