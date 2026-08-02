@@ -491,7 +491,7 @@ export default function App() {
           <main className="flex-1 min-w-0">
             {loading ? <LoadingScreen /> : (
               <>
-                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} userId={session?.user?.id} />}
+                {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} userId={session?.user?.id} accounts={accounts} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "journaling" && (

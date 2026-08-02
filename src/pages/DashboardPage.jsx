@@ -168,8 +168,9 @@ export const WeeklyRecapCard = ({ trades }) => {
 };
 
 
-export const PreMarketChecklistCard = ({ userId }) => {
-  const storageKey = (d) => `strike_premarket_checklist_${userId || "anon"}_${d}`;
+export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
+  const [accountId, setAccountId] = useState(null); // null = shared/"All accounts" checklist
+  const storageKey = (d) => `strike_premarket_checklist_${userId || "anon"}_${accountId || "all"}_${d}`;
   const readForToday = () => {
     try {
       const raw = localStorage.getItem(storageKey(todayISO()));
@@ -180,13 +181,13 @@ export const PreMarketChecklistCard = ({ userId }) => {
   const [day, setDay] = useState(todayISO());
   const [checked, setChecked] = useState(readForToday);
 
-  // Re-read from storage whenever the logged-in user changes (e.g. sign out
-  // then sign in as someone else in the same tab) so state never bleeds
-  // from one account to another.
+  // Re-read from storage whenever the logged-in user OR the selected account
+  // changes, so each account keeps its own independent checklist state and
+  // nothing bleeds between accounts (or across users) in the same tab.
   useEffect(() => {
     setChecked(readForToday());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, accountId]);
 
   // If the tab is left open across midnight, roll over to a fresh checklist
   // without needing a page refresh.
@@ -201,7 +202,7 @@ export const PreMarketChecklistCard = ({ userId }) => {
   useEffect(() => {
     if (!userId) return; // don't persist under the "anon" bucket
     try { localStorage.setItem(storageKey(day), JSON.stringify(checked)); } catch {}
-  }, [checked, day, userId]);
+  }, [checked, day, userId, accountId]);
 
   const toggle = (i) => setChecked((c) => ({ ...c, [i]: !c[i] }));
   const doneCount = PRE_MARKET_CHECKLIST_ITEMS.filter((_, i) => checked[i]).length;
@@ -209,12 +210,26 @@ export const PreMarketChecklistCard = ({ userId }) => {
 
   return (
     <Card className="p-4 md:p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 gap-3">
         <div>
           <h3 className="font-bold text-[var(--text-primary)] text-sm">Pre-Market Checklist</h3>
           <p className="text-xs text-[var(--text-muted)]">Resets automatically every day · {doneCount}/{PRE_MARKET_CHECKLIST_ITEMS.length} done today</p>
         </div>
-        <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
+        <div className="flex items-center gap-2 shrink-0">
+          {accounts.length > 0 && (
+            <select
+              value={accountId || ""}
+              onChange={(e) => setAccountId(e.target.value || null)}
+              className="text-xs font-semibold rounded-lg border px-2 py-1.5 bg-[var(--bg-primary)] border-white/10 text-[var(--text-secondary)] focus:outline-none"
+            >
+              <option value="">All Accounts</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          )}
+          <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
+        </div>
       </div>
       <div className="space-y-1.5">
         {PRE_MARKET_CHECKLIST_ITEMS.map((label, i) => (
@@ -244,7 +259,7 @@ export const PreMarketChecklistCard = ({ userId }) => {
 // challenge that's used 80%+ of its daily or total loss allowance.
 
 
-export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive, userId }) => {
+export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive, userId, accounts = [] }) => {
   const kpis = computeKPIs(trades);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
@@ -298,7 +313,7 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
         <PsychologyReportCard trades={trades} />
       </UpgradeGate>
 
-      <PreMarketChecklistCard userId={userId} />
+      <PreMarketChecklistCard userId={userId} accounts={accounts} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
