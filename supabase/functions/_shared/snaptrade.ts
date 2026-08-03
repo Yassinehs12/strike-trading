@@ -95,14 +95,29 @@ export async function snapTradeRequest(
   return data;
 }
 
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://strikejournal.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://strikejournal.com",
+  "https://www.strikejournal.com",
+]);
 
-export function json(body: unknown, status = 200) {
+// CORS must echo back the exact Origin that made the request — browsers
+// reject a mismatch even if the value "looks" like your domain (e.g.
+// apex vs www are different origins). Anything not in the allowlist
+// falls back to the primary domain, which will still fail the browser's
+// check (safe default: deny rather than reflect an arbitrary origin).
+export function corsHeadersFor(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.strikejournal.com";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+export function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...headers, "Content-Type": "application/json" },
   });
 }

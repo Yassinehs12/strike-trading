@@ -20,10 +20,12 @@
 // `userSecret` / `redirectURI` under those exact keys.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { snapTradeRequest, corsHeaders, json } from "../_shared/snaptrade.ts";
+import { snapTradeRequest, corsHeadersFor, json as jsonBase } from "../_shared/snaptrade.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = corsHeadersFor(req);
+  const json = (body: unknown, status = 200) => jsonBase(body, status, cors);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";

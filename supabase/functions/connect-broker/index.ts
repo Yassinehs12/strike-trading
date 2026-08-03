@@ -21,13 +21,26 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN");
 const METAAPI_BASE_URL = "https://mt-provisioning-api-v1.agiliumtrade.ai";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://strikejournal.com",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://strikejournal.com",
+  "https://www.strikejournal.com",
+]);
+
+function corsHeadersFor(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.strikejournal.com";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = corsHeadersFor(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
     if (!METAAPI_TOKEN) {
@@ -131,10 +144,3 @@ Deno.serve(async (req) => {
     return json({ error: String(err) }, 500);
   }
 });
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
