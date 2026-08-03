@@ -24,6 +24,7 @@ const METAAPI_BASE_URL = "https://mt-provisioning-api-v1.agiliumtrade.ai";
 const ALLOWED_ORIGINS = new Set([
   "https://strikejournal.com",
   "https://www.strikejournal.com",
+  "http://localhost:5173",
 ]);
 
 function corsHeadersFor(req: Request) {

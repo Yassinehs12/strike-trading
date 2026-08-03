@@ -98,6 +98,7 @@ export async function snapTradeRequest(
 const ALLOWED_ORIGINS = new Set([
   "https://strikejournal.com",
   "https://www.strikejournal.com",
+  "http://localhost:5173", // vite dev server — remove if you'd rather not allow local testing against prod functions
 ]);
 
 // CORS must echo back the exact Origin that made the request — browsers
