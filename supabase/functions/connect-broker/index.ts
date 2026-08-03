@@ -22,7 +22,7 @@ const METAAPI_TOKEN = Deno.env.get("METAAPI_TOKEN");
 const METAAPI_BASE_URL = "https://mt-provisioning-api-v1.agiliumtrade.ai";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://strikejournal.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
