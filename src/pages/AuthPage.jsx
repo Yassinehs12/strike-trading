@@ -162,14 +162,22 @@ export const AuthPage = ({ onBack }) => {
       // Set which storage the session token lands in before Supabase
       // actually writes it, so the choice takes effect on this sign-up.
       setKeepSignedIn(keepSignedIn);
-      const { error: err } = await supabase.auth.signUp({
+      const { data: signUpData, error: err } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { username: cleanUsername, age: ageNum } },
       });
       setLoading(false);
-      if (err) { setError(err.message || "Something went wrong creating your account. Please try again."); try { localStorage.removeItem("pendingProfile"); } catch {} }
-      else setNotice("Account created — check your email to confirm, then sign in.");
+      if (err) {
+        setError(err.message || "Something went wrong creating your account. Please try again.");
+        try { localStorage.removeItem("pendingProfile"); } catch {}
+      } else if (signUpData?.session) {
+        // Email confirmation is turned off in Supabase, so signUp already
+        // returned a live session — the app's auth listener will pick this
+        // up and take them straight in. No "check your email" notice needed.
+      } else {
+        setNotice("Account created — check your email to confirm, then sign in.");
+      }
     } else {
       // Same idea for sign-in: pick the storage target first, then let
       // Supabase persist the session into it.
