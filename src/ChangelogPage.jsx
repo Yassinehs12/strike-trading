@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowLeft, Sparkles, Wrench, Bug, Rocket } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
+import { usePageMeta } from "./lib/seo";
 
 /* ============================================================
    CHANGELOG ENTRIES
@@ -133,6 +134,11 @@ const ChangelogEntry = ({ entry }) => {
 };
 
 export default function ChangelogPage() {
+  usePageMeta({
+    title: "Changelog",
+    description: "What's new in Strike Journal — new features, fixes, and improvements to the trading journal and funding challenge tracker.",
+    path: "/changelog",
+  });
   return (
     <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <style>{`

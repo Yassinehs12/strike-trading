@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowLeft, Clock, Tag as TagIcon, Newspaper } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
+import { usePageMeta } from "./lib/seo";
 
 /* ============================================================
    BLOG POSTS
@@ -103,7 +104,13 @@ const PostCard = ({ post }) => (
   </a>
 );
 
-export const BlogListPage = () => (
+export const BlogListPage = () => {
+  usePageMeta({
+    title: "Blog",
+    description: "Notes on trading, prop firm challenges, and building a trading journal that actually gets used — from the Strike Journal team.",
+    path: "/blog",
+  });
+  return (
   <Shell>
     <div className="flex items-center gap-2 mb-1">
       <Newspaper size={20} className="text-[var(--accent)]" />
@@ -126,7 +133,8 @@ export const BlogListPage = () => (
       </div>
     )}
   </Shell>
-);
+  );
+};
 
 const Block = ({ block }) => {
   switch (block.type) {
@@ -153,6 +161,12 @@ const Block = ({ block }) => {
 
 export const BlogPostPage = ({ slug }) => {
   const post = POSTS.find((p) => p.slug === slug);
+
+  usePageMeta(
+    post
+      ? { title: post.title, description: post.excerpt, path: `/blog/${post.slug}` }
+      : { title: "Post not found", path: `/blog/${slug || ""}` }
+  );
 
   if (!post) {
     return (

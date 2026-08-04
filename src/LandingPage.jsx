@@ -9,6 +9,7 @@ import { LogoMark } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { fetchLandingStats } from "./db";
 import { FAQS } from "./faqData";
+import { usePageMeta } from "./lib/seo";
 
 const XLogoIcon = ({ size = 14, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -818,6 +819,11 @@ const Footer = () => (
 );
 
 export default function LandingPage({ onGetStarted, onSignIn }) {
+  usePageMeta({
+    title: "Strike Journal — Trading Journal & Prop Firm Challenge Tracker",
+    description: "Log trades, track prop firm challenge rules in real time, and see the analytics that explain your edge. Free trading journal — no credit card required.",
+    path: "/",
+  });
   return (
     <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <LandingStyle />

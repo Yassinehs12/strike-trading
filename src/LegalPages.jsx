@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowLeft } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
+import { usePageMeta } from "./lib/seo";
 
 /* ============================================================
    Shared shell for legal pages — matches the landing page's
@@ -15,7 +16,9 @@ const SUB_NAV = [
   { label: "Changelog", href: "/changelog" },
 ];
 
-const LegalShell = ({ title, updated, children }) => (
+const LegalShell = ({ title, updated, children }) => {
+  usePageMeta({ title, path: title === "Privacy Policy" ? "/privacy" : "/terms" });
+  return (
   <div className="lp-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -71,7 +74,8 @@ const LegalShell = ({ title, updated, children }) => (
       </div>
     </footer>
   </div>
-);
+  );
+};
 
 const Section = ({ id, title, children }) => (
   <section id={id} className="scroll-mt-24">

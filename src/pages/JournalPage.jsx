@@ -10,7 +10,10 @@ import { PAGE_SIZE } from "../constants";
 import { isProPlan } from "../lib/plan";
 
 export const CalendarCard = ({ trades, onOpenTrade }) => {
-  const [cursor, setCursor] = useState(new Date(2026, 6, 1)); // July 2026
+  const [cursor, setCursor] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
   const [now, setNow] = useState(new Date());
 
   // Keep "today" accurate in real time (e.g. across a midnight rollover

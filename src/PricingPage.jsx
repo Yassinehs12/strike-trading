@@ -2,6 +2,7 @@ import React from "react";
 import { Check, X as XIcon, Sparkles } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
+import { usePageMeta } from "./lib/seo";
 
 const FEATURES = [
   { label: "Trade journal", free: true, pro: true },
@@ -23,6 +24,11 @@ const Cell = ({ value }) => {
 };
 
 export default function PricingPage() {
+  usePageMeta({
+    title: "Pricing",
+    description: "Strike Journal is free to start — full trade journal, funding challenge tracker, and community access. Upgrade to Pro for unlimited accounts and advanced analytics.",
+    path: "/pricing",
+  });
   return (
     <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <header className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://strikejournal.com/sitemap.xml
+Sitemap: https://www.strikejournal.com/sitemap.xml
