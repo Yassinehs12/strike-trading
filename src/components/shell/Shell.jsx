@@ -353,6 +353,12 @@ export const UserMenu = ({ user, profile, setActive, onSignOut }) => {
               <UserCircle size={16} /> View Profile
             </button>
             <button
+              onClick={() => { setActive("friends"); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            >
+              <UserPlus size={16} /> Friends
+            </button>
+            <button
               onClick={() => { setActive("settings"); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
             >

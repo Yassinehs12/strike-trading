@@ -31,6 +31,7 @@ import CorrelationPage from "./CorrelationPage";
 import ForumPage from "./ForumPage";
 import ProfilePage from "./ProfilePage";
 import MessagesPage from "./MessagesPage";
+import FriendsPage from "./FriendsPage";
 import AdminPanel from "./AdminPanel";
 import SupportChatWidget from "./SupportChatWidget";
 import AdminBadge from "./AdminBadge";
@@ -242,6 +243,7 @@ export default function App() {
     correlation: ["Correlation Checker", "See which pairs move together before you stack positions"],
     forum: ["Community", "Connect with other traders"],
     leaderboard: ["Leaderboard", "Weekly and monthly rankings for opted-in traders"],
+    friends: ["Friends", "People you're connected with on Strike Journal"],
     settings: ["Settings", "Personalize Strike Journal"],
     profile: ["Profile", "How other traders see you"],
     messages: ["Messages", "Your private conversations"],
@@ -511,6 +513,7 @@ export default function App() {
                 {active === "leaderboard" && <LeaderboardPage session={session} profile={profile} onViewProfile={setViewingUserId} onGoToSettings={() => setActive("settings")} />}
                 {active === "profile" && <ProfilePage session={session} profile={profile} onProfileUpdate={setProfile} toast={addToast} />}
                 {active === "messages" && <MessagesPage session={session} profile={profile} />}
+                {active === "friends" && <FriendsPage session={session} profile={profile} />}
                 {active === "settings" && <SettingsPage settings={settings} onSave={(s) => setSettings(s)} session={session} profile={profile} onProfileUpdate={setProfile} onSignOut={signOut} />}
                 {active === "admin" && (profile?.is_admin
                   ? <AdminPanel session={session} profile={profile} toast={addToast} />

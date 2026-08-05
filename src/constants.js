@@ -57,6 +57,7 @@ export const NAV_GROUPS = [
     items: [
       { id: "forum", label: "Community", icon: MessagesSquare },
       { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+      { id: "friends", label: "Friends", icon: UserPlus },
       { id: "messages", label: "Messages", icon: Mail },
     ],
   },

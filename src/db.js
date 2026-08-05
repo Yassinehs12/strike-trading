@@ -239,6 +239,26 @@ export async function removeFriendship(id) {
   if (error) throw error;
 }
 
+// All accepted friendships this user is part of (either side), with the
+// other person's profile attached — powers the Friends page list.
+export async function fetchFriends(userId) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+    .eq("status", "accepted")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const withProfiles = await Promise.all(
+    data.map(async (f) => {
+      const otherId = f.requester_id === userId ? f.addressee_id : f.requester_id;
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", otherId).maybeSingle();
+      return { friendshipId: f.id, since: f.created_at, otherId, profile: p };
+    })
+  );
+  return withProfiles.filter((f) => f.profile);
+}
+
 // Incoming pending friend requests, with the requester's profile attached.
 export async function fetchPendingFriendRequests(userId) {
   const { data, error } = await supabase
