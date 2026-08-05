@@ -85,6 +85,7 @@ export default function MessagesPage({ session, profile }) {
   const [query, setQuery] = useState("");
   const [newMsgOpen, setNewMsgOpen] = useState(false);
   const [viewingUserId, setViewingUserId] = useState(null);
+  const [filterUnread, setFilterUnread] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -104,13 +105,21 @@ export default function MessagesPage({ session, profile }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = conversations.filter((c) =>
-    !query.trim() || (c.profile.username || "").toLowerCase().includes(query.trim().toLowerCase())
-  );
+  const isUnread = (c) => c.lastMessage.recipient_id === session.user.id && !c.lastMessage.read_at;
+  const unreadCount = conversations.filter(isUnread).length;
+
+  const filtered = conversations.filter((c) => {
+    if (filterUnread && !isUnread(c)) return false;
+    return !query.trim() || (c.profile.username || "").toLowerCase().includes(query.trim().toLowerCase());
+  });
 
   const openConversation = (p) => {
     setActiveUser(p);
     setNewMsgOpen(false);
+    // MessageThread marks the conversation read as soon as it mounts —
+    // refetch shortly after so the unread dot/filter here catches up
+    // without requiring the user to close the thread first.
+    setTimeout(load, 700);
   };
 
   const handleThreadClose = () => {
@@ -143,6 +152,20 @@ export default function MessagesPage({ session, profile }) {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search conversations..."
               className="w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 outline-none rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors" />
           </div>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setFilterUnread(true)}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                filterUnread ? "bg-[var(--accent)] text-white" : "bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              }`}>
+              Unread{unreadCount > 0 ? ` (${unreadCount})` : ""}
+            </button>
+            <button onClick={() => setFilterUnread(false)}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                !filterUnread ? "bg-[var(--accent)] text-white" : "bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              }`}>
+              All
+            </button>
+          </div>
         </div>
 
         {error && <div className="mx-3 mt-3 text-xs text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-3 py-2">{error}</div>}
@@ -153,12 +176,22 @@ export default function MessagesPage({ session, profile }) {
           ) : filtered.length === 0 ? (
             <div className="text-center py-14 px-4">
               <div className="w-11 h-11 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center mx-auto mb-3"><Mail size={18} className="text-[var(--text-muted)]" /></div>
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">{conversations.length === 0 ? "No conversations yet" : "No matches"}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">{conversations.length === 0 ? "Search for a trader above to start one." : "Try a different search."}</p>
+              <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                {conversations.length === 0 ? "No conversations yet" : filterUnread ? "No unread messages" : "No matches"}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {conversations.length === 0 ? "Search for a trader above to start one." : filterUnread ? "You're all caught up." : "Try a different search."}
+              </p>
+              {filterUnread && conversations.length > 0 && (
+                <button onClick={() => setFilterUnread(false)} className="text-xs font-semibold text-[var(--accent)] mt-3 hover:underline">
+                  Show all conversations
+                </button>
+              )}
             </div>
           ) : (
             filtered.map((c) => {
               const isActive = activeUser?.id === c.otherId;
+              const unread = isUnread(c);
               return (
                 <button key={c.otherId} onClick={() => openConversation(c.profile)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left border-l-2 transition-colors ${
@@ -167,10 +200,13 @@ export default function MessagesPage({ session, profile }) {
                   <Avatar profile={c.profile} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{c.profile.username}</span>
-                      <span className="text-[11px] text-[var(--text-muted)] shrink-0">{timeShort(c.lastMessage.created_at)}</span>
+                      <span className={`text-sm truncate ${unread ? "font-bold text-[var(--text-primary)]" : "font-semibold text-[var(--text-primary)]"}`}>{c.profile.username}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] text-[var(--text-muted)]">{timeShort(c.lastMessage.created_at)}</span>
+                        {unread && <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />}
+                      </div>
                     </div>
-                    <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
+                    <p className={`text-xs truncate mt-0.5 ${unread ? "text-[var(--text-secondary)] font-medium" : "text-[var(--text-muted)]"}`}>
                       {c.lastMessage.deleted ? <span className="italic">Message deleted</span> : (
                         <>{c.lastMessage.sender_id === session.user.id ? "You: " : ""}{c.lastMessage.image_url && !c.lastMessage.body ? "📷 Photo" : c.lastMessage.body}</>
                       )}
