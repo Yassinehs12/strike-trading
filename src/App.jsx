@@ -20,6 +20,7 @@ import { computePsychologyReport } from "./psychology";
 import { filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { InstallBanner, InstallMenuItem, IOSInstallModal } from "./InstallPrompt";
+import { joinPresence, leavePresence } from "./lib/presence";
 import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import PricingPage from "./PricingPage";
 import ChangelogPage from "./ChangelogPage";
@@ -138,6 +139,11 @@ export default function App() {
   // pages) too, plus the synthetic popstate dispatched by the click
   // interceptor above.
   useEffect(() => {
+    if (session?.user?.id) joinPresence(session.user.id);
+    else leavePresence();
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     const onPopState = () => { setActive(tabFromPath()); setLegalPage(legalFromPath()); };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -215,6 +221,7 @@ export default function App() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    leavePresence();
     // Without this, the URL stays on whatever tab was open (e.g.
     // /dashboard) even though the page now shows the logged-out landing
     // page — confusing on refresh or when sharing the URL.
