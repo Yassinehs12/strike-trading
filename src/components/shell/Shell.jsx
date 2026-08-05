@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Plus, Activity, Menu, Loader2, LogOut, UserCircle, Bell, Check, Palette, CheckCheck, UserPlus, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
-import { fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications } from "../../db";
+import { fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, fetchUnreadMessageCount, subscribeToDirectMessages } from "../../db";
 import ThemeToggle from "../../ThemeToggle.jsx";
 import AdminBadge from "../../AdminBadge.jsx";
 import { InstallMenuItem, IOSInstallModal } from "../../InstallPrompt";
@@ -14,6 +14,31 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
   const groups = NAV_GROUPS.map((g, i) =>
     i === NAV_GROUPS.length - 1 && profile?.is_admin ? { ...g, items: [...g.items, ADMIN_NAV_ITEM] } : g
   );
+
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // Refetch whenever the signed-in user changes, and whenever the person
+  // navigates (covers the case where they just read a thread on the
+  // Messages page and moved elsewhere — the badge should drop to match).
+  useEffect(() => {
+    if (!user?.id) { setUnreadMessages(0); return; }
+    fetchUnreadMessageCount(user.id).then(setUnreadMessages).catch(() => {});
+  }, [user?.id, active]);
+
+  // New incoming DM while the sidebar is mounted — refetch the authoritative
+  // count shortly after (rather than a naive local +1) so the badge doesn't
+  // get stuck showing unread if the person already has that thread open and
+  // it was marked read the instant it arrived.
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsubscribe = subscribeToDirectMessages(user.id, () => {
+      setTimeout(() => {
+        fetchUnreadMessageCount(user.id).then(setUnreadMessages).catch(() => {});
+      }, 600);
+    });
+    return unsubscribe;
+  }, [user?.id]);
+
   return (
   <>
     <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-[var(--bg-primary)] border-r border-white/10 flex flex-col
@@ -31,11 +56,17 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = active === item.id;
+                const badgeCount = item.id === "messages" ? unreadMessages : 0;
                 return (
                   <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                       ${isActive ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
                     <Icon size={17} />{item.label}
+                    {badgeCount > 0 && (
+                      <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}

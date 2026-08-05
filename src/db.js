@@ -344,6 +344,29 @@ export async function fetchConversations(userId) {
   }
   return Array.from(seen.entries()).map(([otherId, lastMessage]) => ({ otherId, lastMessage }));
 }
+
+// Total unread DMs across every conversation — powers the sidebar badge.
+export async function fetchUnreadMessageCount(userId) {
+  const { count, error } = await supabase
+    .from("direct_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", userId)
+    .is("read_at", null);
+  if (error) throw error;
+  return count || 0;
+}
+
+// Marks every unread message from one specific person as read — called
+// when the user opens that conversation.
+export async function markConversationRead(userId, otherId) {
+  const { error } = await supabase
+    .from("direct_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", userId)
+    .eq("sender_id", otherId)
+    .is("read_at", null);
+  if (error) throw error;
+}
 export async function fetchForumPosts() {
   const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });
   if (error) throw error;

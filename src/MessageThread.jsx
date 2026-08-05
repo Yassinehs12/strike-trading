@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Send, Loader2, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, CheckCheck } from "lucide-react";
-import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages, uploadDmImage, deleteDirectMessage } from "./db";
+import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages, uploadDmImage, deleteDirectMessage, markConversationRead } from "./db";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
@@ -65,6 +65,10 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       .then((msgs) => {
         msgs.forEach((m) => seenIds.current.add(m.id));
         setMessages(msgs);
+        // Opening the thread implies reading it — clear the unread badge
+        // for this conversation. Fire-and-forget: a failure here shouldn't
+        // block the thread from displaying.
+        markConversationRead(currentUserId, otherUser.id).catch(() => {});
       })
       .catch((err) => setError(err.message || "Failed to load messages."))
       .finally(() => {
@@ -78,6 +82,10 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       seenIds.current.add(msg.id);
       setMessages((prev) => [...prev, msg]);
       setTimeout(() => scrollToBottom("smooth"), 0);
+      // The user is actively looking at this thread when it arrives, so
+      // treat it as read immediately rather than leaving it unread until
+      // they reopen the conversation.
+      markConversationRead(currentUserId, otherUser.id).catch(() => {});
     });
 
     return unsubscribe;
