@@ -35,7 +35,7 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
       setTimeout(() => {
         fetchUnreadMessageCount(user.id).then(setUnreadMessages).catch(() => {});
       }, 600);
-    });
+    }, "sidebar-badge");
     return unsubscribe;
   }, [user?.id]);
 

@@ -317,9 +317,16 @@ export async function deleteDirectMessage(messageId, senderId) {
 }
 
 // Subscribes to incoming direct messages for this user. Returns an unsubscribe function.
-export function subscribeToDirectMessages(userId, onInsert) {
+//
+// tag distinguishes concurrent subscribers (e.g. the sidebar's unread badge
+// and an open MessageThread both listen for this user's incoming DMs at the
+// same time). Supabase Realtime channels are singletons keyed by name —
+// reusing one name for two independent .subscribe() calls throws "cannot
+// add postgres_changes callbacks... after subscribe()", so each caller
+// needs its own channel name even though they're watching the same table.
+export function subscribeToDirectMessages(userId, onInsert, tag = "default") {
   const channel = supabase
-    .channel(`dm_inbox_${userId}`)
+    .channel(`dm_inbox_${userId}_${tag}`)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "direct_messages", filter: `recipient_id=eq.${userId}` },

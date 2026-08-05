@@ -86,7 +86,7 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       // treat it as read immediately rather than leaving it unread until
       // they reopen the conversation.
       markConversationRead(currentUserId, otherUser.id).catch(() => {});
-    });
+    }, "thread");
 
     return unsubscribe;
   }, [otherUser?.id, currentUserId]);
