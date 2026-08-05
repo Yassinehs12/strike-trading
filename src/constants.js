@@ -57,7 +57,6 @@ export const NAV_GROUPS = [
     items: [
       { id: "forum", label: "Community", icon: MessagesSquare },
       { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-      { id: "friends", label: "Friends", icon: UserPlus },
       { id: "messages", label: "Messages", icon: Mail },
     ],
   },
@@ -80,6 +79,7 @@ export const VALID_TAB_IDS = [
   ...NAV_GROUPS.flatMap((g) => g.items.map((i) => i.id)),
   ADMIN_NAV_ITEM.id,
   "profile",
+  "friends",
 ];
 
 // Reads the tab out of the URL path (e.g. "/settings" -> "settings") on
