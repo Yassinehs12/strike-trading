@@ -366,13 +366,25 @@ export async function fetchUnreadMessageCount(userId) {
 // Marks every unread message from one specific person as read — called
 // when the user opens that conversation.
 export async function markConversationRead(userId, otherId) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("direct_messages")
     .update({ read_at: new Date().toISOString() })
     .eq("recipient_id", userId)
     .eq("sender_id", otherId)
-    .is("read_at", null);
+    .is("read_at", null)
+    .select("id");
   if (error) throw error;
+  // Supabase doesn't error when RLS filters out every row a policy doesn't
+  // cover — it just updates zero rows. That's indistinguishable from
+  // "nothing was unread" unless we check, so surface it loudly in dev
+  // rather than let the badge silently never clear again.
+  if (import.meta.env.DEV && (!data || data.length === 0)) {
+    console.warn(
+      `markConversationRead: 0 rows updated for recipient=${userId} sender=${otherId}. ` +
+      `If unread messages actually existed, check the direct_messages RLS UPDATE policy allows recipient_id = auth.uid().`
+    );
+  }
+  return data || [];
 }
 export async function fetchForumPosts() {
   const { data, error } = await supabase.from("forum_posts").select("*").order("created_at", { ascending: false });
