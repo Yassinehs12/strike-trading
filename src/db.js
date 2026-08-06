@@ -86,6 +86,37 @@ const challengeToDB = (c, userId) => ({
   payout_history: c.payoutHistory || [],
 });
 
+/* ---------- pre-market checklist (synced across devices) ---------- */
+const ALL_ACCOUNTS_CHECKLIST_ID = "00000000-0000-0000-0000-000000000000";
+
+export async function fetchChecklistState(userId, accountId, dateISO) {
+  const { data, error } = await supabase
+    .from("checklist_completions")
+    .select("checked_items")
+    .eq("user_id", userId)
+    .eq("account_id", accountId || ALL_ACCOUNTS_CHECKLIST_ID)
+    .eq("checklist_date", dateISO)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.checked_items || {};
+}
+
+export async function saveChecklistState(userId, accountId, dateISO, checkedItems) {
+  const { error } = await supabase
+    .from("checklist_completions")
+    .upsert(
+      {
+        user_id: userId,
+        account_id: accountId || ALL_ACCOUNTS_CHECKLIST_ID,
+        checklist_date: dateISO,
+        checked_items: checkedItems,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,account_id,checklist_date" }
+    );
+  if (error) throw error;
+}
+
 /* ---------- trades ---------- */
 export async function fetchTrades() {
   const { data, error } = await supabase.from("trades").select("*").order("date", { ascending: false });

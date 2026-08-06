@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  ShieldCheck, BookOpen, Plus, X, TrendingUp, Percent, Target, Activity, CheckCircle2, Wallet, Sparkles, Check, ShieldAlert, Shield,
+  ShieldCheck, BookOpen, Plus, X, TrendingUp, Percent, Target, Activity, CheckCircle2, Wallet, Sparkles, Check, ShieldAlert, Shield, Loader2,
 } from "lucide-react";
 import { computePsychologyReport } from "../psychology";
 import { filterTradesByPeriod } from "../insights";
@@ -13,6 +13,7 @@ import { PRE_MARKET_CHECKLIST_ITEMS, SCORE_RING_COLORS } from "../constants";
 import { Card, CustomTooltip, EmptyState, KPICard, ProgressBar, StatusPill, UpgradeGate } from "../components/ui/Primitives";
 import { fmtUSD, fmtUSD2, isoWeekKey, todayISO } from "../lib/format";
 import { RuleViolationAlerts } from "../components/trades/TradeComponents";
+import { fetchChecklistState, saveChecklistState } from "../db";
 
 export const PsychologyReportCard = ({ trades }) => {
   const [period, setPeriod] = useState("week"); // "week" | "month"
@@ -170,41 +171,37 @@ export const WeeklyRecapCard = ({ trades }) => {
 
 export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
   const [accountId, setAccountId] = useState(null); // null = shared/"All accounts" checklist
-  const storageKey = (d) => `strike_premarket_checklist_${userId || "anon"}_${accountId || "all"}_${d}`;
-  const readForToday = () => {
-    try {
-      const raw = localStorage.getItem(storageKey(todayISO()));
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-  };
-
   const [day, setDay] = useState(todayISO());
-  const [checked, setChecked] = useState(readForToday);
+  const [checked, setChecked] = useState({});
+  const [loaded, setLoaded] = useState(false);
 
-  // Re-read from storage whenever the logged-in user OR the selected account
-  // changes, so each account keeps its own independent checklist state and
-  // nothing bleeds between accounts (or across users) in the same tab.
+  // Load from the server whenever the user, selected account, or day
+  // changes — this is what makes the checklist follow you across devices
+  // instead of being stuck in whichever browser you checked it in.
   useEffect(() => {
-    setChecked(readForToday());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, accountId]);
+    if (!userId) { setChecked({}); setLoaded(true); return; }
+    setLoaded(false);
+    fetchChecklistState(userId, accountId, day)
+      .then(setChecked)
+      .catch(() => setChecked({}))
+      .finally(() => setLoaded(true));
+  }, [userId, accountId, day]);
 
   // If the tab is left open across midnight, roll over to a fresh checklist
   // without needing a page refresh.
   useEffect(() => {
     const id = setInterval(() => {
       const now = todayISO();
-      if (now !== day) { setDay(now); setChecked({}); }
+      if (now !== day) setDay(now);
     }, 60 * 1000);
     return () => clearInterval(id);
   }, [day]);
 
-  useEffect(() => {
-    if (!userId) return; // don't persist under the "anon" bucket
-    try { localStorage.setItem(storageKey(day), JSON.stringify(checked)); } catch {}
-  }, [checked, day, userId, accountId]);
-
-  const toggle = (i) => setChecked((c) => ({ ...c, [i]: !c[i] }));
+  const toggle = (i) => {
+    const next = { ...checked, [i]: !checked[i] };
+    setChecked(next); // optimistic — feels instant, persists in the background
+    if (userId) saveChecklistState(userId, accountId, day, next).catch(() => {});
+  };
   const doneCount = PRE_MARKET_CHECKLIST_ITEMS.filter((_, i) => checked[i]).length;
   const allDone = doneCount === PRE_MARKET_CHECKLIST_ITEMS.length;
 
@@ -213,7 +210,7 @@ export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
       <div className="flex items-center justify-between mb-3 gap-3">
         <div>
           <h3 className="font-bold text-[var(--text-primary)] text-sm">Pre-Market Checklist</h3>
-          <p className="text-xs text-[var(--text-muted)]">Resets automatically every day · {doneCount}/{PRE_MARKET_CHECKLIST_ITEMS.length} done today</p>
+          <p className="text-xs text-[var(--text-muted)]">Syncs across your devices · resets every day · {doneCount}/{PRE_MARKET_CHECKLIST_ITEMS.length} done today</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {accounts.length > 0 && (
@@ -228,7 +225,11 @@ export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
               ))}
             </select>
           )}
-          <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
+          {loaded ? (
+            <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
+          ) : (
+            <Loader2 size={16} className="text-[var(--text-tertiary)] animate-spin" />
+          )}
         </div>
       </div>
       <div className="space-y-1.5">
