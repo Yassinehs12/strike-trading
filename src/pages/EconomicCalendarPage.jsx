@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Filter, CalendarClock, Folder,
+  Filter, CalendarClock,
 } from "lucide-react";
 import { ECON_COUNTRIES, IMPACT_LEVELS } from "../constants";
 import { Card } from "../components/ui/Primitives";
@@ -66,15 +66,14 @@ export const EconomicCalendarPage = () => {
           <CalendarClock size={16} className="text-[var(--accent)]" />
           <h3 className="font-bold text-[var(--text-primary)] text-sm">Economic Calendar</h3>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Live economic events, grouped by day — rate decisions, CPI, NFP, and more that can move the markets you trade.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-4">Live economic events, grouped by day — rate decisions, CPI, NFP, and more that can move the markets you trade. Powered by TradingView.</p>
 
         <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-white/10">
           {IMPACT_LEVELS.map((lvl) => {
             const on = impacts.includes(lvl.value);
             return (
               <button key={lvl.value} onClick={() => toggleImpact(lvl.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${on ? lvl.active : "bg-[var(--bg-primary)] border-white/10 text-[var(--text-muted)]"}`}>
-                <Folder size={13} className={on ? lvl.dot.replace("bg-", "text-") : "text-[var(--text-faint)]"} fill="currentColor" fillOpacity={on ? 1 : 0} />
+                className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${on ? lvl.active : "bg-transparent border-white/15 text-[var(--text-faint)] hover:border-white/25 hover:text-[var(--text-muted)]"}`}>
                 {lvl.label}
               </button>
             );
@@ -84,7 +83,7 @@ export const EconomicCalendarPage = () => {
 
           <div className="relative">
             <button onClick={() => setCountryMenuOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]/40 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 bg-transparent text-xs font-semibold text-[var(--text-secondary)] hover:border-white/25 hover:text-[var(--text-primary)] transition-colors">
               <Filter size={12} /> Countries {allCountriesSelected ? "(All)" : `(${countries.length})`}
             </button>
             {countryMenuOpen && (
