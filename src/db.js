@@ -828,6 +828,13 @@ export async function rejectSpotlight(id, adminId) {
   return data;
 }
 
+// Removes the currently-pinned Trade of the Week without approving a
+// replacement — the forum simply has no spotlight until another one is approved.
+export async function unpinSpotlight(id) {
+  const { error } = await supabase.from("trade_spotlights").update({ is_active: false }).eq("id", id);
+  if (error) throw error;
+}
+
 /* ---------- badges (computed server-side so PnL/trade details never leave the DB) ---------- */
 export async function fetchPublicBadgeStats(userId) {
   const { data, error } = await supabase.rpc("get_public_badges", { target_user_id: userId });

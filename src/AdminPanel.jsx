@@ -5,7 +5,7 @@ import {
 import {
   fetchAllProfilesAdmin, setUserAdmin, setUserSupporter, amIOwner, banUser, unbanUser, timeoutUser,
   fetchForumPosts, adminDeleteForumPost, fetchChatMessages, adminDeleteChatMessage,
-  fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification,
+  fetchPendingSpotlights, approveSpotlight, rejectSpotlight, broadcastNotification, fetchActiveSpotlight, unpinSpotlight,
   fetchMemberBadges, grantMemberBadge, revokeMemberBadge,
   logAuditEvent, fetchAuditLog,
 } from "./db";
@@ -240,6 +240,7 @@ export default function AdminPanel({ session, profile, toast }) {
 
   const [spotlights, setSpotlights] = useState([]);
   const [spotlightsLoading, setSpotlightsLoading] = useState(true);
+  const [activeSpotlight, setActiveSpotlight] = useState(null);
 
   const [auditLog, setAuditLog] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
@@ -269,8 +270,8 @@ export default function AdminPanel({ session, profile, toast }) {
 
   const loadSpotlights = useCallback(() => {
     setSpotlightsLoading(true);
-    fetchPendingSpotlights()
-      .then(setSpotlights)
+    Promise.all([fetchPendingSpotlights(), fetchActiveSpotlight()])
+      .then(([pending, active]) => { setSpotlights(pending); setActiveSpotlight(active); })
       .catch((err) => setError(err.message || "Failed to load spotlight submissions."))
       .finally(() => setSpotlightsLoading(false));
   }, []);
@@ -370,8 +371,9 @@ export default function AdminPanel({ session, profile, toast }) {
 
   const handleApproveSpotlight = (s) =>
     withBusy(`spotlight-${s.id}`, async () => {
-      await approveSpotlight(s.id, session.user.id);
+      const approved = await approveSpotlight(s.id, session.user.id);
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
+      setActiveSpotlight(approved);
       broadcastNotification("spotlight", s.username, { assetLabel: s.asset }).catch(() => {});
       logAction("approve_spotlight", "trade_spotlight", s.id, { username: s.username, asset: s.asset });
       notify(`Pinned ${s.username}'s trade as Trade of the Week`);
@@ -383,6 +385,14 @@ export default function AdminPanel({ session, profile, toast }) {
       setSpotlights((prev) => prev.filter((x) => x.id !== s.id));
       logAction("reject_spotlight", "trade_spotlight", s.id, { username: s.username, asset: s.asset });
       notify("Submission rejected");
+    });
+
+  const handleUnpinSpotlight = (s) =>
+    withBusy(`unpin-${s.id}`, async () => {
+      await unpinSpotlight(s.id);
+      setActiveSpotlight(null);
+      logAction("unpin_spotlight", "trade_spotlight", s.id, { username: s.username, asset: s.asset });
+      notify("Removed from Trade of the Week");
     });
 
   const handleBroadcastLeaderboardReset = () =>
@@ -560,10 +570,45 @@ export default function AdminPanel({ session, profile, toast }) {
           </div>
           {spotlightsLoading ? (
             <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
-          ) : spotlights.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No pending submissions.</Card>
           ) : (
-            <div className="space-y-2">
+            <>
+              {activeSpotlight && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--text-faint)] mb-2">Currently Pinned</h4>
+                  <Card className="p-4 border-amber-500/30">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                          <Star size={13} className="text-amber-400" />
+                          <span className="font-semibold">{activeSpotlight.username}</span>
+                          <span className="text-[var(--text-faint)]">·</span>
+                          <span>{activeSpotlight.asset}</span>
+                          <span className={activeSpotlight.direction === "Long" ? "text-emerald-400" : "text-rose-400"}>{activeSpotlight.direction}</span>
+                        </div>
+                        {activeSpotlight.notes && <p className="text-sm text-[var(--text-tertiary)] mt-1">{activeSpotlight.notes}</p>}
+                        <div className="text-xs text-[var(--text-muted)] mt-1">Pinned {timeAgo(activeSpotlight.reviewed_at)}</div>
+                      </div>
+                      <span className={`text-sm font-bold ${activeSpotlight.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {activeSpotlight.pnl >= 0 ? "+" : ""}{Number(activeSpotlight.pnl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                      </span>
+                    </div>
+                    {activeSpotlight.screenshot && <img src={activeSpotlight.screenshot} alt="" className="mt-3 w-full max-h-56 object-contain rounded-lg border border-white/10" />}
+                    <button onClick={() => handleUnpinSpotlight(activeSpotlight)} disabled={busyId === `unpin-${activeSpotlight.id}`}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 transition-colors disabled:opacity-40 mt-3">
+                      {busyId === `unpin-${activeSpotlight.id}` ? <Loader2 size={12} className="animate-spin" /> : <StarOff size={12} />} Remove from Trade of the Week
+                    </button>
+                  </Card>
+                </div>
+              )}
+
+              <div>
+                {activeSpotlight && spotlights.length > 0 && (
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--text-faint)] mb-2 mt-5">Pending Submissions</h4>
+                )}
+                {spotlights.length === 0 ? (
+                  !activeSpotlight && <Card className="p-12 text-center text-sm text-[var(--text-muted)]">No pending submissions.</Card>
+                ) : (
+                  <div className="space-y-2">
               {spotlights.map((s) => (
                 <Card key={s.id} className="p-4">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -594,7 +639,10 @@ export default function AdminPanel({ session, profile, toast }) {
                   </div>
                 </Card>
               ))}
-            </div>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
