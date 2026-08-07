@@ -357,7 +357,7 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
         </Card>
       </div>
 
-      <CalendarCard trades={trades} onOpenTrade={onOpenTrade} />
+      <CalendarCard trades={trades} onOpenTrade={onOpenTrade} compact showWeeklySummary />
 
       <Card className="p-4 md:p-5">
         <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Recent Trades</h3>

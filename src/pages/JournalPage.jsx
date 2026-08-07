@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  BookOpen, Search, ChevronLeft, ChevronRight, Filter, ArrowUpRight, ArrowDownRight, Trash2, Download, Loader2, Upload, FileText, Lock,
+  BookOpen, Search, ChevronLeft, ChevronRight, Filter, ArrowUpRight, ArrowDownRight, Trash2, Download, Loader2, Upload, FileText, Lock, ArrowLeftRight, CalendarDays,
 } from "lucide-react";
 import { AssetOptions, Card, EmptyState, SortHeader, StatusPill, useToast } from "../components/ui/Primitives";
 import { clamp, fmtUSD2 } from "../lib/format";
@@ -9,7 +9,7 @@ import { csvToTrades, downloadBlob, tradesToCSV } from "../lib/csv";
 import { PAGE_SIZE } from "../constants";
 import { isProPlan } from "../lib/plan";
 
-export const CalendarCard = ({ trades, onOpenTrade }) => {
+export const CalendarCard = ({ trades, onOpenTrade, compact = false, showWeeklySummary = false }) => {
   const [cursor, setCursor] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -55,57 +55,122 @@ export const CalendarCard = ({ trades, onOpenTrade }) => {
   const cellOpacity = (pnl) => (pnl ? clamp(Math.abs(pnl) / maxAbs, 0.18, 0.9) : 1);
 
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const monthTotal = Object.entries(byDay).filter(([date]) => new Date(date).getMonth() === month && new Date(date).getFullYear() === year).reduce((s, [, v]) => s + v.pnl, 0);
+  const monthEntries = Object.entries(byDay).filter(([date]) => new Date(date).getMonth() === month && new Date(date).getFullYear() === year);
+  const monthTotal = monthEntries.reduce((s, [, v]) => s + v.pnl, 0);
+  const monthDays = monthEntries.length;
+
+  // 7-day (Sun-Sat) week rows spanning the visible grid, including the
+  // leading/trailing days that belong to adjacent months — a week can
+  // straddle two months, so its date range and totals reflect that.
+  const weeks = useMemo(() => {
+    if (!showWeeklySummary) return [];
+    const gridStart = new Date(year, month, 1 - startOffset);
+    const totalWeeks = Math.ceil(cells.length / 7);
+    return Array.from({ length: totalWeeks }, (_, w) => {
+      const start = new Date(gridStart); start.setDate(gridStart.getDate() + w * 7);
+      const end = new Date(start); end.setDate(start.getDate() + 6);
+      let pnl = 0, days = 0;
+      Object.entries(byDay).forEach(([date, v]) => {
+        const d = new Date(date + "T00:00:00");
+        if (d >= start && d <= end) { pnl += v.pnl; days += 1; }
+      });
+      return { start, end, pnl, days };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showWeeklySummary, year, month, startOffset, cells.length, byDay]);
+
+  const fmtRange = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <Card className="p-4 md:p-5">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="font-bold text-[var(--text-primary)]">{monthLabel}</h3>
-            <p className={`text-xs tj-mono ${monthTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{monthTotal >= 0 ? "+" : ""}{fmtUSD2(monthTotal)} net this month</p>
-          </div>
+        <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="p-1.5 rounded-lg border border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronLeft size={15} /></button>
+            <h3 className="font-bold text-[var(--text-primary)]">{monthLabel}</h3>
             <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="p-1.5 rounded-lg border border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronRight size={15} /></button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="text-center text-xs text-[var(--text-muted)] font-medium py-1">{d}</div>)}
-        </div>
-        <div className="grid grid-cols-7 gap-1.5">
-          {cells.map((d, i) => {
-            if (d === null) return <div key={i} />;
-            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            const info = byDay[dateStr];
-            const isToday = dateStr === todayStr;
-            return (
-              <button key={i} onClick={() => info?.trades?.[0] && onOpenTrade(info.trades[0])}
-                className={`relative aspect-square rounded-lg border flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-[var(--bg-secondary)]/40"} ${isToday ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/60" : "border-white/10"}`}
-                style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
-                {isToday && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />}
-                <span className={`text-[11px] font-medium ${isToday ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>{d}</span>
-                {info ? (
-                  <>
-                    <span className="text-[10px] tj-mono text-[var(--text-primary)] font-semibold leading-tight">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
-                    <span className="text-[9px] tj-mono text-[var(--text-primary)]/80 leading-tight">{info.count} trade{info.count === 1 ? "" : "s"}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[9px] tj-mono text-[var(--text-faint)] leading-tight">0 Trade</span>
-                    <span className="text-[10px] tj-mono text-[var(--text-faint)] font-medium leading-tight">$0</span>
-                  </>
-                )}
+            {compact && (
+              <button onClick={() => setCursor(new Date(now.getFullYear(), now.getMonth(), 1))}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-white/10 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-white/20 transition-colors">
+                <CalendarDays size={13} /> Today
               </button>
-            );
-          })}
+            )}
+          </div>
+          {compact ? (
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-[var(--text-muted)]">PnL: <span className={`font-semibold tj-mono ${monthTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{monthTotal >= 0 ? "+" : ""}{fmtUSD2(monthTotal)}</span></span>
+              <span className="text-[var(--text-muted)]">Days: <span className="font-semibold text-[var(--text-primary)]">{monthDays}</span></span>
+            </div>
+          ) : (
+            <p className={`text-xs tj-mono ${monthTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{monthTotal >= 0 ? "+" : ""}{fmtUSD2(monthTotal)} net this month</p>
+          )}
         </div>
 
-        <div className="flex items-center gap-4 mt-5 text-xs text-[var(--text-muted)] flex-wrap">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500" /> Profitable day</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-rose-500" /> Losing day</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[var(--bg-tertiary)]" /> No trades</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border border-[var(--accent)] ring-1 ring-[var(--accent)]/60" /> Today</span>
+        <div className={showWeeklySummary ? "grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5" : ""}>
+          <div>
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="text-center text-xs text-[var(--text-muted)] font-medium py-1">{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1.5">
+              {cells.map((d, i) => {
+                if (d === null) return <div key={i} />;
+                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                const info = byDay[dateStr];
+                const isToday = dateStr === todayStr;
+                return (
+                  <button key={i} onClick={() => info?.trades?.[0] && onOpenTrade(info.trades[0])}
+                    className={`relative ${compact ? "aspect-[4/3]" : "aspect-square"} rounded-lg border flex flex-col items-center justify-center transition-transform hover:scale-[1.04] ${info ? "cursor-pointer" : "cursor-default"} ${info ? cellColor(info.pnl) : "bg-[var(--bg-secondary)]/40"} ${isToday ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/60" : "border-white/10"}`}
+                    style={info ? { backgroundColor: info.pnl > 0 ? `rgba(16,185,129,${cellOpacity(info.pnl)})` : info.pnl < 0 ? `rgba(244,63,94,${cellOpacity(info.pnl)})` : "#3f3f46" } : {}}>
+                    {isToday && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />}
+                    <span className={`${compact ? "text-xs" : "text-[11px]"} font-medium ${isToday ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}>{d}</span>
+                    {info ? (
+                      <>
+                        <span className={`${compact ? "hidden sm:inline text-[9px]" : "text-[10px]"} tj-mono text-[var(--text-primary)] font-semibold leading-tight flex items-center gap-0.5`}>
+                          {compact && <ArrowLeftRight size={8} />}{info.count}{!compact && ` trade${info.count === 1 ? "" : "s"}`}
+                        </span>
+                        <span className="text-[10px] tj-mono text-[var(--text-primary)]/80 leading-tight">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
+                      </>
+                    ) : !compact ? (
+                      <>
+                        <span className="text-[9px] tj-mono text-[var(--text-faint)] leading-tight">0 Trade</span>
+                        <span className="text-[10px] tj-mono text-[var(--text-faint)] font-medium leading-tight">$0</span>
+                      </>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-4 mt-5 text-xs text-[var(--text-muted)] flex-wrap">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500" /> Profitable day</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-rose-500" /> Losing day</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[var(--bg-tertiary)]" /> No trades</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border border-[var(--accent)] ring-1 ring-[var(--accent)]/60" /> Today</span>
+            </div>
+          </div>
+
+          {showWeeklySummary && (
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--text-faint)] mb-2.5">Weekly Summary</h4>
+              <div className="space-y-2">
+                {weeks.map((w, i) => (
+                  <div key={i} className="bg-[var(--bg-tertiary)]/60 border border-white/10 rounded-xl px-3.5 py-2.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-[var(--text-primary)]">Week {["One", "Two", "Three", "Four", "Five", "Six"][i] || i + 1}</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">{fmtRange(w.start)} - {fmtRange(w.end)}</span>
+                    </div>
+                    {w.days === 0 ? (
+                      <span className="text-xs text-[var(--text-muted)]">No trades</span>
+                    ) : (
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-[var(--text-muted)]">PnL: <span className={`font-semibold tj-mono ${w.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{w.pnl >= 0 ? "+" : ""}{fmtUSD2(w.pnl)}</span></span>
+                        <span className="text-[var(--text-muted)]">Days: <span className="font-semibold text-[var(--text-primary)]">{w.days}</span></span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
   );
