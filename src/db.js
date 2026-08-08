@@ -90,7 +90,7 @@ const challengeToDB = (c, userId) => ({
 export async function fetchEconomicEvents() {
   const { data, error } = await supabase.functions.invoke("econ-calendar", { method: "GET" });
   if (error) throw error;
-  return data?.events || [];
+  return { events: data?.events || [], failedUrls: data?.failedUrls || [] };
 }
 
 /* ---------- pre-market checklist (synced across devices) ---------- */

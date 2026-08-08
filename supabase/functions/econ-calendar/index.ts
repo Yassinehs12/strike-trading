@@ -46,7 +46,7 @@ function corsHeadersFor(req: Request) {
 // second concurrent isolate gets its own copy). Good enough to absorb
 // normal traffic bursts; not a substitute for a real scheduled cache table
 // if this ever needs to be bulletproof under heavy concurrent load.
-let cache: { data: unknown[]; fetchedAt: number } | null = null;
+let cache: { data: unknown[]; fetchedAt: number; failedUrls: string[] } | null = null;
 
 Deno.serve(async (req) => {
   const cors = corsHeadersFor(req);
@@ -55,18 +55,34 @@ Deno.serve(async (req) => {
   try {
     const fresh = cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
     if (!fresh) {
-      const results = await Promise.all(
-        FF_URLS.map((url) => fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; StrikeJournal/1.0)" } }))
+      // Fetch each feed independently — thisweek.json is confirmed stable,
+      // but nextweek.json is NOT a documented/verified endpoint (guessed
+      // by pattern from thisweek). If it 404s or errors, that shouldn't
+      // take down thisweek's data too.
+      const settled = await Promise.allSettled(
+        FF_URLS.map(async (url) => {
+          const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; StrikeJournal/1.0)" } });
+          if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+          const data = await res.json();
+          if (!Array.isArray(data)) throw new Error(`${url} returned a non-array response`);
+          return data;
+        })
       );
-      for (const res of results) {
-        if (!res.ok) throw new Error(`Forex Factory feed returned ${res.status}`);
+
+      const merged: unknown[] = [];
+      const failedUrls: string[] = [];
+      settled.forEach((result, i) => {
+        if (result.status === "fulfilled") merged.push(...result.value);
+        else failedUrls.push(FF_URLS[i]);
+      });
+
+      if (merged.length === 0 && failedUrls.length === FF_URLS.length) {
+        throw new Error("All Forex Factory feeds failed");
       }
-      const parsed = await Promise.all(results.map((res) => res.json()));
-      const merged = parsed.flat().filter(Boolean);
-      cache = { data: merged, fetchedAt: Date.now() };
+      cache = { data: merged, fetchedAt: Date.now(), failedUrls };
     }
 
-    return new Response(JSON.stringify({ events: cache!.data, cachedAt: cache!.fetchedAt }), {
+    return new Response(JSON.stringify({ events: cache!.data, cachedAt: cache!.fetchedAt, failedUrls: cache!.failedUrls }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -75,7 +91,7 @@ Deno.serve(async (req) => {
     // an economic calendar that's a few hours stale is far more useful
     // than a blank page.
     if (cache) {
-      return new Response(JSON.stringify({ events: cache.data, cachedAt: cache.fetchedAt, stale: true }), {
+      return new Response(JSON.stringify({ events: cache.data, cachedAt: cache.fetchedAt, stale: true, failedUrls: cache.failedUrls }), {
         status: 200,
         headers: { ...cors, "Content-Type": "application/json" },
       });

@@ -80,6 +80,7 @@ export const EconomicCalendarPage = () => {
   const toggleAllCurrencies = () => setCurrencies(allCurrenciesSelected ? [] : [...CURRENCIES]);
 
   const [rawEvents, setRawEvents] = useState([]);
+  const [failedUrls, setFailedUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [now, setNow] = useState(new Date());
@@ -92,10 +93,12 @@ export const EconomicCalendarPage = () => {
   useEffect(() => {
     setLoading(true);
     fetchEconomicEvents()
-      .then((events) => setRawEvents(events || []))
+      .then(({ events, failedUrls }) => { setRawEvents(events); setFailedUrls(failedUrls); })
       .catch((err) => setError(err.message || "Failed to load the economic calendar."))
       .finally(() => setLoading(false));
   }, []);
+
+  const nextWeekUnavailable = selectedRange === "Next Week" && failedUrls.some((u) => u.includes("nextweek"));
 
   // Normalize Forex Factory's raw event shape once, rather than repeating
   // the same field access/parsing on every filter re-run.
@@ -212,7 +215,11 @@ export const EconomicCalendarPage = () => {
               {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-9 rounded-md bg-white/[0.04] tj-skeleton" />)}
             </div>
           ) : dayEvents.length === 0 ? (
-            <div className="p-10 text-center text-sm text-[var(--text-muted)]">No events match your filters for this day.</div>
+            <div className="p-10 text-center text-sm text-[var(--text-muted)]">
+              {nextWeekUnavailable
+                ? "Next week's data isn't available from the free Forex Factory feed right now — this endpoint isn't officially documented and may be unreliable. Try This Week instead."
+                : "No events match your filters for this range."}
+            </div>
           ) : (
             dayEvents.map((e) => {
               const passed = e.date <= now;
