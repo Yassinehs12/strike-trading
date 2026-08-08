@@ -86,6 +86,13 @@ const challengeToDB = (c, userId) => ({
   payout_history: c.payoutHistory || [],
 });
 
+/* ---------- economic calendar (Forex Factory, via edge function proxy) ---------- */
+export async function fetchEconomicEvents() {
+  const { data, error } = await supabase.functions.invoke("econ-calendar", { method: "GET" });
+  if (error) throw error;
+  return data?.events || [];
+}
+
 /* ---------- pre-market checklist (synced across devices) ---------- */
 const ALL_ACCOUNTS_CHECKLIST_ID = "00000000-0000-0000-0000-000000000000";
 

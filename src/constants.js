@@ -127,9 +127,9 @@ export const ACCOUNT_TYPES = [
 
 
 export const IMPACT_LEVELS = [
-  { value: "1", label: "High Impact", dot: "bg-rose-500", active: "bg-rose-500/10 border-rose-500/60 text-rose-400" },
-  { value: "0", label: "Medium Impact", dot: "bg-amber-400", active: "bg-amber-400/10 border-amber-400/60 text-amber-400" },
-  { value: "-1", label: "Low Impact", dot: "bg-emerald-500", active: "bg-emerald-500/10 border-emerald-500/60 text-emerald-400" },
+  { value: "High", label: "High Impact", dot: "bg-rose-500", active: "bg-rose-500/10 border-rose-500/60 text-rose-400" },
+  { value: "Medium", label: "Medium Impact", dot: "bg-amber-400", active: "bg-amber-400/10 border-amber-400/60 text-amber-400" },
+  { value: "Low", label: "Low Impact", dot: "bg-emerald-500", active: "bg-emerald-500/10 border-emerald-500/60 text-emerald-400" },
 ];
 
 
