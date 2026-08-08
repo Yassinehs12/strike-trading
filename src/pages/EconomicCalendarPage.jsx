@@ -5,7 +5,7 @@ import { Card } from "../components/ui/Primitives";
 import { fetchEconomicEvents } from "../db";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "CNY"];
-const RANGES = ["Yesterday", "Today", "Tomorrow", "This Week", "Next Week"];
+const RANGES = ["Yesterday", "Today", "Tomorrow", "This Week"];
 
 const toISODate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -34,7 +34,6 @@ function rangeBounds(range, today) {
   if (range === "Today") return [startOfDay(today), endOfDay(today)];
   if (range === "Tomorrow") { const d = new Date(today); d.setDate(d.getDate() + 1); return [startOfDay(d), endOfDay(d)]; }
   if (range === "This Week") { const w = weekDates(today); return [startOfDay(w[0]), endOfDay(w[6])]; }
-  if (range === "Next Week") { const nextMonday = new Date(today); nextMonday.setDate(nextMonday.getDate() + 7); const w = weekDates(nextMonday); return [startOfDay(w[0]), endOfDay(w[6])]; }
   return [startOfDay(today), endOfDay(today)];
 }
 
@@ -98,7 +97,7 @@ export const EconomicCalendarPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const nextWeekUnavailable = selectedRange === "Next Week" && failedUrls.some((u) => u.includes("nextweek"));
+
 
   // Normalize Forex Factory's raw event shape once, rather than repeating
   // the same field access/parsing on every filter re-run.
@@ -208,25 +207,21 @@ export const EconomicCalendarPage = () => {
         {/* Table */}
         <div className="rounded-lg overflow-hidden border border-white/10">
           <div className="hidden sm:grid grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2 bg-white/[0.03] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-            <span>{selectedRange === "This Week" || selectedRange === "Next Week" ? "Date / Time" : "Time"}</span><span>Currency</span><span>Event</span><span>Previous</span><span>Forecast</span><span></span>
+            <span>{selectedRange === "This Week" ? "Date / Time" : "Time"}</span><span>Currency</span><span>Event</span><span>Previous</span><span>Forecast</span><span></span>
           </div>
           {loading ? (
             <div className="p-8 space-y-2">
               {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-9 rounded-md bg-white/[0.04] tj-skeleton" />)}
             </div>
           ) : dayEvents.length === 0 ? (
-            <div className="p-10 text-center text-sm text-[var(--text-muted)]">
-              {nextWeekUnavailable
-                ? "Next week's data isn't available from the free Forex Factory feed right now — this endpoint isn't officially documented and may be unreliable. Try This Week instead."
-                : "No events match your filters for this range."}
-            </div>
+            <div className="p-10 text-center text-sm text-[var(--text-muted)]">No events match your filters for this range.</div>
           ) : (
             dayEvents.map((e) => {
               const passed = e.date <= now;
               return (
                 <div key={e.id} className={`grid grid-cols-2 sm:grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2.5 border-t border-white/5 border-l-2 ${IMPACT_ROW_BORDER[e.impact] || "border-l-transparent"} items-center`}>
                   <span className="text-xs text-[var(--text-secondary)] tj-mono">
-                    {selectedRange === "This Week" || selectedRange === "Next Week" ? `${fmtDate(e.date)}, ${fmtTime(e.date)}` : fmtTime(e.date)}
+                    {selectedRange === "This Week" ? `${fmtDate(e.date)}, ${fmtTime(e.date)}` : fmtTime(e.date)}
                   </span>
                   <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5">{FLAG[e.country] || "🏳️"} {e.country}</span>
                   <span className="text-sm text-[var(--text-primary)] col-span-2 sm:col-span-1">{e.title}</span>

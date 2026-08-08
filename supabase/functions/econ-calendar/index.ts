@@ -7,21 +7,23 @@
 // almost immediately. Routing it through one server-side function means
 // all of Strike Journal's traffic shares a single, cached fetch instead.
 //
-// Fetches both "this week" and "next week" feeds (2 requests, comfortably
-// under FF's 2-per-5-min limit) so the client can offer Today/Tomorrow/
-// This Week/Next Week filters without a second round trip. "Yesterday"
-// can fall outside both feeds right at a Monday boundary (it'd be in last
-// week's feed, which isn't fetched, to avoid a 3rd request risking the
-// rate limit) — a known, minor gap rather than an oversight.
+// Fetches "this week", covering Yesterday/Today/Tomorrow/This Week filters
+// on the client. "Yesterday" can fall outside this feed right at a Monday
+// boundary (it'd be in last week's feed, which isn't fetched, to avoid a
+// 2nd request risking FF's rate limit) — a known, minor gap.
 //
 // This is Forex Factory's unofficial public export endpoint, widely used
 // by trading tools/EAs — not a documented, guaranteed-stable API. If they
 // change or block it, this function will start returning stale cache or
 // errors; there's no SLA here.
 
+// Fetches "this week" from Forex Factory's feed. An earlier version of
+// this also tried ff_calendar_nextweek.json for a "Next Week" filter —
+// removed because that URL was a guess (patterned off the confirmed-real
+// thisweek.json) and turned out not to work. Forex Factory only reliably
+// documents/serves the current week via this endpoint.
 const FF_URLS = [
   "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
-  "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
 ];
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min — comfortably under FF's rate limit even with bursty traffic
 
