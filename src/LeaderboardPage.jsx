@@ -32,7 +32,7 @@ export default function LeaderboardPage({ session, profile, onViewProfile, onGoT
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-[var(--text-muted)]">Ranked by net P&amp;L among traders who've opted in. Minimum 3 trades in the period.</p>
+        <p className="text-sm text-[var(--text-muted)]">Ranked by net P&amp;L among traders who've opted in.</p>
         <div className="flex items-center gap-1 bg-white/[0.03] border border-white/10 rounded-lg p-1 w-fit">
           {["week", "month"].map((p) => (
             <button key={p} onClick={() => setPeriod(p)}
