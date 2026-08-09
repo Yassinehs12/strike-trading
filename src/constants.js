@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle,
+  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle, Percent,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -48,6 +48,7 @@ export const NAV_GROUPS = [
     label: "Tools",
     items: [
       { id: "calculator", label: "Pips Calculator", icon: Calculator },
+      { id: "position-calculator", label: "Position Calculator", icon: Percent },
       { id: "risk-tools", label: "Risk of Ruin", icon: Gauge },
       { id: "correlation", label: "Correlation Checker", icon: Link2 },
     ],
