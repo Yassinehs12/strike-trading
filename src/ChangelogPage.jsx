@@ -14,6 +14,21 @@ import { usePageMeta } from "./lib/seo";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-08-10",
+    title: "Friends, a custom Economic Calendar, standalone Position Calculator, and cross-device checklist sync",
+    type: "feature",
+    items: [
+      "New Friends page — see your accepted friends with real-time online status, manage incoming friend requests, and message or remove a friend right from the list. Find it from your profile menu.",
+      "Economic Calendar rebuilt as a custom calendar sourced from Forex Factory — filter by High/Medium/Low/No Impact and currency, browse Yesterday/Today/Tomorrow/This Week, and see at a glance which events have already passed.",
+      "Position Calculator now has its own page under Tools — size a position by risk %, balance, and stop distance, with Long/Short, leverage, R:R take-profit targeting, a live trade preview, and a full stats breakdown (risk amount, pip value, pips at risk/target, est. margin, potential profit).",
+      "Pre-Market Checklist now syncs across devices — check it off on your phone, see it checked on your desktop. Still tracked per trading account.",
+      "Messages now shows an unread-count badge in the sidebar, and the Messages page defaults to showing only unread conversations, with a one-click toggle to see all.",
+      "Dashboard calendar is now more compact with a Today button and month-level PnL/day stats, plus a new Weekly Summary panel showing each week's performance at a glance.",
+      "Removed the 3-trade minimum from the Leaderboard — everyone who's opted in now shows up, regardless of trade count.",
+      "Fixed the notification panel and support chat overlapping other controls on mobile.",
+    ],
+  },
+  {
     date: "2026-07-30",
     title: "Correlation Checker added to Risk Tools",
     type: "feature",

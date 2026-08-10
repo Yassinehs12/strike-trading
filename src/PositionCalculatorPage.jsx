@@ -1,12 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { Target, Info, Copy, Check, ArrowUp, ArrowDown } from "lucide-react";
-import { PAIRS, num, fmt, clamp01to5 } from "./lib/positionCalc";
+import { Percent, ArrowUp, ArrowDown, Copy, Check, Info } from "lucide-react";
+import { Card } from "../components/ui/Primitives";
+import { PAIRS, num, fmt, clamp01to5 } from "../lib/positionCalc";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-[var(--border-primary)] focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] transition-colors";
-
-const Card = ({ className = "", children }) => (
-  <div className={`bg-white/[0.03] border border-white/10 backdrop-blur-sm rounded-xl ${className}`}>{children}</div>
-);
 
 const Field = ({ label, children, hint }) => (
   <label className="block mb-4">
@@ -16,18 +13,17 @@ const Field = ({ label, children, hint }) => (
   </label>
 );
 
-// A small labeled stat tile — used for the 6-card results summary.
-const StatCard = ({ label, value, sub, tone = "text-[var(--text-primary)]" }) => (
-  <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-4">
-    <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)] mb-1.5">{label}</div>
-    <div className={`text-xl font-bold tabular-nums ${tone}`}>{value}</div>
-    {sub && <div className="text-[11px] text-[var(--text-faint)] mt-1">{sub}</div>}
-  </div>
-);
-
 const QUICK_BALANCES = [5000, 10000, 25000, 50000];
 const QUICK_RISKS = [0.5, 1, 2, 3];
 const LEVERAGES = [2, 5, 10, 20, 30, 50, 100];
+
+const StatBox = ({ label, value, sub, color = "text-[var(--text-primary)]" }) => (
+  <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-4">
+    <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)] mb-1.5">{label}</div>
+    <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
+    {sub && <div className="text-[11px] text-[var(--text-faint)] mt-0.5">{sub}</div>}
+  </div>
+);
 
 export default function PositionCalculatorPage() {
   const [instrument, setInstrument] = useState("NDX100");
@@ -49,10 +45,7 @@ export default function PositionCalculatorPage() {
     const entryN = num(entry);
     const isLong = direction === "long";
 
-    const slPrice =
-      slMode === "pips"
-        ? entryN + (isLong ? -1 : 1) * num(slValue) * inst.pipSize
-        : num(slValue);
+    const slPrice = slMode === "pips" ? entryN + (isLong ? -1 : 1) * num(slValue) * inst.pipSize : num(slValue);
     const slPips = Math.abs(entryN - slPrice) / inst.pipSize;
 
     let tpPrice;
@@ -69,11 +62,12 @@ export default function PositionCalculatorPage() {
 
     const riskAmount = num(balance) * (num(riskPct) / 100);
     const lots = slPips > 0 ? riskAmount / (slPips * inst.pipValue) : 0;
+    const pipValueForLots = inst.pipValue * lots;
     const notional = entryN * lots * (inst.type === "Forex" ? 100000 : 1);
     const marginRequired = leverage > 0 ? notional / leverage : 0;
-    const potentialProfit = tpPips != null ? tpPips * inst.pipValue * lots : null;
+    const potentialProfit = tpPips != null ? tpPips * pipValueForLots : null;
 
-    return { slPrice, slPips, tpPrice, tpPips, rr, riskAmount, lots, marginRequired, potentialProfit };
+    return { slPrice, slPips, tpPrice, tpPips, rr, riskAmount, lots, pipValueForLots, marginRequired, potentialProfit };
   }, [inst, entry, direction, slMode, slValue, tpMode, tpValue, balance, riskPct, leverage]);
 
   const copyLots = () => {
@@ -87,14 +81,13 @@ export default function PositionCalculatorPage() {
   const riskPctNum = clamp01to5(num(riskPct));
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-5">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-5">
       <Card className="p-5 md:p-6">
         <div className="flex items-center gap-2 mb-1">
-          <Target size={16} className="text-[var(--accent)]" />
+          <Percent size={16} className="text-[var(--accent)]" />
           <h2 className="font-bold text-[var(--text-primary)] text-sm">Position Calculator</h2>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-[var(--text-faint)]">Beta</span>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">Calculate your optimal position size based on risk parameters — before you place the trade.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">Size a position to risk exactly what you intend, see your margin requirement, and preview the trade before you place it.</p>
 
         <div className="grid lg:grid-cols-2 gap-5 items-start">
           {/* Left: inputs */}
@@ -269,22 +262,19 @@ export default function PositionCalculatorPage() {
           </div>
         </div>
 
-        <p className="text-xs text-[var(--text-faint)] mt-5 flex items-start gap-1.5"><Info size={13} className="shrink-0 mt-0.5" /> Pip sizes and values are standard approximations. Always confirm against your broker's exact contract specs before sizing a real position.</p>
+        <p className="text-xs text-[var(--text-faint)] mt-5 flex items-start gap-1.5"><Info size={13} className="shrink-0 mt-0.5" /> Pip sizes/values are standard approximations. Always confirm against your broker's exact contract specs before sizing a real position.</p>
       </Card>
 
-      {/* 6-stat results summary */}
+      {/* Stats grid */}
       {calc && (
-        <Card className="p-5 md:p-6">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--text-faint)] mb-4">Summary</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <StatCard label="Risk Amount" value={`$${fmt(calc.riskAmount)}`} sub={`${fmt(riskPctNum, 1)}% of balance`} />
-            <StatCard label="Pip Value" value={`$${fmt(inst.pipValue)}`} sub="per lot per pip" />
-            <StatCard label="Pips at Risk" value={fmt(calc.slPips, 1)} sub="to stop loss" tone="text-rose-400" />
-            <StatCard label="Pips to Target" value={calc.tpPips != null ? fmt(calc.tpPips, 1) : "—"} sub="to take profit" tone={calc.tpPips != null ? "text-emerald-400" : undefined} />
-            <StatCard label="Est. Margin" value={`$${fmt(calc.marginRequired)}`} sub={`at 1:${leverage} leverage`} />
-            <StatCard label="Potential Profit" value={calc.potentialProfit != null ? `$${fmt(calc.potentialProfit)}` : "—"} sub="if TP hit" tone={calc.potentialProfit != null ? "text-emerald-400" : undefined} />
-          </div>
-        </Card>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <StatBox label="Risk Amount" value={`$${fmt(calc.riskAmount)}`} sub={`${fmt(riskPctNum, 1)}% of balance`} />
+          <StatBox label="Pip Value" value={`$${fmt(calc.pipValueForLots)}`} sub="per lot per pip" />
+          <StatBox label="Pips at Risk" value={fmt(calc.slPips, 1)} sub="to stop loss" color="text-rose-400" />
+          <StatBox label="Pips to Target" value={calc.tpPips != null ? fmt(calc.tpPips, 1) : "—"} sub="to take profit" color="text-emerald-400" />
+          <StatBox label="Est. Margin" value={`$${fmt(calc.marginRequired)}`} sub={`at 1:${leverage} leverage`} />
+          <StatBox label="Potential Profit" value={calc.potentialProfit != null ? `$${fmt(calc.potentialProfit)}` : "—"} sub="if TP hit" color="text-emerald-400" />
+        </div>
       )}
     </div>
   );
