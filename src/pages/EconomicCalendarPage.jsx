@@ -53,7 +53,13 @@ function normalizeImpact(raw) {
 }
 
 export const EconomicCalendarPage = () => {
-  const today = useMemo(() => new Date(), []);
+  const [now, setNow] = useState(new Date());
+  // "today" for range-chip math must track the same clock as `now` — two
+  // separate date sources that don't both tick was the actual bug here:
+  // "today" used to be captured once at mount and never updated, so
+  // Today/Yesterday/Tomorrow/This Week would silently go stale for anyone
+  // who left the tab open across midnight.
+  const today = now;
   const [selectedRange, setSelectedRange] = useState("Today");
 
   const [impacts, setImpacts] = useState(() => {
@@ -82,38 +88,57 @@ export const EconomicCalendarPage = () => {
   const [failedUrls, setFailedUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    setLoading(true);
+  const loadEvents = () => {
     fetchEconomicEvents()
       .then(({ events, failedUrls }) => { setRawEvents(events); setFailedUrls(failedUrls); })
       .catch((err) => setError(err.message || "Failed to load the economic calendar."))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadEvents();
+    // Refetch periodically so newly-published data (e.g. an "actual" value
+    // appearing shortly after a release) shows up without a manual reload.
+    // The edge function's own cache means this doesn't hit Forex Factory
+    // any more often than every ~10 minutes regardless of this interval.
+    const id = setInterval(loadEvents, 5 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
 
 
   // Normalize Forex Factory's raw event shape once, rather than repeating
-  // the same field access/parsing on every filter re-run.
-  const events = useMemo(
-    () =>
-      rawEvents.map((e, i) => ({
-        id: `${e.country}-${e.date}-${e.title}-${i}`,
+  // the same field access/parsing on every filter re-run. Also dedupes by
+  // content (country+date+title) — Forex Factory's own feed occasionally
+  // repeats a row (e.g. across a revision), and this collapses that rather
+  // than rendering the same event twice.
+  const events = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const e of rawEvents) {
+      const key = `${e.country}|${e.date}|${e.title}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        id: key,
         title: e.title || "Untitled event",
         country: (e.country || "").toUpperCase(),
         date: new Date(e.date),
         impact: normalizeImpact(e.impact),
         forecast: e.forecast || "",
         previous: e.previous || "",
-      })),
-    [rawEvents]
-  );
+        actual: e.actual || "",
+      });
+    }
+    return out;
+  }, [rawEvents]);
 
   const dayEvents = useMemo(() => {
     const [start, end] = rangeBounds(selectedRange, today);
@@ -206,8 +231,8 @@ export const EconomicCalendarPage = () => {
 
         {/* Table */}
         <div className="rounded-lg overflow-hidden border border-white/10">
-          <div className="hidden sm:grid grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2 bg-white/[0.03] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-            <span>{selectedRange === "This Week" ? "Date / Time" : "Time"}</span><span>Currency</span><span>Event</span><span>Previous</span><span>Forecast</span><span></span>
+          <div className="hidden sm:grid grid-cols-[80px_100px_1fr_90px_90px_90px_110px] gap-2 px-3 py-2 bg-white/[0.03] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
+            <span>{selectedRange === "This Week" ? "Date / Time" : "Time"}</span><span>Currency</span><span>Event</span><span>Previous</span><span>Forecast</span><span>Actual</span><span></span>
           </div>
           {loading ? (
             <div className="p-8 space-y-2">
@@ -219,7 +244,7 @@ export const EconomicCalendarPage = () => {
             dayEvents.map((e) => {
               const passed = e.date <= now;
               return (
-                <div key={e.id} className={`grid grid-cols-2 sm:grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2.5 border-t border-white/5 border-l-2 ${IMPACT_ROW_BORDER[e.impact] || "border-l-transparent"} items-center`}>
+                <div key={e.id} className={`grid grid-cols-2 sm:grid-cols-[80px_100px_1fr_90px_90px_90px_110px] gap-2 px-3 py-2.5 border-t border-white/5 border-l-2 ${IMPACT_ROW_BORDER[e.impact] || "border-l-transparent"} items-center`}>
                   <span className="text-xs text-[var(--text-secondary)] tj-mono">
                     {selectedRange === "This Week" ? `${fmtDate(e.date)}, ${fmtTime(e.date)}` : fmtTime(e.date)}
                   </span>
@@ -227,6 +252,7 @@ export const EconomicCalendarPage = () => {
                   <span className="text-sm text-[var(--text-primary)] col-span-2 sm:col-span-1">{e.title}</span>
                   <span className="text-xs text-[var(--text-muted)] tj-mono">{e.previous || "—"}</span>
                   <span className="text-xs text-[var(--text-muted)] tj-mono">{e.forecast || "—"}</span>
+                  <span className={`text-xs tj-mono font-semibold ${e.actual ? "text-[var(--text-primary)]" : "text-[var(--text-faint)]"}`}>{e.actual || "—"}</span>
                   <span className="flex justify-start sm:justify-end">
                     {passed ? (
                       <span className="text-[10px] font-semibold px-2 py-1 rounded-md bg-white/[0.06] text-[var(--text-faint)]">Event Passed</span>
