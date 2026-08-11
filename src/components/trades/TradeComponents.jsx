@@ -8,6 +8,15 @@ import { ACCOUNT_TYPES, CHECKLIST_ITEMS, EMOTIONS, SESSIONS, SETUP_GRADES, input
 import { PROP_FIRM_PRESETS, computeChallengeStats } from "../../lib/tradeCalculations";
 import { fmtUSD, fmtUSD2, todayISO } from "../../lib/format";
 
+// Formats a trade's outcome as an R-multiple (reward relative to what was
+// risked) — e.g. risked $100, made $250 -> "2.5". Sign matches the trade's
+// actual direction of profit/loss.
+const fmtR = (pnl, riskAmount) => {
+  if (!riskAmount || riskAmount <= 0) return "—";
+  const r = pnl / riskAmount;
+  return `${r >= 0 ? "+" : ""}${r.toFixed(2)}`;
+};
+
 export const ChecklistToggles = ({ checklist, onChange }) => {
   const c = checklist || { setupConfirmed: false, riskSized: false, newsChecked: false };
   const checkedCount = CHECKLIST_ITEMS.filter((i) => c[i.key]).length;
@@ -164,7 +173,7 @@ export const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
 
 export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
-  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -194,6 +203,7 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
       challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshot: form.screenshot,
+      riskAmount: form.riskAmount === "" ? null : Number(form.riskAmount),
       checklist: form.checklist,
     });
     setForm(blank);
@@ -228,6 +238,9 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
         <Field label="Exit Price" error={errors.exit}><input type="number" step="any" className={inputCls} value={form.exit} onChange={(e) => set("exit", e.target.value)} /></Field>
         <Field label="Lot Size / Contracts" error={errors.lots}><input type="number" step="any" className={inputCls} value={form.lots} onChange={(e) => set("lots", e.target.value)} /></Field>
         <Field label="P&L ($)" error={errors.pnl}><input type="number" step="any" className={inputCls} placeholder="e.g. 240 or -85" value={form.pnl} onChange={(e) => set("pnl", e.target.value)} /></Field>
+        <Field label="Risk Amount ($)" hint={form.riskAmount && form.pnl !== "" ? `= ${fmtR(Number(form.pnl), Number(form.riskAmount))}R` : "How much you risked if the stop was hit"}>
+          <input type="number" step="any" className={inputCls} placeholder="e.g. 100" value={form.riskAmount} onChange={(e) => set("riskAmount", e.target.value)} />
+        </Field>
         <Field label="Fees / Commissions"><input type="number" step="any" className={inputCls} placeholder="0" value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
         <Field label="Setup / Strategy">
           <input className={inputCls} placeholder="e.g. Breakout, FVG, Trend Following — your own note" value={form.setup} onChange={(e) => set("setup", e.target.value)} />
@@ -360,7 +373,12 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
                 );
               })()}
             </div>
-            <span className={`tj-mono text-lg font-bold ${trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{trade.pnl >= 0 ? "+" : ""}{fmtUSD2(trade.pnl)}</span>
+            <div className="text-right">
+              <span className={`tj-mono text-lg font-bold ${trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{trade.pnl >= 0 ? "+" : ""}{fmtUSD2(trade.pnl)}</span>
+              {trade.riskAmount > 0 && (
+                <div className="text-xs text-[var(--text-faint)] tj-mono">risked {fmtUSD2(trade.riskAmount)} · {fmtR(trade.pnl, trade.riskAmount)}R</div>
+              )}
+            </div>
           </div>
 
           {trade.screenshot && <img src={trade.screenshot} alt="chart" className="w-full rounded-lg border border-white/10" />}
@@ -408,6 +426,7 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
             <Field label="Exit"><input type="number" step="any" className={inputCls} value={form.exit} onChange={(e) => set("exit", e.target.value)} /></Field>
             <Field label="Lots"><input type="number" step="any" className={inputCls} value={form.lots} onChange={(e) => set("lots", e.target.value)} /></Field>
             <Field label="P&L ($)"><input type="number" step="any" className={inputCls} value={form.pnl} onChange={(e) => set("pnl", e.target.value)} /></Field>
+            <Field label="Risk Amount ($)"><input type="number" step="any" className={inputCls} placeholder="e.g. 100" value={form.riskAmount ?? ""} onChange={(e) => set("riskAmount", e.target.value)} /></Field>
             <Field label="Fees"><input type="number" step="any" className={inputCls} value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
             <Field label="Status">
               <select className={inputCls} value={form.status} onChange={(e) => set("status", e.target.value)}><option>Win</option><option>Loss</option><option>BE</option></select>

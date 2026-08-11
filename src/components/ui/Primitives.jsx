@@ -237,11 +237,12 @@ export const Drawer = ({ open, onClose, title, children }) => {
 };
 
 
-export const Field = ({ label, error, children }) => (
+export const Field = ({ label, error, hint, children }) => (
   <div className="mb-4">
     <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5">{label}</label>
     {children}
     {error && <p className="text-xs text-rose-400 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
+    {!error && hint && <p className="text-xs text-[var(--text-faint)] mt-1">{hint}</p>}
   </div>
 );
 
