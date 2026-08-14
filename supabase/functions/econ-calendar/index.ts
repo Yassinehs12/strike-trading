@@ -25,7 +25,7 @@
 const FF_URLS = [
   "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
 ];
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min — comfortably under FF's rate limit even with bursty traffic
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 min — still under FF's 2-req/5-min limit (worst case ~1 req/3min per warm isolate), but cuts the delay before newly-published "actual" values show up
 
 const ALLOWED_ORIGINS = new Set([
   "https://strikejournal.com",

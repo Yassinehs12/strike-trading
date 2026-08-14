@@ -106,9 +106,11 @@ export const EconomicCalendarPage = () => {
     loadEvents();
     // Refetch periodically so newly-published data (e.g. an "actual" value
     // appearing shortly after a release) shows up without a manual reload.
-    // The edge function's own cache means this doesn't hit Forex Factory
-    // any more often than every ~10 minutes regardless of this interval.
-    const id = setInterval(loadEvents, 5 * 60 * 1000);
+    // The edge function's own cache (3 min) means this doesn't hit Forex
+    // Factory any more often than every ~3 minutes regardless of this
+    // interval, so polling every 2 min here keeps the client close behind
+    // the cache without adding real upstream load.
+    const id = setInterval(loadEvents, 2 * 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
