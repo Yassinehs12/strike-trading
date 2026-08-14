@@ -129,12 +129,12 @@ export const CalendarCard = ({ trades, onOpenTrade, compact = false, showWeeklyS
                         </span>
                         <span className="text-[10px] tj-mono text-[var(--text-primary)]/80 leading-tight">{info.pnl >= 0 ? "+$" : "-$"}{Math.abs(Math.round(info.pnl))}</span>
                       </>
-                    ) : !compact ? (
+                    ) : (
                       <>
-                        <span className="text-[9px] tj-mono text-[var(--text-faint)] leading-tight">0 Trade</span>
+                        <span className={`${compact ? "hidden sm:inline text-[9px]" : "text-[9px]"} tj-mono text-[var(--text-faint)] leading-tight`}>0 Trade</span>
                         <span className="text-[10px] tj-mono text-[var(--text-faint)] font-medium leading-tight">$0</span>
                       </>
-                    ) : null}
+                    )}
                   </button>
                 );
               })}
