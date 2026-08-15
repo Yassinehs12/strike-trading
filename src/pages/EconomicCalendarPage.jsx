@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Filter, CalendarClock } from "lucide-react";
 import { IMPACT_LEVELS, ECON_COUNTRIES } from "../constants";
 import { Card } from "../components/ui/Primitives";
+import { useTheme } from "../ThemeContext";
 
 // TradingView's economic calendar is a sandboxed iframe widget — the only
 // things we can control are the params it accepts (theme, importance
@@ -10,6 +11,7 @@ import { Card } from "../components/ui/Primitives";
 // was the whole reason a custom Forex-Factory-backed version existed for
 // a while. This is the simpler, TradingView-data version.
 export const EconomicCalendarPage = () => {
+  const { theme } = useTheme();
   const containerRef = useRef(null);
   const [impacts, setImpacts] = useState(["-1", "0", "1"]);
   const [countries, setCountries] = useState(ECON_COUNTRIES.map((c) => c.code));
@@ -32,7 +34,7 @@ export const EconomicCalendarPage = () => {
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-events.js";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      colorTheme: "dark",
+      colorTheme: theme === "light" ? "light" : "dark",
       isTransparent: true,
       width: "100%",
       height: "650",
@@ -41,7 +43,7 @@ export const EconomicCalendarPage = () => {
       countryFilter: countries.join(","),
     });
     containerRef.current.appendChild(script);
-  }, [impacts, countries]);
+  }, [impacts, countries, theme]);
 
   return (
     <div className="p-4 md:p-6">
