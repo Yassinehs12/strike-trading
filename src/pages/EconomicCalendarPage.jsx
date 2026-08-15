@@ -22,9 +22,17 @@ export const EconomicCalendarPage = () => {
   const allCountriesSelected = countries.length === ECON_COUNTRIES.length;
   const toggleAllCountries = () => setCountries(allCountriesSelected ? [] : ECON_COUNTRIES.map((c) => c.code));
 
+  // Recreating the widget by mutating containerRef's innerHTML in place
+  // raced with TradingView's own async script — if a newer effect run
+  // cleared the container before the script (still loading from a
+  // previous run) executed, it threw trying to query a container that no
+  // longer existed. Keying the container on the filter/theme state instead
+  // makes React fully unmount and remount the DOM node on change, so
+  // there's never a stale node for a late-arriving script to find.
+  const widgetKey = `${theme}-${impacts.join(",")}-${countries.join(",")}`;
+
   useEffect(() => {
     if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
 
     const widgetDiv = document.createElement("div");
     widgetDiv.className = "tradingview-widget-container__widget";
@@ -43,7 +51,7 @@ export const EconomicCalendarPage = () => {
       countryFilter: countries.join(","),
     });
     containerRef.current.appendChild(script);
-  }, [impacts, countries, theme]);
+  }, [widgetKey]);
 
   return (
     <div className="p-4 md:p-6">
@@ -90,7 +98,7 @@ export const EconomicCalendarPage = () => {
           </div>
         </div>
 
-        <div className="tradingview-widget-container" ref={containerRef} />
+        <div key={widgetKey} className="tradingview-widget-container" ref={containerRef} />
       </Card>
     </div>
   );
