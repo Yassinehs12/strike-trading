@@ -179,7 +179,7 @@ export const ChallengesPage = ({ challenges, trades, onCreate, onDelete, onMarkF
             <button onClick={() => setView("cards")} className={`p-2 ${view === "cards" ? "bg-[var(--bg-tertiary)] text-[var(--accent)]" : "text-[var(--text-muted)]"}`} title="Card view"><LayoutGrid size={15} /></button>
             <button onClick={() => setView("compare")} className={`p-2 ${view === "compare" ? "bg-[var(--bg-tertiary)] text-[var(--accent)]" : "text-[var(--text-muted)]"}`} title="Compare view"><Table2 size={15} /></button>
           </div>
-          <button onClick={() => setModalOpen(true)} className="flex items-center gap-1.5 bg-[var(--bg-secondary)] hover:bg-white text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95">
+          <button onClick={() => setModalOpen(true)} className="flex items-center gap-1.5 bg-[var(--accent)] hover:opacity-90 text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95">
             <Plus size={16} strokeWidth={2.5} /> New Challenge
           </button>
         </div>

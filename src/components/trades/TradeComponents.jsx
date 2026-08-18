@@ -399,7 +399,7 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
           </div>
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => setEditing(true)} className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--bg-secondary)] hover:bg-white text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
+            <button onClick={() => setEditing(true)} className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--accent)] hover:opacity-90 text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
               <Pencil size={14} /> Edit
             </button>
             <button onClick={() => onDelete(trade.id)} className="flex items-center justify-center gap-1.5 border border-rose-900 text-rose-400 hover:bg-rose-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition-all">
