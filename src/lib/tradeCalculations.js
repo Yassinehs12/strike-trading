@@ -2,6 +2,70 @@ import React from "react";
 import { TODAY } from "../lib/mockData";
 import { clamp, daysAgo } from "../lib/format";
 
+// Tracks progress climbing back from a drawdown, not just the raw
+// current-vs-peak gap. "Recovery %" is how far equity has come back from
+// the lowest point reached since the last equity high — 0% right at the
+// bottom of the drawdown, 100% back at a new high.
+export function computeDrawdownRecovery(trades) {
+  if (!trades.length) return { peak: 0, current: 0, troughSincePeak: 0, drawdownPct: 0, recoveryPct: 100, atNewHigh: true };
+
+  const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let equity = 0, peak = 0, troughSincePeak = 0;
+  for (const t of sorted) {
+    equity += t.pnl - t.fees;
+    if (equity > peak) {
+      peak = equity;
+      troughSincePeak = equity; // peak resets the trough tracker — a new high means no active drawdown
+    } else if (equity < troughSincePeak) {
+      troughSincePeak = equity;
+    }
+  }
+
+  const current = equity;
+  const atNewHigh = current >= peak;
+  const drawdownPct = peak > 0 ? ((peak - current) / peak) * 100 : 0;
+  const drawdownRange = peak - troughSincePeak;
+  const recoveryPct = atNewHigh || drawdownRange <= 0
+    ? 100
+    : clamp(((current - troughSincePeak) / drawdownRange) * 100, 0, 100);
+
+  return { peak, current, troughSincePeak, drawdownPct, recoveryPct, atNewHigh };
+}
+
+// Groups closed trades by their setup tag and computes per-setup win rate,
+// total/average P&L, and average R-multiple (only when risk amounts have
+// actually been logged for that setup — otherwise it's correctly omitted
+// rather than shown as a misleading 0).
+export function computeSetupPerformance(trades) {
+  const closed = trades.filter((t) => t.status === "Win" || t.status === "Loss" || t.status === "BE");
+  const groups = {};
+  for (const t of closed) {
+    const key = t.setup || "Untagged";
+    if (!groups[key]) groups[key] = { setup: key, trades: [] };
+    groups[key].trades.push(t);
+  }
+
+  return Object.values(groups)
+    .map((g) => {
+      const n = g.trades.length;
+      const wins = g.trades.filter((t) => t.status === "Win").length;
+      const netPnl = g.trades.reduce((s, t) => s + t.pnl - t.fees, 0);
+      const withRisk = g.trades.filter((t) => t.riskAmount > 0);
+      const avgR = withRisk.length > 0
+        ? withRisk.reduce((s, t) => s + (t.pnl / t.riskAmount), 0) / withRisk.length
+        : null;
+      return {
+        setup: g.setup,
+        count: n,
+        winRate: n > 0 ? (wins / n) * 100 : 0,
+        netPnl,
+        avgPnl: n > 0 ? netPnl / n : 0,
+        avgR,
+      };
+    })
+    .sort((a, b) => b.netPnl - a.netPnl);
+}
+
 export function computeKPIs(trades) {
   const total = trades.length;
   const wins = trades.filter((t) => t.status === "Win");

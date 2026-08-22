@@ -5,6 +5,8 @@ import {
   computeChallengeStats,
   computePaceProjection,
   equityCurve,
+  computeDrawdownRecovery,
+  computeSetupPerformance,
 } from "./tradeCalculations";
 
 // Minimal trade factory — only fills the fields these functions actually read,
@@ -175,6 +177,114 @@ describe("computePaceProjection", () => {
       tradingDaysCount: 3, netPnl: -500, targetBalance: 110000, currentBalance: 99500,
     };
     expect(computePaceProjection(stats)).toEqual({ avgDailyPnl: expect.any(Number), projectedDays: null });
+  });
+});
+
+describe("computeDrawdownRecovery", () => {
+  it("reports a new high with 100% recovery when there are no trades", () => {
+    const r = computeDrawdownRecovery([]);
+    expect(r.atNewHigh).toBe(true);
+    expect(r.recoveryPct).toBe(100);
+  });
+
+  it("reports a new high when equity only ever went up", () => {
+    const trades = [
+      trade({ pnl: 100, date: "2026-07-01" }),
+      trade({ pnl: 50, date: "2026-07-02" }),
+    ];
+    const r = computeDrawdownRecovery(trades);
+    expect(r.atNewHigh).toBe(true);
+    expect(r.current).toBe(150);
+    expect(r.peak).toBe(150);
+    expect(r.drawdownPct).toBe(0);
+  });
+
+  it("computes partial recovery progress between the trough and the prior peak", () => {
+    // Equity path: +1000 (peak) -> -500 (trough, equity=500) -> +250 (equity=750)
+    // Drawdown range = 1000-500 = 500. Recovered = 750-500 = 250. -> 50%.
+    const trades = [
+      trade({ pnl: 1000, date: "2026-07-01" }),
+      trade({ pnl: -500, date: "2026-07-02", status: "Loss" }),
+      trade({ pnl: 250, date: "2026-07-03" }),
+    ];
+    const r = computeDrawdownRecovery(trades);
+    expect(r.atNewHigh).toBe(false);
+    expect(r.peak).toBe(1000);
+    expect(r.troughSincePeak).toBe(500);
+    expect(r.recoveryPct).toBe(50);
+  });
+
+  it("reports 0% recovery right at the trough itself", () => {
+    const trades = [
+      trade({ pnl: 1000, date: "2026-07-01" }),
+      trade({ pnl: -500, date: "2026-07-02", status: "Loss" }),
+    ];
+    const r = computeDrawdownRecovery(trades);
+    expect(r.recoveryPct).toBe(0);
+  });
+
+  it("resets the trough tracker once a new equity high is reached", () => {
+    const trades = [
+      trade({ pnl: 1000, date: "2026-07-01" }),
+      trade({ pnl: -800, date: "2026-07-02", status: "Loss" }), // deep drawdown, equity=200
+      trade({ pnl: 900, date: "2026-07-03" }), // new high, equity=1100 -> trough resets
+      trade({ pnl: -100, date: "2026-07-04", status: "Loss" }), // equity=1000
+    ];
+    const r = computeDrawdownRecovery(trades);
+    // Trough should track the small dip from the NEW peak (1100), not the old deep one.
+    expect(r.peak).toBe(1100);
+    expect(r.troughSincePeak).toBe(1000);
+  });
+});
+
+describe("computeSetupPerformance", () => {
+  it("groups trades by setup and computes win rate and net P&L per group", () => {
+    const trades = [
+      trade({ setup: "Breakout", status: "Win", pnl: 100 }),
+      trade({ setup: "Breakout", status: "Win", pnl: 100 }),
+      trade({ setup: "Breakout", status: "Loss", pnl: -50 }),
+      trade({ setup: "Reversal", status: "Loss", pnl: -30 }),
+    ];
+    const result = computeSetupPerformance(trades);
+    const breakout = result.find((r) => r.setup === "Breakout");
+    expect(breakout.count).toBe(3);
+    expect(breakout.winRate).toBeCloseTo((2 / 3) * 100);
+    expect(breakout.netPnl).toBe(150);
+  });
+
+  it("sorts groups by net P&L descending", () => {
+    const trades = [
+      trade({ setup: "A", status: "Loss", pnl: -100 }),
+      trade({ setup: "B", status: "Win", pnl: 200 }),
+    ];
+    const result = computeSetupPerformance(trades);
+    expect(result[0].setup).toBe("B");
+    expect(result[1].setup).toBe("A");
+  });
+
+  it("excludes open/pending trades from the grouping", () => {
+    const trades = [trade({ setup: "A", status: "Open" }), trade({ setup: "A", status: "Win", pnl: 50 })];
+    const result = computeSetupPerformance(trades);
+    expect(result[0].count).toBe(1);
+  });
+
+  it("labels trades with no setup tag as 'Untagged' rather than dropping them", () => {
+    const result = computeSetupPerformance([trade({ setup: "", status: "Win", pnl: 10 })]);
+    expect(result[0].setup).toBe("Untagged");
+  });
+
+  it("only computes avg R from trades that actually have a risk amount logged", () => {
+    const trades = [
+      trade({ setup: "A", status: "Win", pnl: 200, riskAmount: 100 }), // 2R
+      trade({ setup: "A", status: "Win", pnl: 50, riskAmount: null }), // no risk logged
+    ];
+    const result = computeSetupPerformance(trades);
+    expect(result[0].avgR).toBe(2);
+  });
+
+  it("returns null avgR for a setup where no trade has a risk amount logged", () => {
+    const result = computeSetupPerformance([trade({ setup: "A", status: "Win", pnl: 50 })]);
+    expect(result[0].avgR).toBeNull();
   });
 });
 

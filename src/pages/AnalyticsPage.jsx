@@ -3,11 +3,11 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  BarChart3, Percent, Target, Wallet, Flame, Award, Clock,
+  BarChart3, Percent, Target, Wallet, Flame, Award, Clock, TrendingDown, Layers,
 } from "lucide-react";
 import { fmtUSD2 } from "../lib/format";
 import { PIE_COLORS, SESSIONS } from "../constants";
-import { computeKPIs, computeStreaks } from "../lib/tradeCalculations";
+import { computeKPIs, computeStreaks, computeDrawdownRecovery, computeSetupPerformance } from "../lib/tradeCalculations";
 import { AccountsBar } from "../components/trades/TradeComponents";
 import { Card, CustomTooltip, EmptyState, KPICard } from "../components/ui/Primitives";
 
@@ -20,6 +20,8 @@ export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, 
 
   const kpis = computeKPIs(trades);
   const streaks = computeStreaks(trades);
+  const drawdown = computeDrawdownRecovery(trades);
+  const setupPerf = computeSetupPerformance(trades);
 
   const winLossData = useMemo(() => {
     const wins = trades.filter((t) => t.status === "Win").length;
@@ -88,6 +90,35 @@ export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, 
         </div>
       </Card>
 
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-4"><TrendingDown size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Drawdown Recovery</h3></div>
+        {drawdown.atNewHigh ? (
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+            <div>
+              <div className="text-sm font-semibold text-emerald-400">You're at a new equity high</div>
+              <div className="text-xs text-[var(--text-muted)] tj-mono">{fmtUSD2(drawdown.current)}</div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">
+                Down <span className="text-rose-400 font-semibold">{drawdown.drawdownPct.toFixed(1)}%</span> from peak of <span className="tj-mono text-[var(--text-secondary)]">{fmtUSD2(drawdown.peak)}</span>
+              </span>
+              <span className="text-xs font-semibold text-[var(--text-primary)]">{drawdown.recoveryPct.toFixed(0)}% recovered</span>
+            </div>
+            <div className="h-2 rounded-full bg-[var(--bg-primary)] border border-white/10 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full transition-all" style={{ width: `${drawdown.recoveryPct}%` }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-[var(--text-faint)] mt-1">
+              <span>Trough: {fmtUSD2(drawdown.troughSincePeak)}</span>
+              <span>Current: {fmtUSD2(drawdown.current)}</span>
+            </div>
+          </>
+        )}
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
         <Card className="p-4 md:p-5">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Win / Loss Ratio</h3>
@@ -141,6 +172,36 @@ export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, 
           </ResponsiveContainer>
         </Card>
       </div>
+
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-4"><Layers size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Setup Performance</h3></div>
+        <div className="overflow-x-auto tj-scrollbar">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)] border-b border-white/10">
+                <th className="pb-2 pr-4">Setup</th>
+                <th className="pb-2 pr-4 text-right">Trades</th>
+                <th className="pb-2 pr-4 text-right">Win Rate</th>
+                <th className="pb-2 pr-4 text-right">Avg R</th>
+                <th className="pb-2 text-right">Net P&L</th>
+              </tr>
+            </thead>
+            <tbody>
+              {setupPerf.map((s) => (
+                <tr key={s.setup} className="border-b border-white/5 last:border-0">
+                  <td className="py-2.5 pr-4 font-medium text-[var(--text-primary)]">{s.setup}</td>
+                  <td className="py-2.5 pr-4 text-right text-[var(--text-secondary)] tj-mono">{s.count}</td>
+                  <td className="py-2.5 pr-4 text-right tj-mono">
+                    <span className={s.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}>{s.winRate.toFixed(0)}%</span>
+                  </td>
+                  <td className="py-2.5 pr-4 text-right tj-mono text-[var(--text-secondary)]">{s.avgR != null ? `${s.avgR >= 0 ? "+" : ""}${s.avgR.toFixed(2)}R` : "—"}</td>
+                  <td className={`py-2.5 text-right tj-mono font-semibold ${s.netPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{s.netPnl >= 0 ? "+" : ""}{fmtUSD2(s.netPnl)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 };

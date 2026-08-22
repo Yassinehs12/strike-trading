@@ -173,18 +173,22 @@ export const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
 
 export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
-  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshot: null, pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshots: [], pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => set("screenshot", reader.result);
-    reader.readAsDataURL(file);
+  const MAX_IMAGES = 6;
+  const handleFiles = (e) => {
+    const files = Array.from(e.target.files || []).slice(0, MAX_IMAGES - form.screenshots.length);
+    e.target.value = ""; // allow re-selecting the same file(s) later
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => setForm((f) => (f.screenshots.length >= MAX_IMAGES ? f : { ...f, screenshots: [...f.screenshots, reader.result] }));
+      reader.readAsDataURL(file);
+    });
   };
+  const removeImage = (i) => setForm((f) => ({ ...f, screenshots: f.screenshots.filter((_, idx) => idx !== i) }));
 
   const submit = () => {
     const errs = {};
@@ -202,7 +206,7 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
       id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
-      challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshot: form.screenshot,
+      challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshots: form.screenshots,
       riskAmount: form.riskAmount === "" ? null : Number(form.riskAmount),
       checklist: form.checklist,
     });
@@ -275,12 +279,26 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
-      <Field label="Chart Screenshot (optional)">
-        <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
-          <Upload size={14} /> {form.screenshot ? "Replace image" : "Upload chart screenshot"}
-          <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
-        </label>
-        {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-white/10 max-h-32 object-cover" />}
+      <Field label={`Chart Screenshots (optional, up to ${MAX_IMAGES})`}>
+        {form.screenshots.length < MAX_IMAGES && (
+          <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
+            <Upload size={14} /> {form.screenshots.length > 0 ? "Add another image" : "Upload chart screenshots"}
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+          </label>
+        )}
+        {form.screenshots.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            {form.screenshots.map((src, i) => (
+              <div key={i} className="relative group">
+                <img src={src} alt={`preview ${i + 1}`} className="rounded-lg border border-white/10 h-20 w-full object-cover" />
+                <button type="button" onClick={() => removeImage(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </Field>
       <Field label="Emotion Behind the Trade">
         <div className="flex flex-wrap gap-2">
@@ -308,7 +326,19 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
 
 
 export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile, addToast }) => {
-  const [form, setForm] = useState(trade);
+  const [form, setForm] = useState(() => ({
+    ...trade,
+    // Older trades only have a singular `screenshot` field, not the
+    // `screenshots` array — fold it in here so it still shows up as an
+    // editable/removable image instead of silently vanishing from the
+    // edit form the first time someone opens it. `trade` can be null
+    // here (this component renders even when nothing is selected, with
+    // the Drawer wrapper controlling actual visibility), so every access
+    // below must be optional-chained rather than assuming trade exists.
+    screenshots: trade?.screenshots && trade.screenshots.length > 0
+      ? trade.screenshots
+      : trade?.screenshot ? [trade.screenshot] : [],
+  }));
   const [editing, setEditing] = useState(false);
   const [submittingSpotlight, setSubmittingSpotlight] = useState(false);
   useEffect(() => {
@@ -332,13 +362,21 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
     }
   };
 
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => set("screenshot", reader.result);
-    reader.readAsDataURL(file);
+  const MAX_IMAGES = 6;
+  const handleFiles = (e) => {
+    const current = form.screenshots || [];
+    const files = Array.from(e.target.files || []).slice(0, MAX_IMAGES - current.length);
+    e.target.value = "";
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => setForm((f) => {
+        const list = f.screenshots || [];
+        return list.length >= MAX_IMAGES ? f : { ...f, screenshots: [...list, reader.result] };
+      });
+      reader.readAsDataURL(file);
+    });
   };
+  const removeImage = (i) => setForm((f) => ({ ...f, screenshots: (f.screenshots || []).filter((_, idx) => idx !== i) }));
 
   const save = () => {
     const entry = Number(form.entry), exit = Number(form.exit), lots = Number(form.lots);
@@ -381,7 +419,13 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
             </div>
           </div>
 
-          {trade.screenshot && <img src={trade.screenshot} alt="chart" className="w-full rounded-lg border border-white/10" />}
+          {(trade.screenshots && trade.screenshots.length > 0) ? (
+            <div className={`grid gap-2 ${trade.screenshots.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+              {trade.screenshots.map((src, i) => (
+                <img key={i} src={src} alt={`chart ${i + 1}`} className="w-full rounded-lg border border-white/10 object-cover" />
+              ))}
+            </div>
+          ) : trade.screenshot && <img src={trade.screenshot} alt="chart" className="w-full rounded-lg border border-white/10" />}
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[["Entry", trade.entry], ["Exit", trade.exit], ["Lots", trade.lots], ["Fees", fmtUSD2(trade.fees)],
@@ -458,12 +502,26 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
           <Field label="Pre-Trade Checklist">
             <ChecklistToggles checklist={form.checklist} onChange={(c) => set("checklist", c)} />
           </Field>
-          <Field label="Chart Screenshot">
-            <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
-              <ImageIcon size={14} /> {form.screenshot ? "Replace image" : "Upload chart screenshot"}
-              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
-            </label>
-            {form.screenshot && <img src={form.screenshot} alt="preview" className="mt-2 rounded-lg border border-white/10 max-h-32 object-cover" />}
+          <Field label={`Chart Screenshots (optional, up to ${MAX_IMAGES})`}>
+            {(form.screenshots || []).length < MAX_IMAGES && (
+              <label className="flex items-center gap-2 justify-center border border-dashed border-[var(--border-secondary)] rounded-lg py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition-colors">
+                <ImageIcon size={14} /> {(form.screenshots || []).length > 0 ? "Add another image" : "Upload chart screenshots"}
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+              </label>
+            )}
+            {(form.screenshots || []).length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {form.screenshots.map((src, i) => (
+                  <div key={i} className="relative group">
+                    <img src={src} alt={`preview ${i + 1}`} className="rounded-lg border border-white/10 h-20 w-full object-cover" />
+                    <button type="button" onClick={() => removeImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </Field>
           <Field label="Notes"><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
           <div className="flex gap-2">
