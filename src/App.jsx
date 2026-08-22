@@ -28,6 +28,7 @@ import ReportCardPage from "./ReportCardPage";
 import { BlogListPage, BlogPostPage } from "./BlogPage";
 import CalculatorPage from "./CalculatorPage";
 import PositionCalculatorPage from "./pages/PositionCalculatorPage";
+import PositionSizeCalculatorPublic from "./pages/PositionSizeCalculatorPublic";
 import RiskToolsPage from "./RiskToolsPage";
 import CorrelationPage from "./CorrelationPage";
 import ForumPage from "./ForumPage";
@@ -93,6 +94,7 @@ export default function App() {
     if (raw === "changelog") return "changelog";
     if (raw === "blog") return "blog";
     if (raw === "pricing") return "pricing";
+    if (raw === "tools/position-size-calculator") return "position-size-calculator";
     if (raw.startsWith("blog/")) return "blog-post";
     if (raw.startsWith("u/")) return "report-card";
     return null;
@@ -386,6 +388,7 @@ export default function App() {
   if (legalPage === "changelog") return <ChangelogPage />;
   if (legalPage === "pricing") return <PricingPage />;
   if (legalPage === "blog") return <BlogListPage />;
+  if (legalPage === "position-size-calculator") return <PositionSizeCalculatorPublic />;
   if (legalPage === "blog-post") {
     const slug = window.location.pathname.replace(/^\/?blog\//, "").split(/[/?#]/)[0];
     return <BlogPostPage slug={decodeURIComponent(slug)} />;

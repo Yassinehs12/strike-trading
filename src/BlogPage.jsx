@@ -66,6 +66,7 @@ export const POSTS = [
       { type: "quote", text: "Your stop loss should be where your trade idea is wrong — not where your position size happens to run out of room." },
       { type: "h2", text: "Do the math before you're in the trade" },
       { type: "p", text: "The moment you're already in a trade is the worst possible time to be doing arithmetic under pressure. Calculating position size, risk exposure, and R:R before you place the order — not after — is the difference between a plan and an improvisation." },
+      { type: "cta", text: "Try the free position size calculator", href: "/tools/position-size-calculator" },
     ],
   },
   {
@@ -280,6 +281,12 @@ const Block = ({ block }) => {
         <blockquote className="border-l-2 border-[var(--accent)] pl-4 py-1 my-5 text-[var(--text-primary)] italic text-[15px] leading-relaxed">
           {block.text}
         </blockquote>
+      );
+    case "cta":
+      return (
+        <a href={block.href} className="block my-6 rounded-xl border border-[var(--border-primary)] px-4 py-3 text-sm font-semibold text-[var(--accent)] hover:underline" style={{ backgroundColor: "var(--card-bg)" }}>
+          {block.text} →
+        </a>
       );
     default:
       return <p className="text-sm text-[var(--text-tertiary)] leading-relaxed mb-4">{block.text}</p>;
