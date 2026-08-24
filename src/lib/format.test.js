@@ -37,19 +37,26 @@ describe("clamp", () => {
 });
 
 describe("daysAgo", () => {
-  // TODAY is a fixed constant (2026-07-10) from lib/mockData, not the real
-  // current date, so this is fully deterministic regardless of when the
-  // test suite actually runs.
-  it("returns 0 for TODAY itself", () => {
-    expect(daysAgo("2026-07-10")).toBe(0);
+  // Pass an explicit referenceDate so these stay deterministic regardless
+  // of when the suite actually runs — daysAgo defaults to the real
+  // current date in production.
+  const REF = new Date("2026-07-10");
+
+  it("returns 0 for the reference date itself", () => {
+    expect(daysAgo("2026-07-10", REF)).toBe(0);
   });
 
-  it("returns a positive count for a date before TODAY", () => {
-    expect(daysAgo("2026-07-01")).toBe(9);
+  it("returns a positive count for a date before the reference date", () => {
+    expect(daysAgo("2026-07-01", REF)).toBe(9);
   });
 
-  it("returns a negative count for a date after TODAY", () => {
-    expect(daysAgo("2026-07-15")).toBe(-5);
+  it("returns a negative count for a date after the reference date", () => {
+    expect(daysAgo("2026-07-15", REF)).toBe(-5);
+  });
+
+  it("defaults to the real current date when no referenceDate is passed", () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    expect(daysAgo(yesterday)).toBe(1);
   });
 });
 

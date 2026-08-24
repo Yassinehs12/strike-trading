@@ -1,5 +1,4 @@
 import React from "react";
-import { TODAY } from "../lib/mockData";
 import { clamp, daysAgo } from "../lib/format";
 
 // Tracks progress climbing back from a drawdown, not just the raw
@@ -128,7 +127,7 @@ export function computeChallengeStats(challenge, allTrades) {
   const tradingDaysCount = Object.keys(byDay).length;
   const minDaysMet = tradingDaysCount >= challenge.minTradingDays;
 
-  const daysActive = Math.floor((TODAY - new Date(challenge.startDate)) / 86400000);
+  const daysActive = Math.floor((new Date() - new Date(challenge.startDate)) / 86400000);
 
   let status = "In Progress";
   if (totalLossBreached || dailyLossBreached) status = "Failed";
@@ -316,7 +315,7 @@ export function computePaceProjection(stats) {
   if (avgDailyPnl <= 0 || stats.tradingDaysCount === 0) return { avgDailyPnl, projectedDays: null };
   const remaining = stats.targetBalance - stats.currentBalance;
   const projectedDays = Math.max(1, Math.ceil(remaining / avgDailyPnl));
-  const projectedDate = new Date(TODAY.getTime() + projectedDays * 86400000);
+  const projectedDate = new Date(Date.now() + projectedDays * 86400000);
   return { avgDailyPnl, projectedDays, projectedDate };
 }
 

@@ -1,5 +1,4 @@
 import React from "react";
-import { TODAY } from "../lib/mockData";
 
 export const todayISO = () => {
   const d = new Date();
@@ -18,7 +17,12 @@ export const fmtUSD2 = (n) => n.toLocaleString("en-US", { style: "currency", cur
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 
-export const daysAgo = (dateStr) => Math.floor((TODAY - new Date(dateStr)) / 86400000);
+// `referenceDate` defaults to the real current date/time — never hardcode
+// this to a fixed date, or every "days since X" stat in the app (streaks,
+// challenge days active, projected completion date) silently drifts wrong
+// as real time passes beyond that fixed date. Tests pass an explicit
+// referenceDate to stay deterministic instead.
+export const daysAgo = (dateStr, referenceDate = new Date()) => Math.floor((referenceDate - new Date(dateStr)) / 86400000);
 
 
 export function isoWeekKey(d = new Date()) {
