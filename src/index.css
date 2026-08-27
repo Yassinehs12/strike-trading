@@ -7,47 +7,53 @@ html, body, #root {
 }
 
 /* ============================================================
-   BLACK / WHITE THEME VARIABLES
-   Default (no class) = black theme. .light on <html> = white theme.
+   THEME VARIABLES
+   Default (no class) = dark theme. .light on <html> = light theme.
+   Accent (#076ef9) is sampled directly from the logo mark so the UI
+   reads as one designed system rather than brand mark + generic
+   Tailwind blue. Neutrals carry a faint cool undertone (not flat
+   gray) for the same reason.
    ============================================================ */
 :root {
-  --bg-primary: #0a0a0c;
-  --bg-secondary: #131316;
-  --bg-tertiary: #1c1c20;
-  --bg-quaternary: #2a2a2f;
-  --text-primary: #f4f4f5;
-  --text-secondary: #d4d4d8;
-  --text-tertiary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-faint: #52525b;
-  --text-inverse: #09090b;
-  --border-primary: #232328;
-  --border-secondary: #35353c;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --card-bg: rgba(255, 255, 255, 0.035);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --card-shadow: none;
+  --bg-primary: #07080b;
+  --bg-secondary: #0e1015;
+  --bg-tertiary: #171a21;
+  --bg-quaternary: #232733;
+  --text-primary: #f4f5f7;
+  --text-secondary: #d3d6dd;
+  --text-tertiary: #9ba0ad;
+  --text-muted: #6b7182;
+  --text-faint: #4b5061;
+  --text-inverse: #07080b;
+  --border-primary: #1d212b;
+  --border-secondary: #2e3341;
+  --accent: #076ef9;
+  --accent-hover: #3b8bfa;
+  --accent-soft: rgba(7, 110, 249, 0.12);
+  --card-bg: rgba(255, 255, 255, 0.045);
+  --card-border: rgba(255, 255, 255, 0.09);
+  --card-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 14px 28px -18px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.45);
 }
 
 html.light {
-  --bg-primary: #f8fafc;
+  --bg-primary: #f7f8fa;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --bg-quaternary: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #1e293b;
-  --text-tertiary: #475569;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  --bg-tertiary: #eef1f5;
+  --bg-quaternary: #e1e5ec;
+  --text-primary: #0c0e14;
+  --text-secondary: #1c2029;
+  --text-tertiary: #464c5c;
+  --text-muted: #656b7d;
+  --text-faint: #97a0b4;
   --text-inverse: #ffffff;
-  --border-primary: #e2e8f0;
-  --border-secondary: #cbd5e1;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --border-primary: #e4e7ed;
+  --border-secondary: #cdd2dc;
+  --accent: #0b5cd1;
+  --accent-hover: #0949a8;
+  --accent-soft: rgba(11, 92, 209, 0.08);
   --card-bg: #ffffff;
-  --card-border: #e2e8f0;
-  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --card-border: #e4e7ed;
+  --card-shadow: 0 1px 2px rgba(12, 14, 20, 0.04), 0 6px 16px -8px rgba(12, 14, 20, 0.08);
 }
 
 html.light body {
