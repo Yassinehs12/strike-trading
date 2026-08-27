@@ -24,9 +24,10 @@ const LandingStyle = () => (
     .lp-display { font-family: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.02em; }
     .lp-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
-    /* Chart-grid backdrop — graph-paper lines that fade toward the edges,
-       standing in for the literal glow-blob. Uses theme border color so it
-       adapts automatically between the light and dark variants. */
+    /* Signature texture: a precise hairline chart-paper grid, faded toward
+       the edges. No colored glow layered on top — the ticker tape above
+       (TickerTape/lp-ticker-track) and this grid are the page's visual
+       identity, not an ambient light effect. */
     .lp-chart-grid {
       background-image:
         linear-gradient(to right, var(--border-primary) 1px, transparent 1px),
@@ -36,15 +37,6 @@ const LandingStyle = () => (
       mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, black 30%, transparent 78%);
       opacity: 0.55;
     }
-    .lp-glow {
-      background: radial-gradient(50% 40% at 50% 0%, rgba(59,130,246,0.14) 0%, rgba(59,130,246,0) 70%);
-    }
-    .lp-card-glow {
-      background: radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0) 60%);
-    }
-
-    @keyframes lp-float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-    .lp-float { animation: lp-float 6s ease-in-out infinite; }
     @keyframes lp-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
     .lp-fade-up { animation: lp-fade-up 0.6s ease-out both; }
 
@@ -85,7 +77,7 @@ const LandingStyle = () => (
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .lp-float, .lp-fade-up, .lp-ticker-track { animation: none !important; }
+      .lp-fade-up, .lp-ticker-track { animation: none !important; }
       .lp-reveal { opacity: 1; transform: none; transition: none; }
     }
 
@@ -501,7 +493,7 @@ const DashboardMock = () => {
     { o: 20, c: 9, h: 22, l: 6 }, { o: 9, c: 15, h: 17, l: 5 }, { o: 15, c: 6, h: 18, l: 3 },
   ];
   return (
-    <div className="lp-float rounded-2xl border border-white/10 bg-[var(--bg-primary)]/80 shadow-2xl shadow-blue-500/10 p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="rounded-2xl border border-white/10 bg-[var(--bg-primary)]/80 p-4 md:p-6 max-w-3xl mx-auto" style={{ boxShadow: "var(--card-shadow)" }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" /><span className="w-2.5 h-2.5 rounded-full bg-[var(--bg-quaternary)]" />
@@ -564,11 +556,9 @@ const Hero = ({ onGetStarted }) => {
   return (
     <section className="relative overflow-hidden pt-14 md:pt-20 pb-20 md:pb-28 px-4">
       <div className="absolute inset-0 lp-chart-grid pointer-events-none" />
-      <div className="absolute inset-0 lp-glow pointer-events-none" />
       <div className="relative max-w-4xl mx-auto text-center">
-        <div className="lp-fade-up inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-          <span className="lp-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">Built for every kind of trader</span>
+        <div className="lp-fade-up lp-mono inline-flex items-center gap-2 text-[11px] uppercase tracking-wider text-[var(--text-faint)] mb-6">
+          <span className="w-4 h-px bg-[var(--border-secondary)]" /> Built for every kind of trader <span className="w-4 h-px bg-[var(--border-secondary)]" />
         </div>
         <h1 className="lp-fade-up lp-display text-4xl md:text-6xl font-bold text-[var(--text-primary)] leading-[1.08] mb-5" style={{ animationDelay: "0.05s" }}>
           The trading journal built for<br className="hidden md:block" /> <span className="text-[var(--accent)]">all types of traders.</span>
@@ -577,7 +567,7 @@ const Hero = ({ onGetStarted }) => {
           Journal every trade, track funding challenge rules in real time, see the analytics that explain your edge, and connect with a community of traders — whether you're funded, self-funded, or just getting started.
         </p>
         <div className="lp-fade-up flex flex-col sm:flex-row items-center justify-center gap-3 mb-3" style={{ animationDelay: "0.15s" }}>
-          <button onClick={onGetStarted} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center shadow-lg shadow-blue-500/20">
+          <button onClick={onGetStarted} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 w-full sm:w-auto justify-center">
             Start Free <ArrowRight size={16} />
           </button>
         </div>
@@ -714,7 +704,7 @@ const Features = () => (
         {FEATURES.map((f, i) => {
           const Icon = f.icon;
           return (
-            <Reveal key={i} delay={(i % 3) * 90} className="lp-card-glow group relative rounded-2xl border border-white/10 border-t-2 border-t-white/10 hover:border-t-[var(--accent)] p-6 transition-colors">
+            <Reveal key={i} delay={(i % 3) * 90} className="group relative rounded-2xl border border-white/10 border-t-2 border-t-white/10 hover:border-t-[var(--accent)] p-6 transition-colors" style={{ backgroundColor: "var(--card-bg)" }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
                   <Icon size={18} className="text-[var(--accent)]" />
@@ -755,11 +745,10 @@ const FinalCTA = ({ onGetStarted }) => (
   <section className="py-20 md:py-28 px-4 border-t border-white/5">
     <Reveal className="relative max-w-3xl mx-auto text-center rounded-3xl border border-white/10 p-10 md:p-14 overflow-hidden">
       <div className="absolute inset-0 lp-chart-grid pointer-events-none" />
-      <div className="absolute inset-0 lp-card-glow pointer-events-none" />
       <TrendingUp size={28} className="relative text-[var(--accent)] mx-auto mb-5" />
       <h2 className="relative lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Start journaling your next challenge today</h2>
       <p className="relative text-[var(--text-tertiary)] mb-8 max-w-md mx-auto">Free to start. Your trades, your rules monitor, your analytics — all in one dashboard.</p>
-      <button onClick={onGetStarted} className="relative inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">
+      <button onClick={onGetStarted} className="relative inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-inverse)] font-semibold px-6 py-3 rounded-xl transition-all active:scale-95">
         Get Started Free <ArrowRight size={16} />
       </button>
     </Reveal>
