@@ -36,10 +36,20 @@ export const NAV_GROUPS = [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "challenges", label: "Challenges", icon: ShieldCheck },
       { id: "journal", label: "Trade Journal", icon: BookOpen },
+    ],
+  },
+  {
+    label: "Review & Growth",
+    items: [
       { id: "journaling", label: "Weekly/Monthly Review", icon: BookMarked },
       { id: "notebook", label: "Notebook", icon: NotebookPen },
       { id: "analytics", label: "Analytics", icon: BarChart3 },
       { id: "goals", label: "Goals", icon: Target },
+    ],
+  },
+  {
+    label: "Market Data",
+    items: [
       { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
       { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
     ],
