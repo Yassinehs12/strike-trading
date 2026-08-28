@@ -14,6 +14,17 @@ import { usePageMeta } from "./lib/seo";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-08-28",
+    title: "Daily Market Plan",
+    type: "feature",
+    items: [
+      "New Daily Market Plan page — write your bias, key levels, setups, max loss, and what would keep you out of the market, before the session opens.",
+      "Section chips above the editor jump you straight to a heading and light up once you've written something under it, with a live fill-progress tracker (e.g. 3/5) and word count.",
+      "Past plans now build a timeline in the right rail — browse any previous day read-only, with a preview of what you wrote.",
+      "Today's plan autosaves as you type.",
+    ],
+  },
+  {
     date: "2026-08-10",
     title: "Friends, a custom Economic Calendar, standalone Position Calculator, and cross-device checklist sync",
     type: "feature",
