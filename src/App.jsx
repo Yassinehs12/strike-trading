@@ -241,6 +241,7 @@ export default function App() {
 
   const titles = {
     dashboard: ["Dashboard", "Your trading performance at a glance"],
+    "market-plan": ["Daily Market Plan", "Write your bias, key levels, and setups before the session starts"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
     journaling: ["Weekly & Monthly Review", "Reflect on your trading beyond the individual trade"],
