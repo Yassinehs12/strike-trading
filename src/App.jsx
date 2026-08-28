@@ -42,6 +42,7 @@ import LeaderboardPage from "./LeaderboardPage";
 import GoalsPage from "./GoalsPage";
 import JournalingPage from "./JournalingPage";
 import NotebookPage from "./NotebookPage";
+import MarketPlanPage from "./MarketPlanPage";
 import UserProfileModal from "./UserProfileModal";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
@@ -514,6 +515,7 @@ export default function App() {
                   </UpgradeGate>
                 )}
                 {active === "notebook" && <NotebookPage session={session} toast={addToast} />}
+                {active === "market-plan" && <MarketPlanPage session={session} toast={addToast} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}

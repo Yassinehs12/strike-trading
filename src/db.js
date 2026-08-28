@@ -1002,6 +1002,56 @@ export async function deleteNotebookNote(id) {
   if (error) throw error;
 }
 
+/* ---------- daily market plan ---------- */
+// One row per user per calendar day (unique on user_id + plan_date). The
+// page always asks for *today's* date specifically, so a new day simply
+// has no row yet — nothing needs to be reset or archived by the app.
+
+const marketPlanFromDB = (r) => ({
+  id: r.id,
+  planDate: r.plan_date,
+  content: r.content,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+export async function fetchMarketPlan(userId, dateStr) {
+  const { data, error } = await supabase
+    .from("market_plans")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("plan_date", dateStr)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? marketPlanFromDB(data) : null;
+}
+
+export async function fetchMarketPlanHistory(userId, limit = 30) {
+  const { data, error } = await supabase
+    .from("market_plans")
+    .select("*")
+    .eq("user_id", userId)
+    .order("plan_date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(marketPlanFromDB);
+}
+
+// Upsert on (user_id, plan_date) — first save of the day creates the row,
+// every save after that just updates the same one.
+export async function saveMarketPlan(userId, dateStr, content) {
+  const { data, error } = await supabase
+    .from("market_plans")
+    .upsert(
+      { user_id: userId, plan_date: dateStr, content, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,plan_date" }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return marketPlanFromDB(data);
+}
+
 /* ---------- personal goals ---------- */
 const goalFromDB = (r) => ({
   id: r.id,
