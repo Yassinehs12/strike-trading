@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus, Search, Pin, PinOff, Trash2, Loader2, NotebookPen, Tag, X, CheckCircle2,
-  Star, ChevronDown, MoreVertical,
+  Star, ChevronDown, MoreVertical, Save,
 } from "lucide-react";
 import { fetchNotebookNotes, createNotebookNote, updateNotebookNote, deleteNotebookNote } from "./db";
 
@@ -46,7 +46,14 @@ export default function NotebookPage({ session, toast }) {
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
-  const saveTimer = useRef(null);
+
+  // Title/content are edited locally and only written to the server when
+  // the person hits Save (or Cmd/Ctrl+S) — no autosave-while-typing.
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftContent, setDraftContent] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const draftRef = useRef({ title: "", content: "" });
+  useEffect(() => { draftRef.current = { title: draftTitle, content: draftContent }; }, [draftTitle, draftContent]);
 
   const notify = (msg, type) => (toast ? toast(msg, type) : undefined);
 
@@ -62,7 +69,6 @@ export default function NotebookPage({ session, toast }) {
   }, [session.user.id]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => () => clearTimeout(saveTimer.current), []);
 
   const allTags = useMemo(() => {
     const s = new Set();
@@ -81,25 +87,68 @@ export default function NotebookPage({ session, toast }) {
 
   const selected = notes.find((n) => n.id === selectedId) || null;
 
+  // Load the draft editor fields whenever the selected note changes
+  // (switching notes, creating one, or the initial load resolving).
+  useEffect(() => {
+    setDraftTitle(selected?.title ?? "");
+    setDraftContent(selected?.content ?? "");
+    setDirty(false);
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const confirmDiscardIfDirty = () => {
+    if (!dirty) return true;
+    return window.confirm("You have unsaved changes to this note. Discard them?");
+  };
+
   const patchLocal = (id, patch) => setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
 
-  const scheduleSave = (id, patch) => {
+  // Immediate save for discrete, non-typing actions (tags, color, pin) —
+  // these aren't the "autosave" behavior being removed, they're one-off
+  // clicks/selections that should persist right away, same as before.
+  const saveField = async (id, patch) => {
     patchLocal(id, patch);
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        const updated = await updateNotebookNote(id, patch);
-        setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
-        setSavedFlash(true);
-        setTimeout(() => setSavedFlash(false), 1500);
-      } catch (err) {
-        notify(err.message || "Failed to save note.", "error");
-      } finally {
-        setSaving(false);
-      }
-    }, 600);
+    setSaving(true);
+    try {
+      const updated = await updateNotebookNote(id, patch);
+      setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } catch (err) {
+      notify(err.message || "Failed to save note.", "error");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // Explicit save for the title/content editor — triggered by the Save
+  // button or Cmd/Ctrl+S, not by typing.
+  const saveNote = useCallback(async () => {
+    if (!selected) return;
+    const { title, content } = draftRef.current;
+    setSaving(true);
+    try {
+      const updated = await updateNotebookNote(selected.id, { title, content });
+      setNotes((prev) => prev.map((n) => (n.id === selected.id ? updated : n)));
+      setDirty(false);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } catch (err) {
+      notify(err.message || "Failed to save note.", "error");
+    } finally {
+      setSaving(false);
+    }
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (draftRef.current) saveNote();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveNote]);
 
   const addNote = async (template) => {
     try {
@@ -144,13 +193,13 @@ export default function NotebookPage({ session, toast }) {
     const tag = raw.trim().toLowerCase().replace(/\s+/g, "-");
     if (!tag || !selected) return;
     if ((selected.tags || []).includes(tag)) { setTagInput(""); return; }
-    scheduleSave(selected.id, { tags: [...(selected.tags || []), tag] });
+    saveField(selected.id, { tags: [...(selected.tags || []), tag] });
     setTagInput("");
   };
 
   const removeTagFromSelected = (tag) => {
     if (!selected) return;
-    scheduleSave(selected.id, { tags: (selected.tags || []).filter((t) => t !== tag) });
+    saveField(selected.id, { tags: (selected.tags || []).filter((t) => t !== tag) });
   };
 
   return (
@@ -171,14 +220,14 @@ export default function NotebookPage({ session, toast }) {
               </button>
               {showTemplates && (
                 <div className="absolute right-0 mt-1.5 w-56 bg-[var(--bg-secondary)] border border-white/10 rounded-lg shadow-xl z-20 py-1">
-                  <button onClick={() => addNote({ title: "Untitled note", content: "", tags: [] })}
+                  <button onClick={() => { if (confirmDiscardIfDirty()) addNote({ title: "Untitled note", content: "", tags: [] }); }}
                     className="w-full text-left px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/5 flex items-center gap-2">
                     <NotebookPen size={13} /> Blank note
                   </button>
                   <div className="border-t border-white/10 my-1" />
                   <div className="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wide text-[var(--text-faint)]">Templates</div>
                   {STARTER_TEMPLATES.map((t) => (
-                    <button key={t.title} onClick={() => addNote(t)}
+                    <button key={t.title} onClick={() => { if (confirmDiscardIfDirty()) addNote(t); }}
                       className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]">
                       {t.title}
                     </button>
@@ -218,7 +267,7 @@ export default function NotebookPage({ session, toast }) {
             const color = COLORS[n.color] || COLORS.default;
             const isActive = n.id === selectedId;
             return (
-              <button key={n.id} onClick={() => setSelectedId(n.id)}
+              <button key={n.id} onClick={() => { if (confirmDiscardIfDirty()) setSelectedId(n.id); }}
                 className={`w-full text-left px-3.5 py-3 border-b border-white/[0.06] transition-colors ${isActive ? "bg-[var(--accent)]/10" : "hover:bg-white/[0.03]"}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -250,7 +299,7 @@ export default function NotebookPage({ session, toast }) {
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
             <NotebookPen size={32} className="text-[var(--text-faint)] mb-3" />
             <p className="text-sm text-[var(--text-muted)] max-w-xs">Your notebook for playbooks, psychology notes, checklists, and anything worth remembering — separate from your trade log.</p>
-            <button onClick={() => addNote()} className="mt-4 flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)]">
+            <button onClick={() => { if (confirmDiscardIfDirty()) addNote(); }} className="mt-4 flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)]">
               <Plus size={14} /> New Note
             </button>
           </div>
@@ -259,11 +308,19 @@ export default function NotebookPage({ session, toast }) {
         {selected && (
           <>
             <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-white/10">
-              <input value={selected.title} onChange={(e) => scheduleSave(selected.id, { title: e.target.value })}
+              <input value={draftTitle} onChange={(e) => { setDraftTitle(e.target.value); setDirty(true); }}
                 placeholder="Untitled note"
                 className="flex-1 min-w-0 bg-transparent outline-none text-lg font-bold text-[var(--text-primary)] placeholder-zinc-600" />
               <div className="flex items-center gap-1.5 shrink-0">
-                {saving ? <Loader2 size={13} className="animate-spin text-[var(--text-faint)]" /> : savedFlash ? <CheckCircle2 size={14} className="text-emerald-400" /> : null}
+                <button onClick={saveNote} disabled={!dirty || saving} title="Save (Ctrl/Cmd+S)"
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                    dirty && !saving
+                      ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--text-inverse)] hover:opacity-90"
+                      : "border-white/10 text-[var(--text-faint)] cursor-default"
+                  }`}>
+                  {saving ? <Loader2 size={13} className="animate-spin" /> : savedFlash ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Save size={13} />}
+                  {saving ? "Saving…" : savedFlash ? "Saved" : "Save"}
+                </button>
                 <div className="relative">
                   <button onClick={() => setColorMenuOpen((v) => !v)} title="Color"
                     className={`w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center hover:border-white/20 transition-colors`}>
@@ -272,7 +329,7 @@ export default function NotebookPage({ session, toast }) {
                   {colorMenuOpen && (
                     <div className="absolute right-0 mt-1.5 bg-[var(--bg-secondary)] border border-white/10 rounded-lg shadow-xl z-20 p-2 flex gap-1.5">
                       {Object.entries(COLORS).map(([key, c]) => (
-                        <button key={key} title={c.label} onClick={() => { scheduleSave(selected.id, { color: key }); setColorMenuOpen(false); }}
+                        <button key={key} title={c.label} onClick={() => { saveField(selected.id, { color: key }); setColorMenuOpen(false); }}
                           className={`w-6 h-6 rounded-full ${c.dot} ${selected.color === key ? "ring-2 ring-offset-2 ring-offset-[var(--bg-secondary)] " + c.ring : ""}`} />
                       ))}
                     </div>
@@ -282,7 +339,7 @@ export default function NotebookPage({ session, toast }) {
                   className="w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center text-[var(--text-tertiary)] hover:text-amber-400 hover:border-amber-400/30 transition-colors">
                   {selected.pinned ? <Pin size={13} className="text-amber-400 fill-amber-400" /> : <PinOff size={13} />}
                 </button>
-                <button onClick={() => removeNote(selected)} title="Delete"
+                <button onClick={() => { if (confirmDiscardIfDirty()) removeNote(selected); }} title="Delete"
                   className="w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center text-[var(--text-tertiary)] hover:text-rose-400 hover:border-rose-400/30 transition-colors">
                   <Trash2 size={13} />
                 </button>
@@ -305,8 +362,8 @@ export default function NotebookPage({ session, toast }) {
             </div>
 
             <textarea
-              value={selected.content}
-              onChange={(e) => scheduleSave(selected.id, { content: e.target.value })}
+              value={draftContent}
+              onChange={(e) => { setDraftContent(e.target.value); setDirty(true); }}
               placeholder="Write freely — playbooks, mistakes to avoid, checklists, mindset notes, anything worth remembering..."
               className="flex-1 w-full bg-transparent outline-none resize-none px-5 py-4 text-sm leading-relaxed text-[var(--text-primary)] placeholder-zinc-600"
             />
