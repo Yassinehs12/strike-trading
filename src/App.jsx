@@ -13,7 +13,7 @@ import {
   ArrowUpDown, CheckCircle, Info, Pencil, Mail, Lock, LogOut, Eye, EyeOff, MessagesSquare, UserCircle, Bell, Check, ShieldAlert, Ban, Trophy, Star, BookMarked, Copy, Shield, KeyRound, Palette, BellRing, Calculator, Plug, Share2, RefreshCw, NotebookPen,
   AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
-import { supabase, setKeepSignedIn } from "./supabaseClient";
+import { supabase, setKeepSignedIn, hasPersistedSession } from "./supabaseClient";
 import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computePsychologyReport } from "./psychology";
@@ -63,7 +63,13 @@ import { MarketHeatmapsPage } from "./pages/MarketHeatmapsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 export default function App() {
-  const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+  // If there's no saved auth token at all, we already know for certain
+  // there's no session — skip the "checking" spinner and go straight to
+  // the logged-out landing page instead of blocking first paint on the
+  // getSession() round-trip. Only visitors with a persisted session (who
+  // are heading into the dashboard anyway) see the brief spinner while it
+  // gets validated.
+  const [session, setSession] = useState(() => (hasPersistedSession() ? undefined : null)); // undefined = checking, null = signed out
   const [profile, setProfile] = useState(undefined); // undefined = checking, null = needs onboarding
   const [authReady, setAuthReady] = useState(false); // true once the initial Supabase auth check has resolved at least once — guards against a transient null session flashing the onboarding screen
   const [profileFetchError, setProfileFetchError] = useState("");

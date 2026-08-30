@@ -42,3 +42,24 @@ const authStorage = {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { storage: authStorage, persistSession: true, autoRefreshToken: true },
 });
+
+// Synchronous, best-effort check for "is there a saved session at all" —
+// used purely to decide what to paint on the very first frame, before
+// supabase.auth.getSession() has had a chance to resolve. supabase-js
+// namespaces its storage key as `sb-<project-ref>-auth-token`, so rather
+// than parse the project ref out of the URL we just look for anything
+// matching that shape in either store. False positives/negatives here are
+// harmless — the real getSession() call is still the source of truth and
+// runs regardless; this only controls whether we show a spinner or jump
+// straight to the logged-out landing page while we wait for it.
+export const hasPersistedSession = () => {
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (key && /^sb-.*-auth-token$/.test(key)) return true;
+      }
+    }
+  } catch {}
+  return false;
+};
