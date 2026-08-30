@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Target, Plus, X, Trash2, Pencil, Loader2, CheckCircle2, TrendingUp, Percent, Hash, Flag, AlertTriangle } from "lucide-react";
 import { fetchGoals, insertGoal, updateGoalDB, deleteGoalDB } from "./db";
+import { todayISO } from "./lib/format";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
@@ -24,10 +25,9 @@ const METRICS = [
 
 const metricMeta = (id) => METRICS.find((m) => m.id === id) || METRICS[3];
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
+// Local start-date default uses the shared, timezone-safe todayISO() from
+// lib/format.js (imported above) instead of new Date().toISOString(),
+// which is off by one day in positive-UTC-offset timezones.
 // Computes { current, target, pct, isComplete } for a goal from the user's trades.
 function computeProgress(goal, trades) {
   const meta = metricMeta(goal.metric);

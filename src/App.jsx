@@ -61,6 +61,7 @@ import { EconomicCalendarPage } from "./pages/EconomicCalendarPage";
 import { JournalPage } from "./pages/JournalPage";
 import { MarketHeatmapsPage } from "./pages/MarketHeatmapsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { todayISO } from "./lib/format";
 
 export default function App() {
   // If there's no saved auth token at all, we already know for certain
@@ -382,7 +383,7 @@ export default function App() {
     if (s.payoutAmount <= 0) return;
     const updated = {
       ...c, lastPayoutNetProfit: s.netPnl,
-      payoutHistory: [...(c.payoutHistory || []), { date: new Date().toISOString().slice(0, 10), amount: +s.payoutAmount.toFixed(2), split: c.profitSplitPct }],
+      payoutHistory: [...(c.payoutHistory || []), { date: todayISO(), amount: +s.payoutAmount.toFixed(2), split: c.profitSplitPct }],
     };
     try {
       const saved = await updateChallengeDB(updated, session.user.id);

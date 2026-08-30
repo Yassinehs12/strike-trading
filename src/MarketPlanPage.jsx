@@ -4,7 +4,7 @@ import {
   Compass, MapPin, Crosshair, ShieldAlert, Ban, NotebookPen,
 } from "lucide-react";
 import { fetchMarketPlan, fetchMarketPlanHistory, saveMarketPlan } from "./db";
-import { todayISO } from "./lib/format";
+import { todayISO, shiftDateStr } from "./lib/format";
 import { EmptyState } from "./components/ui/Primitives";
 
 // Section labels mirror PRE_MARKET_CHECKLIST_ITEMS in constants.js so the
@@ -57,10 +57,8 @@ function wordCount(text) {
 
 function formatDateLabel(dateStr, todayStr) {
   if (dateStr === todayStr) return "Today";
+  if (dateStr === shiftDateStr(todayStr, -1)) return "Yesterday";
   const d = new Date(dateStr + "T00:00:00");
-  const yesterday = new Date(todayStr + "T00:00:00");
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (dateStr === yesterday.toISOString().slice(0, 10)) return "Yesterday";
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
@@ -149,16 +147,10 @@ export default function MarketPlanPage({ session, toast }) {
     ta.scrollTop = Math.max(0, (linesBefore - 3) * lineHeight);
   };
 
-  const goToPrevDay = () => {
-    const d = new Date(viewDate + "T00:00:00");
-    d.setDate(d.getDate() - 1);
-    setViewDate(d.toISOString().slice(0, 10));
-  };
+  const goToPrevDay = () => setViewDate(shiftDateStr(viewDate, -1));
   const goToNextDay = () => {
     if (viewDate >= today) return;
-    const d = new Date(viewDate + "T00:00:00");
-    d.setDate(d.getDate() + 1);
-    setViewDate(d.toISOString().slice(0, 10));
+    setViewDate(shiftDateStr(viewDate, 1));
   };
 
   return (
