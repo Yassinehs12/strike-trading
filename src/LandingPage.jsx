@@ -293,6 +293,7 @@ const NAV_LINKS = [
 
 const RESOURCES_LINKS = [
   { label: "How it works", href: "#how-it-works", desc: "See the workflow in a few steps." },
+  { label: "Position Size Calculator", href: "/tools/position-size-calculator", desc: "Free tool — risk-based position sizing for any account." },
   { label: "Blog", href: "/blog", desc: "Guides and ideas for serious traders." },
   { label: "Changelog", href: "/changelog", desc: "See what's new in Strike Journal." },
 ];

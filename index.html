@@ -34,6 +34,27 @@
     <meta name="twitter:image" content="https://www.strikejournal.com/og-image.png" />
     <title>Strike Journal — Trading Journal & Funding Challenge Tracker</title>
 
+    <!-- Organization schema: identifies Strike Journal as a real, single
+         brand entity (with a logo and verified social profiles) rather
+         than just a URL. This is part of what Google uses to decide
+         whether a site is established enough to earn sitelinks and a
+         knowledge-panel-style logo in search results — it's not something
+         a meta tag can force on its own, but it's a genuine input. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Strike Journal",
+      "url": "https://www.strikejournal.com/",
+      "logo": "https://www.strikejournal.com/logo-mark.png",
+      "sameAs": [
+        "https://x.com/strikejournals",
+        "https://www.instagram.com/strikejournals",
+        "https://discord.gg/WuJSsCb3AW"
+      ]
+    }
+    </script>
+
     <!-- Structured data: helps Google understand what Strike Journal is
          (a software application, not an article/business listing) and is
          a prerequisite for certain rich-result eligibility. -->
