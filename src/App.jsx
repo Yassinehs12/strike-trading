@@ -60,6 +60,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { EconomicCalendarPage } from "./pages/EconomicCalendarPage";
 import { JournalPage } from "./pages/JournalPage";
 import { MarketHeatmapsPage } from "./pages/MarketHeatmapsPage";
+import { MacroSentimentPage } from "./pages/MacroSentimentPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { todayISO } from "./lib/format";
 
@@ -257,6 +258,7 @@ export default function App() {
     goals: ["Goals", "Set targets and track your progress toward them"],
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
+    "macro-sentiment": ["Macro & Sentiment", "Institutional positioning, macro backdrop, and retail crowd sentiment"],
     calculator: ["Pips Calculator", "Know what a pip is worth, and how far between two prices"],
     "position-calculator": ["Position Calculator", "Size a position to risk exactly what you intend, before you're in it"],
     "risk-tools": ["Risk of Ruin", "Sanity-check your edge before it costs you money"],
@@ -528,6 +530,7 @@ export default function App() {
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
+                {active === "macro-sentiment" && <MacroSentimentPage />}
                 {active === "calculator" && <CalculatorPage />}
                 {active === "position-calculator" && <PositionCalculatorPage />}
                 {active === "risk-tools" && <RiskToolsPage />}

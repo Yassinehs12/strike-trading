@@ -97,6 +97,40 @@ export async function fetchEconomicEvents() {
   return { events: data?.events || [], failedUrls: data?.failedUrls || [] };
 }
 
+/* ---------- macro & sentiment (COT positioning, FRED macro series, MyFxBook retail sentiment) ---------- */
+
+// supabase.functions.invoke() collapses any non-2xx response into a
+// generic "Edge Function returned a non-2xx status code" error and
+// discards the actual JSON body our functions return (which includes the
+// real, useful message — e.g. "FRED_API_KEY is not configured..."). This
+// pulls that real body back out via the error's `context` (the raw
+// Response), falling back to the generic message only if that fails.
+async function unwrapFunctionError(error) {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return new Error(body.error);
+  } catch {}
+  return error;
+}
+
+export async function fetchCotPositioning() {
+  const { data, error } = await supabase.functions.invoke("cot-positioning", { method: "GET" });
+  if (error) throw await unwrapFunctionError(error);
+  return { instruments: data?.instruments || [], cachedAt: data?.cachedAt || null, failedIds: data?.failedIds || [] };
+}
+
+export async function fetchMacroIndicators() {
+  const { data, error } = await supabase.functions.invoke("macro-indicators", { method: "GET" });
+  if (error) throw await unwrapFunctionError(error);
+  return { series: data?.series || [], cachedAt: data?.cachedAt || null, failedIds: data?.failedIds || [] };
+}
+
+export async function fetchRetailSentiment() {
+  const { data, error } = await supabase.functions.invoke("retail-sentiment", { method: "GET" });
+  if (error) throw await unwrapFunctionError(error);
+  return { symbols: data?.symbols || [], cachedAt: data?.cachedAt || null };
+}
+
 /* ---------- pre-market checklist (synced across devices) ---------- */
 const ALL_ACCOUNTS_CHECKLIST_ID = "00000000-0000-0000-0000-000000000000";
 
