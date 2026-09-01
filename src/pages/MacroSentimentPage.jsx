@@ -1,18 +1,51 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Compass, TrendingUp, TrendingDown, Users, AlertTriangle, RefreshCw } from "lucide-react";
 import { Card, EmptyState } from "../components/ui/Primitives";
 import { fetchCotPositioning, fetchMacroIndicators, fetchRetailSentiment } from "../db";
+import { ASSET_GROUPS } from "../constants";
 
-// Instruments we try to surface from MyFxBook's retail outlook — matched
-// loosely against whatever symbol names their feed returns, since broker
-// feeds don't all use identical tickers (XAUUSD vs GOLD, US100 vs NAS100).
-const SENTIMENT_WATCHLIST = [
-  { match: ["XAUUSD", "GOLD"], label: "Gold (XAU/USD)" },
-  { match: ["NAS100", "USTEC", "US100"], label: "Nasdaq 100" },
-  { match: ["US30", "DJ30"], label: "Dow Jones 30" },
-  { match: ["EURUSD"], label: "EUR/USD" },
-  { match: ["GBPUSD"], label: "GBP/USD" },
-];
+// Friendlier display names for tickers that aren't a plain currency pair.
+// Anything not listed here falls back to inserting a "/" for 6-letter
+// pair-style tickers (EURUSD -> EUR/USD), or the raw ticker otherwise.
+const LABEL_OVERRIDES = {
+  US30: "Dow Jones 30", NAS100: "Nasdaq 100", SP500: "S&P 500",
+  GER40: "DAX 40", UK100: "FTSE 100", JPN225: "Nikkei 225", FRA40: "CAC 40",
+  USOIL: "WTI Crude Oil", UKOIL: "Brent Crude Oil", NATGAS: "Natural Gas",
+  XAUUSD: "Gold (XAU/USD)", XAGUSD: "Silver (XAG/USD)",
+  BTCUSD: "Bitcoin", ETHUSD: "Ethereum", SOLUSD: "Solana", XRPUSD: "XRP",
+};
+
+// Broker/feed naming varies (XAUUSD vs GOLD, NAS100 vs USTEC vs US100), so
+// each ticker is matched against a few plausible aliases rather than one
+// exact string. Anything not listed here is matched against itself only.
+const MATCH_OVERRIDES = {
+  XAUUSD: ["XAUUSD", "GOLD"], XAGUSD: ["XAGUSD", "SILVER"],
+  USOIL: ["USOIL", "WTI", "USOUSD", "CRUDE"], UKOIL: ["UKOIL", "BRENT", "UKOUSD"],
+  NATGAS: ["NATGAS", "NGAS"],
+  US30: ["US30", "DJ30", "DJI30"], NAS100: ["NAS100", "USTEC", "US100"],
+  SP500: ["SP500", "SPX500", "US500"], GER40: ["GER40", "DAX40", "DE40", "GER30"],
+  UK100: ["UK100", "FTSE100"], JPN225: ["JPN225", "JP225", "NIKKEI225"], FRA40: ["FRA40", "CAC40"],
+  BTCUSD: ["BTCUSD", "BITCOIN"], ETHUSD: ["ETHUSD", "ETHEREUM"], XRPUSD: ["XRPUSD", "RIPPLE"],
+};
+
+function labelFor(ticker) {
+  if (LABEL_OVERRIDES[ticker]) return LABEL_OVERRIDES[ticker];
+  if (/^[A-Z]{6}$/.test(ticker)) return `${ticker.slice(0, 3)}/${ticker.slice(3)}`;
+  return ticker;
+}
+
+// Built from the same ASSET_GROUPS used to populate the asset picker in
+// the Trade Journal, so every pair a trade can be logged against also
+// shows up here — instead of a hand-picked shortlist. Individual stocks
+// (Stocks group) are excluded: MyFxBook's retail outlook is FX/metals/
+// energy/indices/crypto only, so single-equity sentiment is never
+// available and would just render nothing.
+function buildSentimentWatchlist() {
+  const tickers = Object.entries(ASSET_GROUPS)
+    .filter(([group]) => group !== "Stocks")
+    .flatMap(([, list]) => list);
+  return tickers.map((ticker) => ({ match: MATCH_OVERRIDES[ticker] || [ticker], label: labelFor(ticker) }));
+}
 
 function findSentimentSymbol(symbols, matchList) {
   return symbols.find((s) => matchList.some((m) => (s.name || "").toUpperCase().includes(m)));
@@ -135,6 +168,14 @@ export const MacroSentimentPage = () => {
 
   useEffect(() => { loadAll(); }, []);
 
+  const sentimentWatchlist = useMemo(() => buildSentimentWatchlist(), []);
+  const matchedSentiment = useMemo(() => {
+    if (!sentiment?.symbols?.length) return [];
+    return sentimentWatchlist
+      .map((w) => ({ label: w.label, sym: findSentimentSymbol(sentiment.symbols, w.match) }))
+      .filter((row) => row.sym);
+  }, [sentiment, sentimentWatchlist]);
+
   const hasAnyData = cot?.instruments?.length || macro?.series?.length || sentiment?.symbols?.length;
 
   return (
@@ -198,13 +239,14 @@ export const MacroSentimentPage = () => {
         <Card className="p-4">
           {loading ? (
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-10 rounded-md bg-[var(--bg-tertiary)] tj-skeleton" />)}</div>
-          ) : sentiment?.symbols?.length ? (
-            SENTIMENT_WATCHLIST.map((w) => {
-              const sym = findSentimentSymbol(sentiment.symbols, w.match);
-              return sym ? <SentimentBar key={w.label} label={w.label} symbol={sym} /> : null;
-            })
+          ) : matchedSentiment.length ? (
+            matchedSentiment.map((row) => <SentimentBar key={row.label} label={row.label} symbol={row.sym} />)
           ) : (
-            <p className="text-xs text-[var(--text-muted)] text-center py-6">Retail sentiment data isn't available right now.</p>
+            <p className="text-xs text-[var(--text-muted)] text-center py-6">
+              {sentiment?.symbols?.length
+                ? "None of your tradable pairs are covered by the retail sentiment feed right now."
+                : "Retail sentiment data isn't available right now."}
+            </p>
           )}
         </Card>
       </div>
