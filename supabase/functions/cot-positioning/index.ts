@@ -1,7 +1,14 @@
-// Proxies the CFTC's public Commitments of Traders (COT) data for the
-// instruments Strike Journal cares about: Gold (COMEX) and Nasdaq-100 /
-// S&P 500 e-mini futures. This is genuinely free, public U.S. government
-// data via CFTC's Socrata "SODA" API — no API key or account required.
+// Proxies the CFTC's public Commitments of Traders (COT) report — Legacy
+// "Futures Only" format, which is what most COT tools (and the specific
+// "Non-Commercial" categorization Strike Journal's UI mirrors) are built
+// on. This is genuinely free, public U.S. government data via CFTC's
+// Socrata "SODA" API — no API key or account required.
+//
+// "Non-Commercial" is the CFTC's own term for large speculators (funds,
+// managed money) as opposed to "Commercial" (hedgers) — it's the category
+// most retail COT tools lead with, since it's the closest proxy for
+// "smart money" positioning. Fields below (noncomm_positions_long_all /
+// _short_all) are exact, verified against CFTC's published SODA schema.
 //
 // Why a proxy instead of calling it from the browser: (1) not CORS-enabled
 // for arbitrary origins, and (2) so every visitor shares one cached fetch
@@ -12,38 +19,32 @@
 // econ-calendar function. There's no point re-fetching more than a few
 // times a day.
 //
-// Two different CFTC datasets are needed because gold and equity index
-// futures are classified differently:
-//   - Gold is a commodity  -> "Disaggregated Futures Only" report, which
-//     breaks positions into Producer/Merchant, Swap Dealers, Managed
-//     Money, and Other Reportables. Managed Money is the closest thing to
-//     "smart money" positioning for a commodity.
-//   - Nasdaq-100 / S&P 500 e-minis are financial futures -> "Traders in
-//     Financial Futures" (TFF) report, which breaks positions into
-//     Dealers, Asset Managers, Leveraged Money, and Other Reportables.
-//     Leveraged Money (hedge funds/CTAs) is the closest "smart money"
-//     analog here.
-// Field names below are exact — verified against CFTC's published SODA
-// schema, not guessed. Note "swap__positions_short_all" has a genuine
-// double underscore in the real dataset; that's not a typo introduced here.
-//
 // Docs: https://publicreporting.cftc.gov/  (Socrata SODA API, no key needed
 // for this volume of traffic; an optional free app token can be added
-// later via the CFTC_APP_TOKEN secret + X-App-Token header if CFTC ever
+// later via a CFTC_APP_TOKEN secret + X-App-Token header if CFTC ever
 // rate-limits the anonymous tier).
 
-const DISAGGREGATED_URL = "https://publicreporting.cftc.gov/resource/72hh-3qpy.json";
-const TFF_URL = "https://publicreporting.cftc.gov/resource/gpe5-46if.json";
+const LEGACY_URL = "https://publicreporting.cftc.gov/resource/6dca-aqww.json";
 
-// Instruments shown on the Macro & Sentiment page, and how to find each
-// one in its respective CFTC dataset. market_and_exchange_names is
-// matched with `upper(...) like '%...%'` rather than an exact string,
-// since CFTC's exact naming/capitalization has changed wording before —
-// a substring match is more resilient than hardcoding one exact name.
+// Instruments shown in the COT table, and how to find each one in the
+// Legacy dataset. market_and_exchange_names is matched with
+// `upper(...) like '%...%'` rather than an exact string, since CFTC's
+// exact naming/capitalization has changed wording before — a substring
+// match is more resilient than hardcoding one exact name.
 const INSTRUMENTS = [
-  { id: "GOLD", label: "Gold (COMEX)", dataset: "disaggregated" as const, match: "GOLD" },
-  { id: "NASDAQ100", label: "Nasdaq-100 E-mini", dataset: "tff" as const, match: "NASDAQ-100" },
-  { id: "SP500", label: "S&P 500 E-mini", dataset: "tff" as const, match: "S&P 500" },
+  { id: "EUR", label: "EUR", match: "EURO FX" },
+  { id: "GBP", label: "GBP", match: "BRITISH POUND" },
+  { id: "JPY", label: "JPY", match: "JAPANESE YEN" },
+  { id: "CHF", label: "CHF", match: "SWISS FRANC" },
+  { id: "CAD", label: "CAD", match: "CANADIAN DOLLAR" },
+  { id: "AUD", label: "AUD", match: "AUSTRALIAN DOLLAR" },
+  { id: "NZD", label: "NZD", match: "NZ DOLLAR" },
+  { id: "GOLD", label: "Gold", match: "GOLD" },
+  { id: "SILVER", label: "Silver", match: "SILVER" },
+  { id: "NASDAQ", label: "Nasdaq-100", match: "NASDAQ-100" },
+  { id: "SP500", label: "S&P 500", match: "S&P 500" },
+  { id: "DOW", label: "Dow Jones", match: "DOW JONES" },
+  { id: "US10Y", label: "US 10Y Note", match: "10-YEAR U.S. TREASURY NOTES" },
 ];
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — CFTC only republishes weekly; this just controls how quickly a fresh weekly release propagates
@@ -64,71 +65,61 @@ function corsHeadersFor(req: Request) {
   };
 }
 
-type CotRow = Record<string, string>;
+type LegacyRow = Record<string, string>;
 
-// Normalizes a raw CFTC row (disaggregated or TFF — different column
-// names) into one common shape the frontend can render either way.
-function normalizeRow(row: CotRow, dataset: "disaggregated" | "tff") {
-  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+function num(v: unknown) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+// Normalizes one week's raw row plus the prior week's row (for week-over-
+// week deltas) into the shape the frontend table renders directly.
+function normalizeWeek(row: LegacyRow, prior: LegacyRow | undefined) {
+  const longContracts = num(row.noncomm_positions_long_all);
+  const shortContracts = num(row.noncomm_positions_short_all);
   const openInterest = num(row.open_interest_all);
+  const netPosition = longContracts - shortContracts;
+  const totalNonComm = longContracts + shortContracts;
 
-  if (dataset === "disaggregated") {
-    const smartLong = num(row.m_money_positions_long_all);
-    const smartShort = num(row.m_money_positions_short_all);
-    const commercialLong = num(row.prod_merc_positions_long_all);
-    const commercialShort = num(row.prod_merc_positions_short_all);
-    return {
-      reportDate: row.report_date_as_yyyy_mm_dd,
-      openInterest,
-      smartMoneyLabel: "Managed Money",
-      smartMoneyLong: smartLong,
-      smartMoneyShort: smartShort,
-      smartMoneyNet: smartLong - smartShort,
-      commercialLabel: "Producer/Merchant",
-      commercialLong,
-      commercialShort,
-      commercialNet: commercialLong - commercialShort,
-    };
-  }
-  const smartLong = num(row.lev_money_positions_long);
-  const smartShort = num(row.lev_money_positions_short);
-  const commercialLong = num(row.dealer_positions_long_all);
-  const commercialShort = num(row.dealer_positions_short_all);
+  const priorLong = prior ? num(prior.noncomm_positions_long_all) : null;
+  const priorShort = prior ? num(prior.noncomm_positions_short_all) : null;
+  const priorOI = prior ? num(prior.open_interest_all) : null;
+  const priorNet = prior !== undefined ? (priorLong! - priorShort!) : null;
+
   return {
     reportDate: row.report_date_as_yyyy_mm_dd,
+    longContracts,
+    shortContracts,
+    longPct: totalNonComm > 0 ? (longContracts / totalNonComm) * 100 : 0,
+    shortPct: totalNonComm > 0 ? (shortContracts / totalNonComm) * 100 : 0,
+    netPosition,
     openInterest,
-    smartMoneyLabel: "Leveraged Money",
-    smartMoneyLong: smartLong,
-    smartMoneyShort: smartShort,
-    smartMoneyNet: smartLong - smartShort,
-    commercialLabel: "Dealers",
-    commercialLong,
-    commercialShort,
-    commercialNet: commercialLong - commercialShort,
+    deltaLong: priorLong !== null ? longContracts - priorLong : null,
+    deltaShort: priorShort !== null ? shortContracts - priorShort : null,
+    deltaOpenInterest: priorOI !== null ? openInterest - priorOI : null,
+    // % change in net position vs the prior week, relative to the prior
+    // week's absolute net position — this isn't a CFTC-defined field,
+    // it's Strike Journal's own "how much did positioning shift" figure.
+    netPctChange: priorNet !== null && priorNet !== 0 ? ((netPosition - priorNet) / Math.abs(priorNet)) * 100 : null,
   };
 }
 
-// Fetches the last `weeks` reports for one instrument (most recent first),
-// so the frontend can show a short net-positioning trend, not just the
-// latest snapshot.
+// Fetches the last `weeks` reports for one instrument (most recent first).
 async function fetchInstrument(inst: (typeof INSTRUMENTS)[number], weeks: number) {
-  const baseUrl = inst.dataset === "disaggregated" ? DISAGGREGATED_URL : TFF_URL;
-  // Built with URLSearchParams (not manual string interpolation) so the
-  // SoQL `%` wildcards, spaces, and the literal "&" in "S&P 500" all get
-  // percent-encoded correctly for the query string.
   const params = new URLSearchParams({
     $where: `upper(market_and_exchange_names) like '%${inst.match.toUpperCase()}%'`,
     $order: "report_date_as_yyyy_mm_dd DESC",
     $limit: String(weeks),
   });
-  const url = `${baseUrl}?${params.toString()}`;
+  const url = `${LEGACY_URL}?${params.toString()}`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error(`CFTC ${inst.id} returned ${res.status}`);
-  const rows = (await res.json()) as CotRow[];
+  const rows = (await res.json()) as LegacyRow[];
+  if (rows.length === 0) throw new Error(`CFTC ${inst.id} returned no rows`);
   return {
     id: inst.id,
     label: inst.label,
-    history: rows.map((r) => normalizeRow(r, inst.dataset)),
+    latest: normalizeWeek(rows[0], rows[1]),
+    // History (oldest-first) for trend sparklines, mirrors the earlier
+    // instrument-detail view.
+    history: [...rows].reverse().map((r, i, arr) => normalizeWeek(r, i > 0 ? arr[i - 1] : undefined)),
   };
 }
 

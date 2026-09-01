@@ -90,35 +90,112 @@ function MacroCard({ series }) {
   );
 }
 
-function CotCard({ instrument }) {
-  if (!instrument || instrument.history.length === 0) return null;
-  const latest = instrument.history[0];
-  const prior = instrument.history[1];
-  const netChange = prior ? latest.smartMoneyNet - prior.smartMoneyNet : 0;
-  const bullish = latest.smartMoneyNet >= 0;
-  // History from the edge function is newest-first; the sparkline reads
-  // left-to-right oldest-first, so reverse just for the chart.
-  const chartHistory = [...instrument.history].reverse();
+function CotBarChart({ instrument }) {
+  if (!instrument) return null;
+  const { longPct, shortPct } = instrument.latest;
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-bold text-[var(--text-primary)]">{instrument.label}</p>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${bullish ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
-          {bullish ? "Net Long" : "Net Short"}
-        </span>
+    <div>
+      <div className="flex items-center gap-4 mb-2 text-xs font-semibold">
+        <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500" /> Long</span>
+        <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400" /> Short</span>
       </div>
-      <p className="text-xs text-[var(--text-muted)] mb-2">{latest.smartMoneyLabel} net positioning</p>
-      <div className="flex items-end justify-between gap-2 mb-2">
-        <span className="text-xl font-bold text-[var(--text-primary)] tj-mono">{latest.smartMoneyNet.toLocaleString()}</span>
-        {prior && (
-          <span className={`flex items-center gap-1 text-xs font-semibold ${netChange >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-            {netChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {Math.abs(netChange).toLocaleString()} vs last week
-          </span>
-        )}
+      <div className="flex h-40 w-full rounded-lg overflow-hidden border border-[var(--border-primary)]">
+        <div className="flex flex-col justify-end w-full">
+          <div className="bg-rose-400/90 flex items-start justify-center pt-1" style={{ height: `${shortPct}%` }}>
+            {shortPct >= 12 && <span className="text-[10px] font-bold text-white">{shortPct.toFixed(0)}%</span>}
+          </div>
+          <div className="bg-indigo-500 flex items-end justify-center pb-1" style={{ height: `${longPct}%` }}>
+            {longPct >= 12 && <span className="text-[10px] font-bold text-white">{longPct.toFixed(0)}%</span>}
+          </div>
+        </div>
       </div>
-      <TrendSparkline history={chartHistory.map((h) => ({ value: h.smartMoneyNet }))} positive={bullish} />
-      <p className="text-[10px] text-[var(--text-faint)] mt-1">Week of {latest.reportDate} · Open interest {latest.openInterest.toLocaleString()}</p>
+      <p className="text-center text-xs font-semibold text-[var(--text-primary)] mt-2">{instrument.label}</p>
+    </div>
+  );
+}
+
+const COT_COLUMNS = [
+  { key: "label", label: "Symbol", align: "left" },
+  { key: "longContracts", label: "Long Contracts" },
+  { key: "shortContracts", label: "Short Contracts" },
+  { key: "deltaLong", label: "Δ Long" },
+  { key: "deltaShort", label: "Δ Short" },
+  { key: "longPct", label: "Long %" },
+  { key: "shortPct", label: "Short %" },
+  { key: "netPosition", label: "Net Position" },
+  { key: "openInterest", label: "Open Interest" },
+  { key: "deltaOpenInterest", label: "Δ Open Interest" },
+];
+
+function fmtCotValue(key, value) {
+  if (value === null || value === undefined) return "—";
+  if (key === "longPct" || key === "shortPct") return `${value.toFixed(1)}%`;
+  return value.toLocaleString();
+}
+
+function CotReportPanel({ instruments }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [sortKey, setSortKey] = useState("label");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const rows = useMemo(() => instruments.map((inst) => ({ id: inst.id, label: inst.label, ...inst.latest })), [instruments]);
+  const sortedRows = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey];
+      if (typeof av === "string") return av.localeCompare(bv) * dir;
+      return ((av ?? 0) - (bv ?? 0)) * dir;
+    });
+  }, [rows, sortKey, sortDir]);
+
+  const toggleSort = (key) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "label" ? "asc" : "desc"); }
+  };
+
+  const selected = instruments.find((i) => i.id === selectedId) || instruments[0];
+
+  if (instruments.length === 0) return null;
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+        <CotBarChart instrument={selected} />
+        <div className="overflow-x-auto tj-scrollbar">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--border-primary)]">
+                {COT_COLUMNS.map((col) => (
+                  <th key={col.key} onClick={() => toggleSort(col.key)}
+                    className={`px-2 py-2 font-semibold text-[10px] uppercase tracking-wide text-[var(--text-faint)] cursor-pointer select-none hover:text-[var(--text-secondary)] whitespace-nowrap ${col.align === "left" ? "text-left" : "text-right"}`}>
+                    {col.label}{sortKey === col.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRows.map((row) => (
+                <tr key={row.id} onClick={() => setSelectedId(row.id)}
+                  className={`border-b border-[var(--border-primary)]/40 cursor-pointer transition-colors hover:bg-[var(--bg-tertiary)]/60 ${selected?.id === row.id ? "bg-[var(--accent)]/10" : ""}`}>
+                  <td className="px-2 py-2 font-semibold text-[var(--text-primary)] whitespace-nowrap">{row.label}</td>
+                  <td className="px-2 py-2 text-right tj-mono text-[var(--text-secondary)]">{fmtCotValue("longContracts", row.longContracts)}</td>
+                  <td className="px-2 py-2 text-right tj-mono text-[var(--text-secondary)]">{fmtCotValue("shortContracts", row.shortContracts)}</td>
+                  <td className={`px-2 py-2 text-right tj-mono ${row.deltaLong >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtCotValue("deltaLong", row.deltaLong)}</td>
+                  <td className={`px-2 py-2 text-right tj-mono ${row.deltaShort >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtCotValue("deltaShort", row.deltaShort)}</td>
+                  <td className="px-2 py-2 text-right tj-mono text-indigo-400">{fmtCotValue("longPct", row.longPct)}</td>
+                  <td className="px-2 py-2 text-right tj-mono text-rose-400">{fmtCotValue("shortPct", row.shortPct)}</td>
+                  <td className={`px-2 py-2 text-right tj-mono font-semibold ${row.netPosition >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtCotValue("netPosition", row.netPosition)}</td>
+                  <td className="px-2 py-2 text-right tj-mono text-[var(--text-secondary)]">{fmtCotValue("openInterest", row.openInterest)}</td>
+                  <td className={`px-2 py-2 text-right tj-mono ${row.deltaOpenInterest >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtCotValue("deltaOpenInterest", row.deltaOpenInterest)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p className="text-[10px] text-[var(--text-faint)] mt-3">
+        Week of {selected?.latest?.reportDate} · CFTC Commitments of Traders, Non-Commercial (large speculator) category · click a row to change the chart
+      </p>
     </Card>
   );
 }
@@ -219,16 +296,12 @@ export const MacroSentimentPage = () => {
 
       {/* COT positioning */}
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] mb-2">Institutional Positioning (CFTC COT, weekly)</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] mb-2">Latest COT Report (Non-Commercial)</h4>
         {errors.cot && <div className="mb-3 text-xs text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-3 py-2">{errors.cot}</div>}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-32 rounded-xl bg-[var(--bg-tertiary)] tj-skeleton" />)}
-          </div>
+          <div className="h-64 rounded-xl bg-[var(--bg-tertiary)] tj-skeleton" />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {(cot?.instruments || []).map((inst) => <CotCard key={inst.id} instrument={inst} />)}
-          </div>
+          <CotReportPanel instruments={cot?.instruments || []} />
         )}
       </div>
 
