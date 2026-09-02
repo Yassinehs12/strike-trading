@@ -90,9 +90,9 @@ function MacroCard({ series }) {
   );
 }
 
-function CotBarChart({ instrument }) {
+function CotBarChart({ instrument, category }) {
   if (!instrument) return null;
-  const { longPct, shortPct } = instrument.latest;
+  const { longPct, shortPct } = instrument.latest[category];
   return (
     <div>
       <div className="flex items-center gap-4 mb-2 text-xs font-semibold">
@@ -127,6 +127,11 @@ const COT_COLUMNS = [
   { key: "deltaOpenInterest", label: "Δ Open Interest" },
 ];
 
+const COT_CATEGORIES = [
+  { key: "nonCommercial", label: "Non-Commercial" },
+  { key: "commercial", label: "Commercial" },
+];
+
 function fmtCotValue(key, value) {
   if (value === null || value === undefined) return "—";
   if (key === "longPct" || key === "shortPct") return `${value.toFixed(1)}%`;
@@ -135,10 +140,21 @@ function fmtCotValue(key, value) {
 
 function CotReportPanel({ instruments }) {
   const [selectedId, setSelectedId] = useState(null);
+  const [category, setCategory] = useState("nonCommercial");
   const [sortKey, setSortKey] = useState("label");
   const [sortDir, setSortDir] = useState("asc");
 
-  const rows = useMemo(() => instruments.map((inst) => ({ id: inst.id, label: inst.label, ...inst.latest })), [instruments]);
+  // openInterest / deltaOpenInterest are shared across categories; the
+  // rest come from whichever category (Non-Commercial / Commercial) is
+  // currently selected.
+  const rows = useMemo(
+    () => instruments.map((inst) => ({
+      id: inst.id, label: inst.label,
+      openInterest: inst.latest.openInterest, deltaOpenInterest: inst.latest.deltaOpenInterest,
+      ...inst.latest[category],
+    })),
+    [instruments, category]
+  );
   const sortedRows = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
     return [...rows].sort((a, b) => {
@@ -159,8 +175,18 @@ function CotReportPanel({ instruments }) {
 
   return (
     <Card className="p-4 md:p-5">
+      <div className="flex justify-end mb-3">
+        <div className="flex rounded-lg border border-[var(--border-primary)] overflow-hidden">
+          {COT_CATEGORIES.map((c) => (
+            <button key={c.key} onClick={() => setCategory(c.key)}
+              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${category === c.key ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
-        <CotBarChart instrument={selected} />
+        <CotBarChart instrument={selected} category={category} />
         <div className="overflow-x-auto tj-scrollbar">
           <table className="w-full text-xs">
             <thead>
@@ -194,7 +220,7 @@ function CotReportPanel({ instruments }) {
         </div>
       </div>
       <p className="text-[10px] text-[var(--text-faint)] mt-3">
-        Week of {selected?.latest?.reportDate} · CFTC Commitments of Traders, Non-Commercial (large speculator) category · click a row to change the chart
+        Week of {selected?.latest?.reportDate} · CFTC Commitments of Traders, {COT_CATEGORIES.find((c) => c.key === category)?.label} category · click a row to change the chart
       </p>
     </Card>
   );
