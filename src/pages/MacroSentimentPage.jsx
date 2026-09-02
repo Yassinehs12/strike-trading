@@ -91,8 +91,9 @@ function MacroCard({ series }) {
 }
 
 function CotBarChart({ instrument, category }) {
-  if (!instrument) return null;
-  const { longPct, shortPct } = instrument.latest[category];
+  const cat = instrument?.latest?.[category];
+  if (!cat) return null;
+  const { longPct, shortPct } = cat;
   return (
     <div>
       <div className="flex items-center gap-4 mb-2 text-xs font-semibold">
@@ -150,8 +151,8 @@ function CotReportPanel({ instruments }) {
   const rows = useMemo(
     () => instruments.map((inst) => ({
       id: inst.id, label: inst.label,
-      openInterest: inst.latest.openInterest, deltaOpenInterest: inst.latest.deltaOpenInterest,
-      ...inst.latest[category],
+      openInterest: inst.latest?.openInterest, deltaOpenInterest: inst.latest?.deltaOpenInterest,
+      ...(inst.latest?.[category] || {}),
     })),
     [instruments, category]
   );
