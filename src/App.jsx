@@ -272,12 +272,20 @@ export default function App() {
     admin: ["Admin Panel", "Manage users and moderate content"],
   };
 
-  const addTrade = async (t) => {
+  // LogTradeModal always calls this with an array — one trade per selected
+  // account (or a single untagged trade when no account was chosen) — so the
+  // same trade can be logged across multiple funded accounts in one go.
+  const addTrade = async (trades) => {
+    const list = Array.isArray(trades) ? trades : [trades];
+    const saved = [];
     try {
-      const saved = await insertTrade(t, session.user.id);
-      setTrades((prev) => [saved, ...prev]);
-      addToast("Trade logged successfully");
-    } catch (err) { addToast(err.message || "Failed to save trade", "error"); }
+      for (const t of list) saved.push(await insertTrade(t, session.user.id));
+      setTrades((prev) => [...saved, ...prev]);
+      addToast(saved.length > 1 ? `Trade logged to ${saved.length} accounts` : "Trade logged successfully");
+    } catch (err) {
+      if (saved.length) setTrades((prev) => [...saved, ...prev]);
+      addToast(err.message || "Failed to save trade", "error");
+    }
   };
 
   const bulkImportTrades = async (parsedTrades) => {

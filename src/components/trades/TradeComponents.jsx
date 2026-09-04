@@ -173,7 +173,7 @@ export const CreateChallengeModal = ({ open, onClose, onCreate }) => {
 
 
 export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
-  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountId: "", screenshots: [], pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
+  const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountIds: [], screenshots: [], pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -202,17 +202,31 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
     const entry = Number(form.entry), exit = Number(form.exit), lots = Number(form.lots);
     const pnl = +Number(form.pnl).toFixed(2);
 
-    onCreate({
-      id: Date.now(), date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
+    const base = {
+      date: form.date, asset: form.asset.toUpperCase(), direction: form.direction,
       entry, exit, lots, fees: Number(form.fees || 0), setup: form.setup, setupGrade: form.setupGrade, session: form.session,
       status: form.status, pnl, holdingMinutes: Number(form.holdingMinutes || 0), emotion: form.emotion,
-      challengeId: form.challengeId || null, accountId: form.accountId || null, notes: form.notes, screenshots: form.screenshots,
+      challengeId: form.challengeId || null, notes: form.notes, screenshots: form.screenshots,
       riskAmount: form.riskAmount === "" ? null : Number(form.riskAmount),
       checklist: form.checklist,
-    });
+    };
+
+    // Logging against several accounts (e.g. multiple funded accounts taking the
+    // same trade) creates one journal entry per selected account, each with its
+    // own id so they can be edited/deleted independently later.
+    const targetAccountIds = form.accountIds.length ? form.accountIds : [null];
+    onCreate(targetAccountIds.map((accountId, i) => ({ ...base, id: Date.now() + i, accountId })));
+
     setForm(blank);
     setErrors({});
     onClose();
+  };
+
+  const toggleAccount = (id) => {
+    setForm((f) => ({
+      ...f,
+      accountIds: f.accountIds.includes(id) ? f.accountIds.filter((x) => x !== id) : [...f.accountIds, id],
+    }));
   };
 
   return (
@@ -273,11 +287,39 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
           {challenges.map((c) => <option key={c.id} value={c.id}>{c.firm} — {c.phase}</option>)}
         </select>
       </Field>
-      <Field label="Account (optional)">
-        <select className={inputCls} value={form.accountId} onChange={(e) => set("accountId", e.target.value)}>
-          <option value="">No account assigned</option>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
+      <Field
+        label="Accounts (optional)"
+        hint={accounts.length ? "Select every account that took this trade — one journal entry is logged per account." : undefined}
+      >
+        {accounts.length === 0 ? (
+          <div className={`${inputCls} text-[var(--text-faint)]`}>No trading accounts yet</div>
+        ) : (
+          <div className="space-y-1.5">
+            {accounts.map((a) => {
+              const checked = form.accountIds.includes(a.id);
+              return (
+                <label
+                  key={a.id}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                    checked ? "border-[var(--accent)]/50 bg-[var(--accent)]/10" : "border-white/10 hover:border-white/20"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-[var(--accent)] w-4 h-4"
+                    checked={checked}
+                    onChange={() => toggleAccount(a.id)}
+                  />
+                  <span className="text-sm text-[var(--text-primary)] font-medium">{a.name}</span>
+                  {a.broker && <span className="text-xs text-[var(--text-faint)]">{a.broker}</span>}
+                </label>
+              );
+            })}
+          </div>
+        )}
+        {form.accountIds.length > 1 && (
+          <p className="text-xs text-[var(--accent)] mt-1.5 font-medium">Will log {form.accountIds.length} separate trades — one per selected account.</p>
+        )}
       </Field>
       <Field label={`Chart Screenshots (optional, up to ${MAX_IMAGES})`}>
         {form.screenshots.length < MAX_IMAGES && (

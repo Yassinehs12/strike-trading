@@ -1,27 +1,72 @@
 import React, { useState, useMemo } from "react";
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, LineChart, Line,
 } from "recharts";
 import {
-  BarChart3, Percent, Target, Wallet, Flame, Award, Clock, TrendingDown, Layers,
+  BarChart3, Percent, Target, Wallet, Flame, Award, Clock, TrendingDown, Layers, TrendingUp, Scale, CircleSlash,
 } from "lucide-react";
 import { fmtUSD2 } from "../lib/format";
 import { PIE_COLORS, SESSIONS } from "../constants";
-import { computeKPIs, computeStreaks, computeDrawdownRecovery, computeSetupPerformance } from "../lib/tradeCalculations";
+import { computeKPIs, computeStreaks, computeDrawdownRecovery, computeSetupPerformance, equityCurve } from "../lib/tradeCalculations";
 import { AccountsBar } from "../components/trades/TradeComponents";
 import { Card, CustomTooltip, EmptyState, KPICard } from "../components/ui/Primitives";
 
+const RANGES = [
+  { id: "all", label: "All" },
+  { id: "90", label: "90D" },
+  { id: "30", label: "30D" },
+  { id: "7", label: "7D" },
+];
+
 export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, onEditAccount, onRemoveAccount, accountLimit = 3 }) => {
   const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [range, setRange] = useState("all");
   const trades = useMemo(
     () => (selectedAccountId ? allTrades.filter((t) => t.accountId === selectedAccountId) : allTrades),
     [allTrades, selectedAccountId]
   );
 
+  const rangedTrades = useMemo(() => {
+    if (range === "all") return trades;
+    const days = Number(range);
+    const cutoff = Date.now() - days * 86400000;
+    return trades.filter((t) => new Date(t.date).getTime() >= cutoff);
+  }, [trades, range]);
+
   const kpis = computeKPIs(trades);
+  const rangedKpis = computeKPIs(rangedTrades);
   const streaks = computeStreaks(trades);
   const drawdown = computeDrawdownRecovery(trades);
   const setupPerf = computeSetupPerformance(trades);
+
+  const startingBalance = useMemo(() => {
+    if (selectedAccountId) return accounts.find((a) => a.id === selectedAccountId)?.startingBalance || 0;
+    return accounts.reduce((s, a) => s + (a.startingBalance || 0), 0);
+  }, [accounts, selectedAccountId]);
+
+  const equityData = useMemo(() => {
+    const curve = equityCurve(rangedTrades);
+    return curve.map((p) => ({ ...p, balance: +(startingBalance + p.equity).toFixed(2) }));
+  }, [rangedTrades, startingBalance]);
+
+  const beCount = rangedTrades.filter((t) => t.status === "BE").length;
+
+  const rMultiples = useMemo(
+    () => rangedTrades.filter((t) => t.riskAmount > 0 && t.status !== "BE").map((t) => +(t.pnl / t.riskAmount).toFixed(2)),
+    [rangedTrades]
+  );
+  const avgR = rMultiples.length ? rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length : 0;
+  const maxR = rMultiples.length ? Math.max(...rMultiples) : 0;
+  const minR = rMultiples.length ? Math.min(...rMultiples) : 0;
+  const rSparkline = rMultiples.map((v, i) => ({ i, v }));
+
+  const expectancy = rangedKpis.total
+    ? ((rangedKpis.winRate / 100) * (rangedKpis.avgRR || 0)) - ((1 - rangedKpis.winRate / 100) * 1)
+    : 0;
+  const netProfitRanged = rangedTrades.reduce((s, t) => s + t.pnl - t.fees, 0);
+  const wins = rangedTrades.filter((t) => t.status === "Win").length;
+  const losses = rangedTrades.filter((t) => t.status === "Loss").length;
 
   const winLossData = useMemo(() => {
     const wins = trades.filter((t) => t.status === "Win").length;
@@ -61,6 +106,124 @@ export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, 
   return (
     <div className="p-4 md:p-6 space-y-6">
       <AccountsBar accounts={accounts} selectedId={selectedAccountId} onSelect={setSelectedAccountId} onAdd={onAddAccount} onEdit={onEditAccount} onRemove={onRemoveAccount} limit={accountLimit} />
+
+      {/* ---------- Hero: Profit & Loss over time ---------- */}
+      <Card className="p-4 md:p-6 tj-animate-in">
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
+          <div>
+            <h2 className="font-bold text-[var(--text-primary)] text-base flex items-center gap-2">
+              <TrendingUp size={16} className="text-[var(--accent)]" /> Profit &amp; Loss
+            </h2>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Over time</p>
+          </div>
+          <div className="flex items-center gap-1 bg-[var(--bg-primary)] border border-white/10 rounded-lg p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setRange(r.id)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  range === r.id ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-4 mb-5">
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Total P&amp;L</div>
+            <div className={`tj-mono text-lg font-bold ${netProfitRanged >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{fmtUSD2(netProfitRanged)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Account Balance</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{fmtUSD2(startingBalance + rangedTrades.reduce((s, t) => s + t.pnl - t.fees, 0))}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Win Rate</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{rangedKpis.winRate.toFixed(0)}%</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Total Trades</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">
+              {rangedKpis.total} <span className="text-xs font-semibold text-[var(--text-faint)]">{wins}W/{losses}L</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Breakeven Trades</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{beCount}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Profit Factor</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{rangedKpis.profitFactor === Infinity ? "∞" : rangedKpis.profitFactor.toFixed(2)}</div>
+          </div>
+        </div>
+
+        {equityData.length > 1 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={equityData} margin={{ left: 0, right: 8, top: 8 }}>
+              <defs>
+                <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} minTickGap={32} />
+              <YAxis stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={40} />
+              <Tooltip content={<CustomTooltip prefix="$" />} />
+              <Area type="monotone" dataKey="balance" stroke="var(--accent)" strokeWidth={2} fill="url(#pnlGradient)" dot={false} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyState icon={TrendingUp} title="Not enough data for this range" sub="Try a wider time range or log more trades." />
+        )}
+      </Card>
+
+      {/* ---------- R-multiple stats strip ---------- */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+        <Card className="p-4 tj-animate-in">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Average RR</span>
+            <div className="w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center"><Scale size={14} className="text-[var(--accent)]" /></div>
+          </div>
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div className={`tj-mono text-2xl font-bold ${avgR >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{avgR.toFixed(2)}R</div>
+              <div className="text-xs text-[var(--text-muted)] mt-1">Max {maxR.toFixed(2)}R · Min {minR.toFixed(2)}R</div>
+            </div>
+            {rSparkline.length > 1 && (
+              <div className="w-24 h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={rSparkline}>
+                    <Line type="monotone" dataKey="v" stroke="var(--accent)" strokeWidth={1.5} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-4 tj-animate-in">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Expectancy / Trade</span>
+            <div className="w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center"><Target size={14} className="text-[var(--accent)]" /></div>
+          </div>
+          <div className={`tj-mono text-2xl font-bold ${expectancy >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{expectancy >= 0 ? "+" : ""}{expectancy.toFixed(2)}R</div>
+          <div className="text-xs text-[var(--text-muted)] mt-1">Expected R per trade at current win rate</div>
+        </Card>
+
+        <Card className="p-4 tj-animate-in">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Breakeven Rate</span>
+            <div className="w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center"><CircleSlash size={14} className="text-[var(--accent)]" /></div>
+          </div>
+          <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{rangedKpis.total ? ((beCount / rangedKpis.total) * 100).toFixed(0) : 0}%</div>
+          <div className="text-xs text-[var(--text-muted)] mt-1">{beCount} of {rangedKpis.total} trades closed flat</div>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} />
         <KPICard icon={Target} label="Profit Factor" value={kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)} />
