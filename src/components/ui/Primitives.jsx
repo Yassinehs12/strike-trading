@@ -201,6 +201,71 @@ export const KPICard = ({ icon: Icon, label, value, sub, accent = "text-[var(--t
 );
 
 /* ============================================================
+   GAUGE PRIMITIVES — semicircle multi-segment gauge and a
+   circular progress ring, hand-drawn with SVG arcs so they pick
+   up theme colors and don't depend on a charting lib's gauge
+   support (recharts has none built in). Shared by the Dashboard
+   and Analytics pages.
+   ============================================================ */
+
+const polar = (cx, cy, r, angleDeg) => {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+};
+const arcPath = (cx, cy, r, startAngle, endAngle) => {
+  const start = polar(cx, cy, r, startAngle);
+  const end = polar(cx, cy, r, endAngle);
+  const large = Math.abs(startAngle - endAngle) > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`;
+};
+
+// Semicircle gauge: sweeps 180°(left) → 0°(right) across the top, split into
+// colored segments proportional to `segments` values. A number is printed
+// under each segment (matching the win/BE/loss counts under each arc slice
+// in the reference dashboard).
+export const SemicircleGauge = ({ segments, size = 96 }) => {
+  const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 8, stroke = 8;
+  let cum = 0;
+  const arcs = segments.map((seg) => {
+    const startAngle = 180 - (cum / total) * 180;
+    cum += seg.value;
+    const endAngle = 180 - (cum / total) * 180;
+    return { ...seg, startAngle, endAngle };
+  });
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size / 2 + stroke} viewBox={`0 0 ${size} ${size / 2 + stroke}`}>
+        {arcs.map((a, i) => (
+          <path key={i} d={arcPath(cx, cy, r, a.startAngle, a.endAngle)} fill="none" stroke={a.color} strokeWidth={stroke} strokeLinecap="round" />
+        ))}
+      </svg>
+      <div className="flex items-center gap-3 -mt-1">
+        {segments.map((seg, i) => (
+          <span key={i} className="text-[10px] font-bold" style={{ color: seg.color }}>{seg.value}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Full-circle progress ring, e.g. for profit factor. `pct` is 0-1.
+export const RingGauge = ({ pct, size = 88, color = "#10b981" }) => {
+  const r = size / 2 - 8, stroke = 8, c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, pct));
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-tertiary)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - clamped)}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </svg>
+  );
+};
+
+/* ============================================================
    NAVIGATION
    ============================================================ */
 

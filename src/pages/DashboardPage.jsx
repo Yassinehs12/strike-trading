@@ -3,14 +3,14 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  ShieldCheck, BookOpen, Plus, X, TrendingUp, Percent, Target, Activity, CheckCircle2, Wallet, Sparkles, Check, ShieldAlert, Shield, Loader2,
+  ShieldCheck, BookOpen, Plus, X, TrendingUp, TrendingDown, CheckCircle2, Sparkles, Check, ShieldAlert, Shield, Loader2,
 } from "lucide-react";
 import { computePsychologyReport } from "../psychology";
 import { filterTradesByPeriod } from "../insights";
-import { computeChallengeStats, computeKPIs, equityCurve } from "../lib/tradeCalculations";
+import { computeChallengeStats, computeKPIs, computeDayWinStats, computeDrawdownSeries, equityCurve } from "../lib/tradeCalculations";
 import { CalendarCard } from "../pages/JournalPage";
 import { PRE_MARKET_CHECKLIST_ITEMS, SCORE_RING_COLORS } from "../constants";
-import { Card, CustomTooltip, EmptyState, KPICard, ProgressBar, StatusPill, UpgradeGate } from "../components/ui/Primitives";
+import { Card, CustomTooltip, EmptyState, ProgressBar, StatusPill, UpgradeGate, SemicircleGauge, RingGauge } from "../components/ui/Primitives";
 import { fmtUSD, fmtUSD2, isoWeekKey, todayISO } from "../lib/format";
 import { RuleViolationAlerts } from "../components/trades/TradeComponents";
 import { fetchChecklistState, saveChecklistState } from "../db";
@@ -262,6 +262,8 @@ export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
 
 export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive, userId, accounts = [] }) => {
   const kpis = computeKPIs(trades);
+  const dayStats = useMemo(() => computeDayWinStats(trades), [trades]);
+  const drawdownStats = useMemo(() => computeDrawdownSeries(trades), [trades]);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
 
@@ -300,12 +302,66 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
 
       <WeeklyRecapCard trades={trades} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-        <KPICard icon={Wallet} label="Net Profit" value={fmtUSD2(kpis.netProfit)} accent={kpis.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} sub="all-time" />
-        <KPICard icon={Percent} label="Win Rate" value={`${kpis.winRate.toFixed(1)}%`} sub={`${trades.filter(t=>t.status==='Win').length} wins`} />
-        <KPICard icon={Target} label="Profit Factor" value={kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)} sub="gross win / gross loss" />
-        <KPICard icon={Activity} label="Total Trades" value={kpis.total} sub="logged entries" />
-        <KPICard icon={ShieldCheck} label="Active Challenges" value={challenges.length} accent="text-[var(--accent)]" sub="funding evaluations" />
+      {/* ---------- KPI row: net P&L + gauges (win %, profit factor, day win %, avg win/loss) ---------- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+        <Card className="p-4 tj-animate-in">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] mb-1">
+            Net P&amp;L <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-faint)]">{kpis.total}</span>
+          </div>
+          <div className={`tj-mono text-2xl font-bold ${kpis.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmtUSD2(kpis.netProfit)}</div>
+          <div className="text-xs text-[var(--text-muted)] mt-1">all-time</div>
+        </Card>
+
+        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
+          <div>
+            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Trade win %</div>
+            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{kpis.winRate.toFixed(2)}%</div>
+          </div>
+          <SemicircleGauge
+            size={84}
+            segments={[
+              { value: kpis.wins, color: "#10b981" },
+              { value: kpis.beCount, color: "#3b82f6" },
+              { value: kpis.losses, color: "#ef4444" },
+            ]}
+          />
+        </Card>
+
+        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
+          <div>
+            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Profit factor</div>
+            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)}</div>
+          </div>
+          <RingGauge pct={kpis.profitFactor === Infinity ? 1 : kpis.profitFactor / 4} color="#10b981" />
+        </Card>
+
+        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
+          <div>
+            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Day win %</div>
+            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{dayStats.dayWinPct.toFixed(2)}%</div>
+          </div>
+          <SemicircleGauge
+            size={84}
+            segments={[
+              { value: dayStats.winDays, color: "#10b981" },
+              { value: dayStats.beDays, color: "#3b82f6" },
+              { value: dayStats.loseDays, color: "#ef4444" },
+            ]}
+          />
+        </Card>
+
+        <Card className="p-4 tj-animate-in">
+          <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Avg win/loss trade</div>
+          <div className="tj-mono text-2xl font-bold text-[var(--text-primary)] mb-3">{kpis.avgLoss ? (kpis.avgWin / kpis.avgLoss).toFixed(2) : "—"}</div>
+          <div className="flex rounded-full overflow-hidden h-2 bg-[var(--bg-tertiary)]">
+            <div className="bg-emerald-500 h-full" style={{ width: `${kpis.avgWin + kpis.avgLoss ? (kpis.avgWin / (kpis.avgWin + kpis.avgLoss)) * 100 : 50}%` }} />
+            <div className="bg-rose-500 h-full flex-1" />
+          </div>
+          <div className="flex justify-between text-[11px] font-semibold mt-1.5">
+            <span className="text-emerald-500">{fmtUSD2(kpis.avgWin)}</span>
+            <span className="text-rose-500">-{fmtUSD2(kpis.avgLoss)}</span>
+          </div>
+        </Card>
       </div>
 
       <RuleViolationAlerts challenges={challenges} trades={trades} />
@@ -318,22 +374,45 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div><h3 className="font-bold text-[var(--text-primary)] text-sm">Equity Curve</h3><p className="text-xs text-[var(--text-muted)]">Cumulative net P&L over time</p></div>
-            <TrendingUp size={16} className="text-emerald-400" />
+          <div className="flex items-center gap-2 mb-4"><TrendingUp size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Performance</h3></div>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              {curve.length ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={curve}>
+                    <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.35} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
+                    <XAxis dataKey="date" stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
+                    <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip content={<CustomTooltip prefix="$" />} />
+                    <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2} fill="url(#eqGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : <EmptyState icon={TrendingUp} title="No trades yet" sub="Log your first trade to see your equity curve." />}
+            </div>
+            <div className="flex md:flex-col flex-wrap gap-4 md:gap-5 md:w-40 md:border-l md:border-[var(--border-primary)] md:pl-4">
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)]">Total trades</div>
+                <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{kpis.total}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)]">Profit factor</div>
+                <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)]">Trade expectancy</div>
+                <div className={`tj-mono text-lg font-bold ${kpis.expectancy >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmtUSD2(kpis.expectancy)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)]">Max drawdown</div>
+                <div className="tj-mono text-lg font-bold text-rose-500">{fmtUSD2(drawdownStats.maxDrawdown)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)]">Avg drawdown</div>
+                <div className="tj-mono text-lg font-bold text-rose-500">{fmtUSD2(drawdownStats.avgDrawdown)}</div>
+              </div>
+            </div>
           </div>
-          {curve.length ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={curve}>
-                <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
-                <YAxis stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
-                <Tooltip content={<CustomTooltip prefix="$" />} />
-                <Area type="monotone" dataKey="equity" stroke="#3b82f6" strokeWidth={2} fill="url(#eqGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : <EmptyState icon={TrendingUp} title="No trades yet" sub="Log your first trade to see your equity curve." />}
         </Card>
 
         <Card className="p-4 md:p-5">
@@ -356,6 +435,29 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
           </div>
         </Card>
       </div>
+
+      <Card className="p-4 md:p-5">
+        <div className="flex items-center gap-2 mb-4"><TrendingDown size={15} className="text-rose-500" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Drawdown</h3></div>
+        {drawdownStats.series.length > 1 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={drawdownStats.series} margin={{ left: 0, right: 8, top: 8 }}>
+              <defs>
+                <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.35} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
+              <XAxis dataKey="date" stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} minTickGap={32} />
+              <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} width={44} />
+              <Tooltip content={<CustomTooltip prefix="$" />} />
+              <Area type="monotone" dataKey="drawdown" stroke="#ef4444" strokeWidth={2} fill="url(#ddGrad)" dot={false} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyState icon={TrendingDown} title="No drawdown yet" sub="Great — your equity curve hasn't dipped below a prior high." />
+        )}
+      </Card>
 
       <CalendarCard trades={trades} onOpenTrade={onOpenTrade} compact showWeeklySummary />
 

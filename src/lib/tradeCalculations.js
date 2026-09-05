@@ -69,6 +69,7 @@ export function computeKPIs(trades) {
   const total = trades.length;
   const wins = trades.filter((t) => t.status === "Win");
   const losses = trades.filter((t) => t.status === "Loss");
+  const breakeven = trades.filter((t) => t.status === "BE");
   const netProfit = trades.reduce((s, t) => s + t.pnl - t.fees, 0);
   const grossProfit = wins.reduce((s, t) => s + t.pnl, 0);
   const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
@@ -77,8 +78,54 @@ export function computeKPIs(trades) {
   const avgWin = wins.length ? grossProfit / wins.length : 0;
   const avgLoss = losses.length ? grossLoss / losses.length : 0;
   const avgRR = avgLoss ? avgWin / avgLoss : 0;
-  return { total, netProfit, winRate, profitFactor, avgRR };
+  const expectancy = total ? (winRate / 100) * avgWin - (1 - winRate / 100) * avgLoss : 0;
+  return {
+    total, netProfit, winRate, profitFactor, avgRR,
+    wins: wins.length, losses: losses.length, beCount: breakeven.length,
+    avgWin, avgLoss, grossProfit, grossLoss, expectancy,
+  };
 }
+
+// Percentage of distinct trading days that closed net positive (a day's P&L
+// across every trade logged that day), mirroring "day win %" in most trading
+// journals — a steadier read than per-trade win rate on days with many trades.
+export function computeDayWinStats(trades) {
+  const byDay = {};
+  for (const t of trades) byDay[t.date] = (byDay[t.date] || 0) + (t.pnl - t.fees);
+  const days = Object.values(byDay);
+  const winDays = days.filter((d) => d > 0).length;
+  const loseDays = days.filter((d) => d < 0).length;
+  const beDays = days.filter((d) => d === 0).length;
+  const totalDays = days.length;
+  return { dayWinPct: totalDays ? (winDays / totalDays) * 100 : 0, winDays, loseDays, beDays, totalDays };
+}
+
+// Running equity vs. its running peak, in dollars — the "underwater" series
+// for a drawdown chart — plus the depth of each completed drawdown episode
+// (from a peak until equity next makes a new high) so max/avg drawdown are
+// reported the way most trading journals do: per-episode, not per-point.
+export function computeDrawdownSeries(trades) {
+  const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let equity = 0, peak = 0, episodeMin = 0;
+  const series = [];
+  const episodes = [];
+  for (const t of sorted) {
+    equity += t.pnl - t.fees;
+    if (equity > peak) {
+      peak = equity;
+      if (episodeMin < 0) episodes.push(episodeMin);
+      episodeMin = 0;
+    } else {
+      episodeMin = Math.min(episodeMin, equity - peak);
+    }
+    series.push({ date: t.date.slice(5), drawdown: +(equity - peak).toFixed(2) });
+  }
+  if (episodeMin < 0) episodes.push(episodeMin);
+  const maxDrawdown = episodes.length ? Math.min(...episodes) : 0;
+  const avgDrawdown = episodes.length ? episodes.reduce((a, b) => a + b, 0) / episodes.length : 0;
+  return { series, maxDrawdown, avgDrawdown };
+}
+
 
 
 export function computeStreaks(trades) {
