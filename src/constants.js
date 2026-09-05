@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle, Percent, CalendarDays, Compass,
+  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle, Percent, CalendarDays, Compass, LineChart, Sprout, Globe2, Wrench, Users,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -32,6 +32,7 @@ export const SETUP_GRADES = ["A+", "A", "B"];
 export const NAV_GROUPS = [
   {
     label: "Trading",
+    icon: LineChart,
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "market-plan", label: "Daily Market Plan", icon: CalendarDays },
@@ -41,6 +42,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Review & Growth",
+    icon: Sprout,
     items: [
       { id: "journaling", label: "Weekly/Monthly Review", icon: BookMarked },
       { id: "notebook", label: "Notebook", icon: NotebookPen },
@@ -50,6 +52,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Market Data",
+    icon: Globe2,
     items: [
       { id: "econ-calendar", label: "Economic Calendar", icon: CalendarClock },
       { id: "heatmaps", label: "Market Heatmaps", icon: Grid3x3 },
@@ -58,6 +61,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Tools",
+    icon: Wrench,
     items: [
       { id: "calculator", label: "Pips Calculator", icon: Calculator },
       { id: "position-calculator", label: "Position Calculator", icon: Percent },
@@ -67,6 +71,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Community",
+    icon: Users,
     items: [
       { id: "forum", label: "Community", icon: MessagesSquare },
       { id: "leaderboard", label: "Leaderboard", icon: Trophy },

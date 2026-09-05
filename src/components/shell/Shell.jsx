@@ -15,6 +15,26 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
     i === NAV_GROUPS.length - 1 && profile?.is_admin ? { ...g, items: [...g.items, ADMIN_NAV_ITEM] } : g
   );
 
+  // Collapsed by default; a group auto-opens once whenever it becomes the
+  // one containing the active page, so navigating there always reveals it
+  // without the click re-collapsing every other section first.
+  const [openGroups, setOpenGroups] = useState(() => {
+    const initial = {};
+    groups.forEach((g, gi) => {
+      if (g.label && g.items.some((item) => item.id === active)) initial[g.label] = true;
+    });
+    return initial;
+  });
+  const toggleGroup = (label) => setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+
+  useEffect(() => {
+    const activeGroup = groups.find((g) => g.label && g.items.some((item) => item.id === active));
+    if (activeGroup && !openGroups[activeGroup.label]) {
+      setOpenGroups((prev) => ({ ...prev, [activeGroup.label]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Refetch whenever the signed-in user changes, and whenever the person
@@ -47,33 +67,47 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
         <LogoFull size={30} textClass="text-base" />
       </div>
       <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto tj-scrollbar">
-        {groups.map((group, gi) => (
+        {groups.map((group, gi) => {
+          const GroupIcon = group.icon;
+          const isOpen = group.label ? !!openGroups[group.label] : true;
+          return (
           <div key={group.label || `group-${gi}`}>
             {group.label && (
-              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">{group.label}</div>
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.label)}
+                className="w-full flex items-center gap-2 px-3 mb-1.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] transition-colors"
+              >
+                {GroupIcon && <GroupIcon size={13} className="shrink-0" />}
+                <span className="flex-1 text-left">{group.label}</span>
+                <ChevronDown size={13} className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
             )}
-            <div className="space-y-1">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = active === item.id;
-                const badgeCount = item.id === "messages" ? unreadMessages : 0;
-                return (
-                  <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      ${isActive ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
-                    <Icon size={17} />{item.label}
-                    {badgeCount > 0 && (
-                      <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                        {badgeCount > 99 ? "99+" : badgeCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {isOpen && (
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = active === item.id;
+                  const badgeCount = item.id === "messages" ? unreadMessages : 0;
+                  return (
+                    <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                        ${isActive ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
+                      <Icon size={17} />{item.label}
+                      {badgeCount > 0 && (
+                        <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {gi < groups.length - 1 && <div className="mt-4 border-t border-white/10" />}
           </div>
-        ))}
+          );
+        })}
       </nav>
     </aside>
     {mobileOpen && <div className="fixed inset-0 bg-[var(--bg-primary)]/60 z-30 md:hidden" onClick={() => setMobileOpen(false)} />}
