@@ -66,45 +66,54 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
       <div className="h-16 flex items-center gap-2 px-5 border-b border-white/10">
         <LogoFull size={30} textClass="text-base" />
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto tj-scrollbar">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto tj-scrollbar">
         {groups.map((group, gi) => {
           const GroupIcon = group.icon;
           const isOpen = group.label ? !!openGroups[group.label] : true;
           return (
-          <div key={group.label || `group-${gi}`}>
+          <div key={group.label || `group-${gi}`} className={gi > 0 ? "pt-1" : ""}>
             {group.label && (
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
-                className="w-full flex items-center gap-2 px-3 mb-1.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)] hover:text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                className="group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[11.5px] font-bold uppercase tracking-wider transition-colors
+                  text-[var(--text-faint)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
               >
-                {GroupIcon && <GroupIcon size={13} className="shrink-0" />}
+                {GroupIcon && (
+                  <span className="w-6 h-6 rounded-md bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-quaternary)] flex items-center justify-center shrink-0 transition-colors">
+                    <GroupIcon size={13} className="text-[var(--text-tertiary)]" />
+                  </span>
+                )}
                 <span className="flex-1 text-left">{group.label}</span>
-                <ChevronDown size={13} className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={14} className={`shrink-0 text-[var(--text-faint)] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
               </button>
             )}
-            {isOpen && (
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = active === item.id;
-                  const badgeCount = item.id === "messages" ? unreadMessages : 0;
-                  return (
-                    <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                        ${isActive ? "bg-[var(--accent)]/10 text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
-                      <Icon size={17} />{item.label}
-                      {badgeCount > 0 && (
-                        <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                          {badgeCount > 99 ? "99+" : badgeCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+            <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <div className="overflow-hidden">
+                <div className={`space-y-0.5 ${group.label ? "mt-0.5 mb-1" : ""}`}>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = active === item.id;
+                    const badgeCount = item.id === "messages" ? unreadMessages : 0;
+                    return (
+                      <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
+                        className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors
+                          ${isActive ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
+                        {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[var(--accent)]" />}
+                        <Icon size={16} strokeWidth={isActive ? 2.25 : 2} className="shrink-0" />
+                        <span className="flex-1 text-left truncate">{item.label}</span>
+                        {badgeCount > 0 && (
+                          <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0">
+                            {badgeCount > 99 ? "99+" : badgeCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-            {gi < groups.length - 1 && <div className="mt-4 border-t border-white/10" />}
+            </div>
+            {gi < groups.length - 1 && <div className="mt-2 border-t border-white/10" />}
           </div>
           );
         })}
