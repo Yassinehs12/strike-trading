@@ -1,19 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  ShieldCheck, BookOpen, Plus, X, TrendingUp, TrendingDown, CheckCircle2, Sparkles, Check, ShieldAlert, Shield, Loader2,
+  ShieldCheck, BookOpen, Plus, X, TrendingUp, TrendingDown, Sparkles, ShieldAlert, Shield,
 } from "lucide-react";
 import { computePsychologyReport } from "../psychology";
 import { filterTradesByPeriod } from "../insights";
 import { computeChallengeStats, computeKPIs, computeDayWinStats, computeDrawdownSeries, equityCurve } from "../lib/tradeCalculations";
 import { CalendarCard } from "../pages/JournalPage";
-import { PRE_MARKET_CHECKLIST_ITEMS, SCORE_RING_COLORS } from "../constants";
+import { SCORE_RING_COLORS } from "../constants";
 import { Card, CustomTooltip, EmptyState, ProgressBar, StatusPill, UpgradeGate, SemicircleGauge, RingGauge } from "../components/ui/Primitives";
-import { fmtUSD, fmtUSD2, isoWeekKey, todayISO } from "../lib/format";
+import { fmtUSD, fmtUSD2, isoWeekKey } from "../lib/format";
 import { RuleViolationAlerts } from "../components/trades/TradeComponents";
-import { fetchChecklistState, saveChecklistState } from "../db";
 
 export const PsychologyReportCard = ({ trades }) => {
   const [period, setPeriod] = useState("week"); // "week" | "month"
@@ -169,90 +168,6 @@ export const WeeklyRecapCard = ({ trades }) => {
 };
 
 
-export const PreMarketChecklistCard = ({ userId, accounts = [] }) => {
-  const [accountId, setAccountId] = useState(null); // null = shared/"All accounts" checklist
-  const [day, setDay] = useState(todayISO());
-  const [checked, setChecked] = useState({});
-  const [loaded, setLoaded] = useState(false);
-
-  // Load from the server whenever the user, selected account, or day
-  // changes — this is what makes the checklist follow you across devices
-  // instead of being stuck in whichever browser you checked it in.
-  useEffect(() => {
-    if (!userId) { setChecked({}); setLoaded(true); return; }
-    setLoaded(false);
-    fetchChecklistState(userId, accountId, day)
-      .then(setChecked)
-      .catch(() => setChecked({}))
-      .finally(() => setLoaded(true));
-  }, [userId, accountId, day]);
-
-  // If the tab is left open across midnight, roll over to a fresh checklist
-  // without needing a page refresh.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = todayISO();
-      if (now !== day) setDay(now);
-    }, 60 * 1000);
-    return () => clearInterval(id);
-  }, [day]);
-
-  const toggle = (i) => {
-    const next = { ...checked, [i]: !checked[i] };
-    setChecked(next); // optimistic — feels instant, persists in the background
-    if (userId) saveChecklistState(userId, accountId, day, next).catch(() => {});
-  };
-  const doneCount = PRE_MARKET_CHECKLIST_ITEMS.filter((_, i) => checked[i]).length;
-  const allDone = doneCount === PRE_MARKET_CHECKLIST_ITEMS.length;
-
-  return (
-    <Card className="p-4 md:p-5">
-      <div className="flex items-center justify-between mb-3 gap-3">
-        <div>
-          <h3 className="font-bold text-[var(--text-primary)] text-sm">Pre-Market Checklist</h3>
-          <p className="text-xs text-[var(--text-muted)]">Syncs across your devices · resets every day · {doneCount}/{PRE_MARKET_CHECKLIST_ITEMS.length} done today</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {accounts.length > 0 && (
-            <select
-              value={accountId || ""}
-              onChange={(e) => setAccountId(e.target.value || null)}
-              className="text-xs font-semibold rounded-lg border px-2.5 py-1.5 bg-[var(--bg-tertiary)] border-[var(--border-primary)] text-[var(--text-secondary)] hover:border-[var(--border-secondary)] focus:outline-none focus:border-[var(--accent)]/60 cursor-pointer transition-colors"
-            >
-              <option value="">All Accounts</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          )}
-          {loaded ? (
-            <CheckCircle2 size={18} className={allDone ? "text-emerald-400" : "text-[var(--text-tertiary)]"} />
-          ) : (
-            <Loader2 size={16} className="text-[var(--text-tertiary)] animate-spin" />
-          )}
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        {PRE_MARKET_CHECKLIST_ITEMS.map((label, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => toggle(i)}
-            className={`w-full flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
-              checked[i] ? "bg-emerald-500/10 border-emerald-500/40" : "bg-[var(--bg-primary)] border-white/10 hover:border-white/20"
-            }`}
-          >
-            <span className={`shrink-0 w-4 h-4 rounded flex items-center justify-center border ${checked[i] ? "bg-emerald-500 border-emerald-500" : "border-white/20"}`}>
-              {checked[i] && <Check size={11} className="text-white" />}
-            </span>
-            <span className={`text-sm ${checked[i] ? "text-emerald-400 line-through decoration-emerald-400/50" : "text-[var(--text-secondary)]"}`}>{label}</span>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-};
-
 // Live prop-firm rule violation alerts. Reuses computeChallengeStats (same
 // numbers already driving the challenge progress bars) so there's no second
 // source of truth — a challenge that's failed here is failed everywhere else
@@ -369,8 +284,6 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
       <UpgradeGate profile={profile} feature="Psychology Report" description="Discipline scoring and emotional-pattern breakdowns computed from your trade tags.">
         <PsychologyReportCard trades={trades} />
       </UpgradeGate>
-
-      <PreMarketChecklistCard userId={userId} accounts={accounts} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
