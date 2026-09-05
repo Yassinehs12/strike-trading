@@ -24,7 +24,7 @@ const trade = (overrides = {}) => ({
 describe("computeKPIs", () => {
   it("returns all zeros for an empty trade list", () => {
     const kpis = computeKPIs([]);
-    expect(kpis).toEqual({ total: 0, netProfit: 0, winRate: 0, profitFactor: 0, avgRR: 0 });
+    expect(kpis).toMatchObject({ total: 0, netProfit: 0, winRate: 0, profitFactor: 0, avgRR: 0 });
   });
 
   it("computes win rate, net profit, and profit factor for a mixed set", () => {

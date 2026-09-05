@@ -4,7 +4,7 @@ import {
   AreaChart, Area, LineChart, Line,
 } from "recharts";
 import {
-  BarChart3, Target, Award, TrendingDown, Layers, TrendingUp, Scale, CircleSlash,
+  BarChart3, Target, Award, TrendingDown, Layers, TrendingUp, Scale, CircleSlash, Clock,
 } from "lucide-react";
 import { fmtUSD2 } from "../lib/format";
 import { PIE_COLORS, SESSIONS } from "../constants";

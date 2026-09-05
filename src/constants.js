@@ -170,7 +170,8 @@ export const SETTINGS_TABS = [
   { id: "account", label: "Account", icon: UserCircle },
   { id: "security", label: "Security", icon: Shield },
   { id: "trading", label: "Trading", icon: Target },
-  { id: "broker", label: "Broker Sync", icon: Plug },
+  // Temporarily hidden — uncomment to restore Broker Sync.
+  // { id: "broker", label: "Broker Sync", icon: Plug },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ];

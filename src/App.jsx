@@ -64,6 +64,10 @@ import { MacroSentimentPage } from "./pages/MacroSentimentPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { todayISO } from "./lib/format";
 
+// Temporary feature flags — set back to true to restore. Not deleting the
+// underlying components/tabs so re-enabling is a one-line change.
+const SHOW_SUPPORT_WIDGET = false;
+
 export default function App() {
   // If there's no saved auth token at all, we already know for certain
   // there's no session — skip the "checking" spinner and go straight to
@@ -560,7 +564,8 @@ export default function App() {
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />
-        <SupportChatWidget session={session} profile={profile} hideLauncher={active === "messages" || active === "forum"} />
+        {/* Temporarily hidden — flip SHOW_SUPPORT_WIDGET back to true to restore. */}
+        {SHOW_SUPPORT_WIDGET && <SupportChatWidget session={session} profile={profile} hideLauncher={active === "messages" || active === "forum"} />}
       </div>
     </ToastContext.Provider>
   );
