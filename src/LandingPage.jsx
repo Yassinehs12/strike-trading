@@ -156,15 +156,29 @@ const Hero = ({ onGetStarted, onSignIn, stats }) => (
 
       <div className="lp-rise-4 relative max-w-3xl mx-auto">
         <div className="lp-card rounded-2xl p-5 md:p-8">
+          <div className="flex items-center justify-between mb-4">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-muted)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 lp-pulse-dot" /> Live account overview
+            </span>
+            <span className="text-[11px] font-semibold text-[var(--text-faint)]">Last 30 days</span>
+          </div>
           <HeroEquityLine />
-          <div className="flex items-center justify-between mt-2 pt-4 border-t border-[var(--border-primary)]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4 mt-2 pt-4 border-t border-[var(--border-primary)]">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold">Net P&L, this month</div>
-              <div className="lp-mono text-2xl font-bold text-emerald-400">+$4,218.60</div>
+              <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold">Net P&L</div>
+              <div className="lp-mono text-xl md:text-2xl font-bold text-emerald-400">+$4,218.60</div>
             </div>
-            <div className="text-right">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold">Win rate</div>
+              <div className="lp-mono text-xl md:text-2xl font-bold text-[var(--text-primary)]">64%</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold">Profit factor</div>
+              <div className="lp-mono text-xl md:text-2xl font-bold text-[var(--text-primary)]">2.3</div>
+            </div>
+            <div>
               <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold">Daily loss limit</div>
-              <div className="lp-mono text-2xl font-bold text-[var(--text-primary)]">12% used</div>
+              <div className="lp-mono text-xl md:text-2xl font-bold text-[var(--text-primary)]">12% used</div>
             </div>
           </div>
         </div>
@@ -283,6 +297,66 @@ const MoreFeaturesSection = () => (
             <f.icon size={18} className="text-[var(--text-muted)] mb-3" />
             <h3 className="font-semibold text-[var(--text-primary)] text-sm mb-1.5">{f.title}</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+/* ---------- how it works ---------- */
+
+const STEPS = [
+  { n: "01", title: "Log the trade", desc: "Entry, exit, size, setup tag, session, and how you felt going in — takes under a minute per trade." },
+  { n: "02", title: "Set your rules", desc: "Add your prop firm's daily loss limit, max drawdown, and profit target once. Or skip it if you trade your own capital." },
+  { n: "03", title: "Watch it update live", desc: "Every gauge, chart, and compliance check recalculates the moment you log — no end-of-week spreadsheet reconciling." },
+  { n: "04", title: "Find your edge", desc: "See exactly which setup, session, or emotional state is actually making or losing you money, then trade accordingly." },
+];
+
+const HowItWorksSection = () => (
+  <section className="py-20 md:py-28 px-4 border-t border-[var(--border-primary)]">
+    <div className="max-w-5xl mx-auto">
+      <div className="max-w-2xl mb-14">
+        <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">From first trade to real insight.</h2>
+        <p className="text-[var(--text-tertiary)] text-lg">No setup calls, no imports required to start. Four steps, and the data starts working for you.</p>
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {STEPS.map((s, i) => (
+          <div key={i} className="relative">
+            <span className="lp-mono lp-gradient-text text-3xl font-bold">{s.n}</span>
+            <h3 className="font-bold text-[var(--text-primary)] mt-3 mb-2">{s.title}</h3>
+            <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{s.desc}</p>
+            {i < STEPS.length - 1 && (
+              <div className="hidden lg:block absolute top-3.5 left-[calc(100%+0.2rem)] w-[calc(1.25rem-0.2rem)] h-px bg-[var(--border-secondary)]" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+/* ---------- who it's for ---------- */
+
+const AUDIENCES = [
+  { title: "Forex traders", desc: "Session-based analytics (Asian, London, NY) so you know exactly when your edge actually shows up." },
+  { title: "Futures traders", desc: "Track R-multiples and setup performance across instruments without a spreadsheet duct-taped to your broker." },
+  { title: "Prop firm traders", desc: "Live daily loss, max drawdown, and profit target tracking that works with any firm's rule set." },
+  { title: "Serious retail traders", desc: "Real accountability and analytics for anyone trading their own capital and treating it like a business." },
+];
+
+const WhoItsForSection = () => (
+  <section className="py-20 md:py-28 px-4 border-t border-[var(--border-primary)]">
+    <div className="max-w-5xl mx-auto">
+      <div className="max-w-2xl mb-14">
+        <h2 className="lp-display text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4">Built for traders who take it seriously.</h2>
+        <p className="text-[var(--text-tertiary)] text-lg">Whatever you trade, the same discipline applies: log it, measure it, improve it.</p>
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {AUDIENCES.map((a, i) => (
+          <div key={i} className="lp-card lp-card-hover rounded-2xl p-6">
+            <h3 className="font-bold text-[var(--text-primary)] mb-2">{a.title}</h3>
+            <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">{a.desc}</p>
           </div>
         ))}
       </div>
@@ -425,6 +499,8 @@ export default function LandingPage({ onGetStarted, onSignIn }) {
       <ProblemSection />
       <FlagshipSection />
       <MoreFeaturesSection />
+      <HowItWorksSection />
+      <WhoItsForSection />
       <FAQSection />
       <FinalCTA onGetStarted={onGetStarted} />
       <Footer />
