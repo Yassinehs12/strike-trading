@@ -99,7 +99,7 @@ export const Sidebar = ({ active, setActive, mobileOpen, setMobileOpen, user, pr
                       <button key={item.id} onClick={() => { setActive(item.id); setMobileOpen(false); }}
                         className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-lg text-[13.5px] font-medium transition-colors
                           ${isActive ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"}`}>
-                        {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[var(--accent)]" />}
+                        {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full tj-gradient-bg" />}
                         <Icon size={16} strokeWidth={isActive ? 2.25 : 2} className="shrink-0" />
                         <span className="flex-1 text-left truncate">{item.label}</span>
                         {badgeCount > 0 && (
@@ -440,7 +440,7 @@ export const TopBar = ({ title, subtitle, onMenu, onLogTrade, showLogTrade, sess
       <div className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
       <UserMenu user={session?.user} profile={profile} setActive={setActive} onSignOut={onSignOut} />
       {showLogTrade && (
-        <button onClick={onLogTrade} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] active:scale-95 text-[var(--text-inverse)] font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
+        <button onClick={onLogTrade} className="flex items-center gap-1.5 tj-gradient-bg hover:opacity-90 active:scale-95 text-[var(--text-inverse)] font-semibold text-sm px-3 md:px-4 py-2 rounded-lg transition-all">
           <Plus size={16} strokeWidth={2.5} /><span className="hidden sm:inline">Log Trade</span>
         </button>
       )}
