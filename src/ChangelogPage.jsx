@@ -15,6 +15,23 @@ import { usePageMeta } from "./lib/seo";
 export const CHANGELOG = [
   {
     date: "2026-08-29",
+    title: "A real trading visual on the sign-in page instead of a plain gradient blob",
+    type: "improvement",
+    items: [
+      "The left panel of the sign-in/sign-up page now shows a mini live-account preview — a candlestick chart with a drawn equity line, net P&L, and a daily loss limit gauge — instead of a flat blue gradient blob.",
+    ],
+  },
+  {
+    date: "2026-08-29",
+    title: "Redesigned the sign-in page and fixed an invisible logo on white theme",
+    type: "fix",
+    items: [
+      "The \"StrikeJournal\" wordmark in the landing page header and footer was hardcoded to white text — invisible once the header background went white-theme-aware. It now follows the theme like everywhere else.",
+      "Sign in / sign up page: the form is now framed in a proper card with border and shadow instead of floating directly on the background, the submit button uses the same gradient as the landing page's CTAs, and a fixed white-only checkbox border (invisible in white theme) is now theme-aware.",
+    ],
+  },
+  {
+    date: "2026-08-29",
     title: "Fixed the white theme on the landing page and added real depth across the app",
     type: "fix",
     items: [

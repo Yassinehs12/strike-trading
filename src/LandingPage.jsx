@@ -336,7 +336,7 @@ const Nav = ({ onGetStarted, onSignIn }) => {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border-primary)] bg-[var(--bg-primary)]/85 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
-        <LogoFull size={28} forceLight />
+        <LogoFull size={28} />
         <nav className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((l) => <a key={l.label} href={l.href} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">{l.label}</a>)}
         </nav>
@@ -371,7 +371,7 @@ const Footer = () => (
   <footer className="border-t border-[var(--border-primary)] py-14 px-4">
     <div className="max-w-6xl mx-auto grid sm:grid-cols-2 md:grid-cols-4 gap-10">
       <div>
-        <LogoFull size={26} forceLight />
+        <LogoFull size={26} />
         <p className="text-sm text-[var(--text-muted)] mt-4 max-w-[220px]">A trading journal and prop firm challenge tracker built for traders who want the data, not the vibes.</p>
         <div className="flex items-center gap-3 mt-5">
           <a href="https://x.com" className="w-8 h-8 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><XLogoIcon size={14} /></a>

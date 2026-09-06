@@ -112,6 +112,67 @@ export const ProfileSetup = ({ session, onComplete, pendingProfile }) => {
    ============================================================ */
 
 
+/* ---------- compact "trading terminal" visual for the auth panel ----------
+   Candlesticks + a drawn equity line + a couple of live-looking stats and a
+   drawdown gauge, standing in for an actual product screenshot without
+   needing one — same gradient/candle language as the rest of the app. */
+const AUTH_CANDLES = [
+  { cy: 96, h: 13, up: true }, { cy: 100, h: 11, up: false }, { cy: 88, h: 15, up: true }, { cy: 92, h: 10, up: false },
+  { cy: 78, h: 16, up: true }, { cy: 82, h: 11, up: false }, { cy: 68, h: 14, up: true }, { cy: 72, h: 10, up: false },
+  { cy: 56, h: 15, up: true }, { cy: 60, h: 10, up: false }, { cy: 44, h: 14, up: true }, { cy: 48, h: 10, up: false },
+  { cy: 32, h: 15, up: true }, { cy: 24, h: 12, up: true },
+];
+
+const AuthTerminalPreview = () => (
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+    <div className="flex items-center justify-between mb-2.5">
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 lp-pulse-dot" /> Live account — XAUUSD
+      </span>
+      <span className="lp-mono text-[11px] font-semibold text-emerald-400">+2.4R this week</span>
+    </div>
+
+    <svg viewBox="0 0 300 116" className="w-full h-auto" fill="none">
+      <defs>
+        <linearGradient id="authLine" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#4F7CFF" />
+          <stop offset="55%" stopColor="#A855F7" />
+          <stop offset="100%" stopColor="#F472B6" />
+        </linearGradient>
+      </defs>
+      {AUTH_CANDLES.map((c, i) => {
+        const x = 8 + i * 21;
+        return (
+          <g key={i}>
+            <line x1={x} x2={x} y1={c.cy - c.h / 2 - 7} y2={c.cy + c.h / 2 + 7} stroke={c.up ? "#34d399" : "#fb7185"} strokeWidth="1.4" opacity="0.7" />
+            <rect x={x - 3.5} y={c.cy - c.h / 2} width="7" height={c.h} rx="1.5" fill={c.up ? "#34d399" : "#fb7185"} opacity={c.up ? 0.9 : 0.75} />
+          </g>
+        );
+      })}
+      <path
+        className="lp-draw-line"
+        d={`M${AUTH_CANDLES.map((c, i) => `${8 + i * 21} ${c.cy}`).join(" L")}`}
+        stroke="url(#authLine)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"
+      />
+    </svg>
+
+    <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/10">
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-zinc-500 font-semibold mb-0.5">Net P&L</div>
+        <div className="lp-mono text-base font-bold text-emerald-400">+$2,480</div>
+      </div>
+      <div className="w-28">
+        <div className="flex items-center justify-between text-[10px] text-zinc-500 font-semibold mb-1">
+          <span>Daily loss limit</span><span className="lp-mono text-zinc-300">22%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: "22%", background: "linear-gradient(90deg, #34d399, #fbbf24 90%)" }} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export const AuthPage = ({ onBack }) => {
   const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail] = useState("");
@@ -198,11 +259,11 @@ export const AuthPage = ({ onBack }) => {
           never changes but --text-primary etc. would flip to a dark color
           in light mode, making the text invisible against it. */}
       <div className="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col justify-between p-12 bg-[#050810]">
-        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 80% 85%, rgba(59,130,246,0.2), transparent 50%)" }} />
         <div
           className="absolute inset-0 opacity-[0.05]"
           style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "44px 44px" }}
         />
+        <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full opacity-20 blur-[100px] pointer-events-none" style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
 
         <a href="/" className="relative flex items-center gap-2">
           <LogoFull size={30} textClass="text-lg" forceLight />
@@ -215,10 +276,13 @@ export const AuthPage = ({ onBack }) => {
           <h1 className="text-4xl font-extrabold leading-tight mb-4 text-white">
             Trade with a system,<br /> not a feeling.
           </h1>
-          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md mb-10">
+          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md mb-6">
             Log every trade, track your funding challenge rules in real time, and see the analytics that actually explain your edge.
           </p>
-          <div className="space-y-3.5">
+
+          <AuthTerminalPreview />
+
+          <div className="space-y-3 mt-8">
             {[
               "Trade journal with setup tags & psychology notes",
               "Funding challenge tracker — works with any prop firm",
@@ -239,8 +303,9 @@ export const AuthPage = ({ onBack }) => {
       </div>
 
       {/* Right — the actual form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-sm">
+      <div className="flex-1 relative flex items-center justify-center p-4 sm:p-8 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 85% 0%, var(--accent-soft), transparent 45%)" }} />
+        <div className="w-full max-w-sm relative">
           <div className="lg:hidden flex items-center justify-center mb-8">
             <LogoFull size={32} textClass="text-lg" />
           </div>
@@ -255,6 +320,7 @@ export const AuthPage = ({ onBack }) => {
             <div className="tj-animate-in">
               <h2 className="text-xl font-extrabold mb-1.5">Reset your password</h2>
               <p className="text-sm text-[var(--text-muted)] mb-6">We'll email you a link to set a new password.</p>
+              <Card className="p-6">
               <form onSubmit={submitForgotPassword}>
                 <Field label="Email">
                   <div className="relative">
@@ -265,11 +331,12 @@ export const AuthPage = ({ onBack }) => {
                 {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
                 {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
+                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-90 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)]">
                   {loading ? <Loader2 size={15} className="animate-spin" /> : null}
                   Send Reset Link
                 </button>
               </form>
+              </Card>
               <button onClick={() => { setMode("signin"); setError(""); setNotice(""); }} className="w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mt-5 transition-colors">
                 ← Back to sign in
               </button>
@@ -281,6 +348,7 @@ export const AuthPage = ({ onBack }) => {
                 {mode === "signup" ? "Free to start — no credit card required." : "Sign in to get back to your journal."}
               </p>
 
+              <Card className="p-6">
               <form onSubmit={submitEmail}>
                 <Field label="Email">
                   <div className="relative">
@@ -319,7 +387,7 @@ export const AuthPage = ({ onBack }) => {
                         type="checkbox"
                         checked={keepSignedIn}
                         onChange={(e) => setKeepSignedInState(e.target.checked)}
-                        className="w-3.5 h-3.5 rounded border-white/20 accent-[var(--accent)]"
+                        className="w-3.5 h-3.5 rounded border-[var(--border-secondary)] accent-[var(--accent)]"
                       />
                       Keep me signed in
                     </label>
@@ -333,11 +401,12 @@ export const AuthPage = ({ onBack }) => {
                 {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
 
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 active:scale-[0.98] text-[var(--text-inverse)] font-semibold text-sm py-2.5 rounded-lg transition-all">
+                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-90 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)]">
                   {loading ? <Loader2 size={15} className="animate-spin" /> : null}
                   {mode === "signup" ? "Create Account" : "Sign In"}
                 </button>
               </form>
+              </Card>
 
               <p className="text-center text-xs text-[var(--text-faint)] mt-5">
                 {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
