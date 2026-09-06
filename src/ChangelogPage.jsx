@@ -14,6 +14,15 @@ import { usePageMeta } from "./lib/seo";
    ============================================================ */
 export const CHANGELOG = [
   {
+    date: "2026-08-29",
+    title: "Fixed the white theme on the landing page and added real depth across the app",
+    type: "fix",
+    items: [
+      "The landing page was hardcoded to a dark design (fixed near-black background, white text) and completely ignored the white theme toggle — it's now fully theme-aware, so switching to white theme actually works there too.",
+      "Every card, panel, and divider across the app was built with translucent white overlays that read as depth on the black theme but were nearly invisible on white — they now get a proper dark-tinted shade and a soft shadow in white theme, matching the sense of elevation the black theme already had.",
+    ],
+  },
+  {
     date: "2026-08-28",
     title: "Daily Market Plan",
     type: "feature",
