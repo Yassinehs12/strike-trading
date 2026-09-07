@@ -256,7 +256,7 @@ export default function App() {
     "market-plan": ["Daily Market Plan", "Write your bias, key levels, and setups before the session starts"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, logged and filterable"],
-    journaling: ["Weekly & Monthly Review", "Reflect on your trading beyond the individual trade"],
+    journaling: ["Weekly & Monthly Review", "Step back from individual trades and understand the bigger picture"],
     notebook: ["Notebook", "Playbooks, psychology notes, and anything worth remembering"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
     goals: ["Goals", "Set targets and track your progress toward them"],
