@@ -1,18 +1,20 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
   ShieldCheck, BookOpen, Plus, X, TrendingUp, TrendingDown, Sparkles, ShieldAlert, Shield,
+  ArrowRight, Target, NotebookPen, ClipboardList, Brain, Lightbulb, Trophy,
 } from "lucide-react";
 import { computePsychologyReport } from "../psychology";
-import { filterTradesByPeriod } from "../insights";
-import { computeChallengeStats, computeKPIs, computeDayWinStats, computeDrawdownSeries, equityCurve } from "../lib/tradeCalculations";
+import { filterTradesByPeriod, computeInsights } from "../insights";
+import { computeChallengeStats, computeKPIs, computeDrawdownSeries, equityCurve } from "../lib/tradeCalculations";
 import { CalendarCard } from "../pages/JournalPage";
 import { SCORE_RING_COLORS } from "../constants";
 import { Card, CustomTooltip, EmptyState, ProgressBar, StatusPill, UpgradeGate, SemicircleGauge, RingGauge } from "../components/ui/Primitives";
 import { fmtUSD, fmtUSD2, isoWeekKey } from "../lib/format";
 import { RuleViolationAlerts } from "../components/trades/TradeComponents";
+import { fetchGoals } from "../db";
 
 export const PsychologyReportCard = ({ trades }) => {
   const [period, setPeriod] = useState("week"); // "week" | "month"
@@ -36,10 +38,15 @@ export const PsychologyReportCard = ({ trades }) => {
 
   return (
     <Card className="p-4 md:p-5">
-      <div className="flex items-center justify-between mb-1">
-        <div>
-          <h3 className="font-bold text-[var(--text-primary)] text-sm">Psychology Report</h3>
-          <p className="text-xs text-[var(--text-muted)]">Emotional state and discipline patterns from your own trade history — not advice, just what the data shows.</p>
+      <div className="flex items-center justify-between mb-1 gap-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/12 flex items-center justify-center shrink-0 mt-0.5">
+            <Brain size={15} className="text-[var(--accent)]" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-bold text-[var(--text-primary)] text-sm">Psychology</h3>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">Understand the emotional and behavioral patterns behind your trades.</p>
+          </div>
         </div>
         <div className="flex items-center bg-[var(--bg-primary)] border border-white/10 rounded-lg p-0.5 shrink-0">
           <button onClick={() => setPeriod("week")} className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${period === "week" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)]"}`}>Week</button>
@@ -48,9 +55,12 @@ export const PsychologyReportCard = ({ trades }) => {
       </div>
 
       {!ready ? (
-        <div className="py-6 text-center">
-          <p className="text-sm text-[var(--text-muted)]">No closed trades this {period} yet.</p>
-          <p className="text-xs text-[var(--text-faint)] mt-1">Keep logging emotion tags — your report unlocks once there's enough data to spot real patterns.</p>
+        <div className="py-8 text-center flex flex-col items-center">
+          <div className="w-11 h-11 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-3">
+            <Sparkles size={18} className="text-[var(--accent)]" />
+          </div>
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">Your psychology profile is still developing.</p>
+          <p className="text-xs text-[var(--text-faint)] mt-1 max-w-xs">Log more trades and emotion tags to uncover behavioral patterns — no closed trades this {period} yet.</p>
         </div>
       ) : (
         <>
@@ -175,15 +185,156 @@ export const WeeklyRecapCard = ({ trades }) => {
 // challenge that's used 80%+ of its daily or total loss allowance.
 
 
+/* ---------- small dashboard-only building blocks ---------- */
+
+// Compact secondary-tier metric tile — used for win rate / profit factor /
+// trade count / avg win-loss beside the Net P&L hero. Deliberately smaller
+// and quieter than the hero card so hierarchy reads instantly.
+const MetricTile = ({ label, value, valueClassName = "text-[var(--text-primary)]", sub, graphic }) => (
+  <Card className="p-3.5 md:p-4 tj-animate-in">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1.5 truncate">{label}</div>
+        <div className={`tj-mono text-xl md:text-2xl font-bold leading-none ${valueClassName}`}>{value}</div>
+        {sub && <div className="text-[11px] text-[var(--text-faint)] mt-1.5">{sub}</div>}
+      </div>
+      {graphic && <div className="shrink-0">{graphic}</div>}
+    </div>
+  </Card>
+);
+
+const QuickAction = ({ icon: Icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-tertiary)]/40 hover:bg-[var(--bg-tertiary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-semibold transition-all active:scale-95 whitespace-nowrap"
+  >
+    <Icon size={14} className="text-[var(--accent)] shrink-0" />
+    {label}
+  </button>
+);
+
+// Small dashboard-scoped goal widget. Reads goals the same way GoalsPage does
+// (fetchGoals + the trades already on hand) but only ever displays a single
+// nearest active "profit" or "trade_count" / "win_rate" goal — never
+// duplicates the full Goals page. Silently renders nothing if the request
+// fails or there's no active goal, since this is a supplementary widget.
+const useNearestGoal = (userId, trades) => {
+  const [goals, setGoals] = useState(null); // null = not loaded yet
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) { setGoals([]); return; }
+    fetchGoals(userId).then((g) => { if (!cancelled) setGoals(g); }).catch(() => { if (!cancelled) setGoals([]); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  return useMemo(() => {
+    if (!goals) return { loading: true, goal: null };
+    const active = goals.filter((g) => g.status === "active" && g.metric !== "custom");
+    if (!active.length) return { loading: false, goal: null };
+    const withEnd = active.filter((g) => g.endDate).sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+    const g = withEnd[0] || active[0];
+
+    const inRange = trades.filter((t) => {
+      if (g.startDate && t.date < g.startDate) return false;
+      if (g.endDate && t.date > g.endDate) return false;
+      return true;
+    });
+    let current = 0;
+    if (g.metric === "profit") current = inRange.reduce((s, t) => s + (t.pnl || 0), 0);
+    else if (g.metric === "trade_count") current = inRange.length;
+    else if (g.metric === "win_rate") {
+      const closed = inRange.filter((t) => t.status === "Win" || t.status === "Loss");
+      current = closed.length ? (closed.filter((t) => t.status === "Win").length / closed.length) * 100 : 0;
+    }
+    const target = g.targetValue ?? 0;
+    const pct = target > 0 ? Math.max(0, Math.min(100, (current / target) * 100)) : 0;
+    return { loading: false, goal: { ...g, current, target, pct } };
+  }, [goals, trades]);
+};
+
+const formatGoalValue = (metric, v) => {
+  if (v == null) return "—";
+  if (metric === "profit") return `${v < 0 ? "-" : ""}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  if (metric === "win_rate") return `${v.toFixed(0)}%`;
+  return Math.round(v).toLocaleString();
+};
+
+const GoalWidgetCard = ({ userId, trades, setActive }) => {
+  const { loading, goal } = useNearestGoal(userId, trades);
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2"><Target size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Goal</h3></div>
+        <button onClick={() => setActive && setActive("goals")} className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors flex items-center gap-0.5">
+          View Goals <ArrowRight size={11} />
+        </button>
+      </div>
+      {loading ? (
+        <div className="h-16" />
+      ) : goal ? (
+        <div>
+          <div className="text-sm font-semibold text-[var(--text-primary)] truncate mb-2">{goal.title}</div>
+          <div className="flex items-end justify-between mb-2">
+            <span className="tj-mono text-xl font-bold text-[var(--text-primary)]">{formatGoalValue(goal.metric, goal.current)}</span>
+            <span className="text-xs text-[var(--text-muted)]">of {formatGoalValue(goal.metric, goal.target)}</span>
+          </div>
+          <ProgressBar pct={goal.pct} />
+          <div className="flex items-center justify-between mt-2 text-[11px] text-[var(--text-faint)]">
+            <span>{goal.pct.toFixed(0)}% achieved</span>
+            {goal.metric !== "win_rate" && goal.target > goal.current && (
+              <span>{formatGoalValue(goal.metric, goal.target - goal.current)} remaining</span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <EmptyState icon={Target} title="No active goal" sub="Set a monthly target to track progress right from the dashboard." />
+      )}
+    </Card>
+  );
+};
+
+// Compact insights card, reusing the same client-side pattern detector that
+// powers Analytics — never fabricated, just the top standout pattern(s) in
+// the member's own history, if the sample is large enough to say anything.
+const InsightsCard = ({ trades }) => {
+  const { insights, ready } = useMemo(() => computeInsights(trades, "all time"), [trades]);
+  const shown = insights.filter((i) => i.type !== "summary").slice(0, 3);
+
+  const iconFor = (type) => {
+    if (type === "strength") return <TrendingUp size={13} className="text-emerald-400 shrink-0 mt-0.5" />;
+    if (type === "weakness") return <ShieldAlert size={13} className="text-amber-400 shrink-0 mt-0.5" />;
+    return <Lightbulb size={13} className="text-[var(--accent)] shrink-0 mt-0.5" />;
+  };
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center gap-2 mb-4"><Lightbulb size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Insights</h3></div>
+      {ready && shown.length ? (
+        <div className="space-y-3">
+          {shown.map((f, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-[var(--text-secondary)] leading-relaxed">
+              {iconFor(f.type)}
+              <span>{f.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon={Lightbulb} title="Not enough data yet" sub="Log a few more trades and we'll surface patterns across your assets, sessions, and setups." />
+      )}
+    </Card>
+  );
+};
+
 export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogTrade, setActive, userId, accounts = [] }) => {
   const kpis = computeKPIs(trades);
-  const dayStats = useMemo(() => computeDayWinStats(trades), [trades]);
   const drawdownStats = useMemo(() => computeDrawdownSeries(trades), [trades]);
   const curve = useMemo(() => equityCurve(trades), [trades]);
   const recent = trades.slice(0, 5);
+  const isUp = kpis.netProfit >= 0;
+  const avgRRRatio = kpis.avgLoss ? kpis.avgWin / kpis.avgLoss : null;
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6">
       {trades.length === 0 && (
         <Card className="p-5 md:p-6 relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, var(--accent), transparent 55%)" }} />
@@ -217,66 +368,55 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
 
       <WeeklyRecapCard trades={trades} />
 
-      {/* ---------- KPI row: net P&L + gauges (win %, profit factor, day win %, avg win/loss) ---------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-        <Card className="p-4 tj-animate-in">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] mb-1">
-            Net P&amp;L <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-faint)]">{kpis.total}</span>
+      {/* ---------- QUICK ACTIONS ---------- */}
+      <div className="flex flex-wrap gap-2">
+        <QuickAction icon={Plus} label="Log Trade" onClick={() => onLogTrade && onLogTrade()} />
+        <QuickAction icon={NotebookPen} label="Daily Market Plan" onClick={() => setActive && setActive("market-plan")} />
+        <QuickAction icon={ClipboardList} label="Review Trades" onClick={() => setActive && setActive("journal")} />
+        <QuickAction icon={Target} label="Set Goal" onClick={() => setActive && setActive("goals")} />
+      </div>
+
+      {/* ---------- PERFORMANCE HERO: Net P&L anchor + secondary metrics ---------- */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-3 md:gap-4">
+        <Card className="p-5 md:p-6 tj-animate-in relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 85% 0%, ${isUp ? "#10b981" : "#f43f5e"}, transparent 60%)` }} />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Net P&amp;L</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-faint)]">{kpis.total} trades</span>
+            </div>
+            <div className={`tj-mono text-3xl md:text-4xl font-extrabold leading-none ${isUp ? "text-emerald-500" : "text-rose-500"}`}>
+              {isUp ? "+" : ""}{fmtUSD2(kpis.netProfit)}
+            </div>
           </div>
-          <div className={`tj-mono text-2xl font-bold ${kpis.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmtUSD2(kpis.netProfit)}</div>
-          <div className="text-xs text-[var(--text-muted)] mt-1">all-time</div>
+          <div className="relative flex items-center gap-1.5 mt-4 text-xs text-[var(--text-muted)]">
+            <span className="px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] font-semibold">All time</span>
+            {isUp ? <TrendingUp size={13} className="text-emerald-500" /> : <TrendingDown size={13} className="text-rose-500" />}
+            <span className={isUp ? "text-emerald-500 font-semibold" : "text-rose-500 font-semibold"}>{kpis.total ? "Account is net positive" : "No trades yet"}</span>
+          </div>
         </Card>
 
-        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
-          <div>
-            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Trade win %</div>
-            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{kpis.winRate.toFixed(2)}%</div>
-          </div>
-          <SemicircleGauge
-            size={84}
-            segments={[
-              { value: kpis.wins, color: "#10b981" },
-              { value: kpis.beCount, color: "#3b82f6" },
-              { value: kpis.losses, color: "#ef4444" },
-            ]}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <MetricTile
+            label="Win Rate"
+            value={`${kpis.winRate.toFixed(2)}%`}
+            sub={`${kpis.wins}W · ${kpis.losses}L · ${kpis.beCount}BE`}
+            graphic={<SemicircleGauge size={64} segments={[{ value: kpis.wins, color: "#10b981" }, { value: kpis.beCount, color: "#3b82f6" }, { value: kpis.losses, color: "#ef4444" }]} />}
           />
-        </Card>
-
-        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
-          <div>
-            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Profit factor</div>
-            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)}</div>
-          </div>
-          <RingGauge pct={kpis.profitFactor === Infinity ? 1 : kpis.profitFactor / 4} color="#10b981" />
-        </Card>
-
-        <Card className="p-4 tj-animate-in flex items-center justify-between gap-2">
-          <div>
-            <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Day win %</div>
-            <div className="tj-mono text-2xl font-bold text-[var(--text-primary)]">{dayStats.dayWinPct.toFixed(2)}%</div>
-          </div>
-          <SemicircleGauge
-            size={84}
-            segments={[
-              { value: dayStats.winDays, color: "#10b981" },
-              { value: dayStats.beDays, color: "#3b82f6" },
-              { value: dayStats.loseDays, color: "#ef4444" },
-            ]}
+          <MetricTile
+            label="Profit Factor"
+            value={kpis.profitFactor === Infinity ? "∞" : kpis.profitFactor.toFixed(2)}
+            sub="Gross profit / gross loss"
+            graphic={<RingGauge size={56} pct={kpis.profitFactor === Infinity ? 1 : kpis.profitFactor / 4} color="#10b981" />}
           />
-        </Card>
-
-        <Card className="p-4 tj-animate-in">
-          <div className="text-xs font-medium text-[var(--text-muted)] mb-1">Avg win/loss trade</div>
-          <div className="tj-mono text-2xl font-bold text-[var(--text-primary)] mb-3">{kpis.avgLoss ? (kpis.avgWin / kpis.avgLoss).toFixed(2) : "—"}</div>
-          <div className="flex rounded-full overflow-hidden h-2 bg-[var(--bg-tertiary)]">
-            <div className="bg-emerald-500 h-full" style={{ width: `${kpis.avgWin + kpis.avgLoss ? (kpis.avgWin / (kpis.avgWin + kpis.avgLoss)) * 100 : 50}%` }} />
-            <div className="bg-rose-500 h-full flex-1" />
-          </div>
-          <div className="flex justify-between text-[11px] font-semibold mt-1.5">
-            <span className="text-emerald-500">{fmtUSD2(kpis.avgWin)}</span>
-            <span className="text-rose-500">-{fmtUSD2(kpis.avgLoss)}</span>
-          </div>
-        </Card>
+          <MetricTile label="Trades" value={kpis.total} sub="Total logged" />
+          <MetricTile
+            label="Avg Win / Loss"
+            value={avgRRRatio ? `${avgRRRatio.toFixed(2)}×` : "—"}
+            valueClassName="text-[var(--text-primary)]"
+            sub={<span><span className="text-emerald-500 font-semibold">{fmtUSD2(kpis.avgWin)}</span> <span className="text-[var(--text-faint)]">/</span> <span className="text-rose-500 font-semibold">-{fmtUSD2(kpis.avgLoss)}</span></span>}
+          />
+        </div>
       </div>
 
       <RuleViolationAlerts challenges={challenges} trades={trades} />
@@ -285,25 +425,35 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
         <PsychologyReportCard trades={trades} />
       </UpgradeGate>
 
+      {/* ---------- MAIN PERFORMANCE AREA: chart + challenges/quick actions ---------- */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="xl:col-span-2 p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-4"><TrendingUp size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Performance</h3></div>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2"><TrendingUp size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Performance</h3></div>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">All time</span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mb-4">Track how your account has evolved over time.</p>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 min-w-0">
               {curve.length ? (
                 <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={curve}>
-                    <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.35} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs>
+                  <AreaChart data={curve} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={isUp ? "#8B5CF6" : "#f43f5e"} stopOpacity={0.32} />
+                        <stop offset="95%" stopColor={isUp ? "#8B5CF6" : "#f43f5e"} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
                     <XAxis dataKey="date" stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
-                    <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                    <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} width={52} />
                     <Tooltip content={<CustomTooltip prefix="$" />} />
-                    <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2} fill="url(#eqGrad)" />
+                    <Area type="monotone" dataKey="equity" stroke={isUp ? "#8B5CF6" : "#f43f5e"} strokeWidth={2.25} fill="url(#eqGrad)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} animationDuration={600} />
                   </AreaChart>
                 </ResponsiveContainer>
-              ) : <EmptyState icon={TrendingUp} title="No trades yet" sub="Log your first trade to see your equity curve." />}
+              ) : <EmptyState icon={TrendingUp} title="No performance history yet" sub="Log your first trade to start building your equity curve." action={<button onClick={() => onLogTrade && onLogTrade()} className="mt-3 text-xs font-semibold text-[var(--text-inverse)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-3.5 py-2 rounded-lg transition-all active:scale-95">Log Trade</button>} />}
             </div>
-            <div className="flex md:flex-col flex-wrap gap-4 md:gap-5 md:w-40 md:border-l md:border-[var(--border-primary)] md:pl-4">
+            <div className="flex md:flex-col flex-wrap gap-4 md:gap-5 md:w-40 md:border-l md:border-[var(--border-primary)] md:pl-4 md:shrink-0">
               <div>
                 <div className="text-[11px] text-[var(--text-muted)]">Total trades</div>
                 <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{kpis.total}</div>
@@ -328,54 +478,89 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
           </div>
         </Card>
 
-        <Card className="p-4 md:p-5">
-          <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Active Challenges</h3>
-          <div className="space-y-5">
-            {challenges.slice(0, 2).map((c) => {
-              const s = computeChallengeStats(c, trades);
-              return (
-                <div key={c.id} className="pb-4 border-b border-white/10 last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-[var(--text-primary)]">{c.firm}</span>
-                    <StatusPill status={s.status} />
+        <div className="flex flex-col gap-4 md:gap-6">
+          <Card className="p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-4"><Trophy size={15} className="text-[var(--accent)]" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Active Challenges</h3></div>
+            <div className="space-y-4">
+              {challenges.slice(0, 2).map((c) => {
+                const s = computeChallengeStats(c, trades);
+                const remaining = Math.max(0, s.targetBalance - s.currentBalance);
+                return (
+                  <div key={c.id} className="pb-4 border-b border-white/10 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{c.firm}</span>
+                      <StatusPill status={s.status} />
+                    </div>
+                    <div className="flex items-baseline gap-1.5 text-xs text-[var(--text-muted)] mb-2">
+                      <span className="tj-mono font-semibold text-[var(--text-secondary)]">{fmtUSD(c.accountSize)}</span>
+                      <ArrowRight size={11} className="text-[var(--text-faint)]" />
+                      <span className="tj-mono font-semibold text-[var(--text-primary)]">{fmtUSD(s.currentBalance)}</span>
+                      <span className="ml-auto">Target {fmtUSD(s.targetBalance)}</span>
+                    </div>
+                    <ProgressBar pct={s.progressToTarget} />
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[11px] text-[var(--text-faint)]">{remaining > 0 ? `${fmtUSD(remaining)} remaining` : "Target reached"}</span>
+                      <button onClick={() => setActive && setActive("challenges")} className="text-[11px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors flex items-center gap-0.5">
+                        View <ArrowRight size={10} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1"><span>{fmtUSD(s.currentBalance)}</span><span>Target {fmtUSD(s.targetBalance)}</span></div>
-                  <ProgressBar pct={s.progressToTarget} />
-                </div>
-              );
-            })}
-            {challenges.length === 0 && <EmptyState icon={ShieldCheck} title="No challenges yet" sub="Create a funding challenge to start tracking rules." />}
-          </div>
-        </Card>
+                );
+              })}
+              {challenges.length === 0 && (
+                <EmptyState
+                  icon={ShieldCheck}
+                  title="No challenges yet"
+                  sub="Create a funding challenge to start tracking rules and progress."
+                  action={<button onClick={() => setActive && setActive("challenges")} className="mt-3 text-xs font-semibold text-[var(--text-inverse)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-3.5 py-2 rounded-lg transition-all active:scale-95">Set Up a Challenge</button>}
+                />
+              )}
+            </div>
+          </Card>
+
+          <GoalWidgetCard userId={userId} trades={trades} setActive={setActive} />
+        </div>
       </div>
 
-      <Card className="p-4 md:p-5">
-        <div className="flex items-center gap-2 mb-4"><TrendingDown size={15} className="text-rose-500" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Drawdown</h3></div>
-        {drawdownStats.series.length > 1 ? (
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={drawdownStats.series} margin={{ left: 0, right: 8, top: 8 }}>
-              <defs>
-                <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0} />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.35} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
-              <XAxis dataKey="date" stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} minTickGap={32} />
-              <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} width={44} />
-              <Tooltip content={<CustomTooltip prefix="$" />} />
-              <Area type="monotone" dataKey="drawdown" stroke="#ef4444" strokeWidth={2} fill="url(#ddGrad)" dot={false} activeDot={{ r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <EmptyState icon={TrendingDown} title="No drawdown yet" sub="Great — your equity curve hasn't dipped below a prior high." />
-        )}
-      </Card>
+      {/* ---------- ACTIVITY / SECONDARY INTELLIGENCE ---------- */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+        <Card className="xl:col-span-2 p-4 md:p-5">
+          <div className="flex items-center gap-2 mb-4"><TrendingDown size={15} className="text-rose-500" /><h3 className="font-bold text-[var(--text-primary)] text-sm">Drawdown</h3></div>
+          {drawdownStats.series.length > 1 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={drawdownStats.series} margin={{ left: 0, right: 8, top: 8 }}>
+                <defs>
+                  <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0} />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.32} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} minTickGap={32} />
+                <YAxis stroke="var(--text-faint)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`} width={44} />
+                <Tooltip content={<CustomTooltip prefix="$" />} />
+                <Area type="monotone" dataKey="drawdown" stroke="#ef4444" strokeWidth={2} fill="url(#ddGrad)" dot={false} activeDot={{ r: 4 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState icon={TrendingDown} title="No drawdown yet" sub="Great — your equity curve hasn't dipped below a prior high." />
+          )}
+        </Card>
+
+        <InsightsCard trades={trades} />
+      </div>
 
       <CalendarCard trades={trades} onOpenTrade={onOpenTrade} compact showWeeklySummary />
 
       <Card className="p-4 md:p-5">
-        <h3 className="font-bold text-[var(--text-primary)] text-sm mb-4">Recent Trades</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-[var(--text-primary)] text-sm">Recent Trading Activity</h3>
+          {recent.length > 0 && (
+            <button onClick={() => setActive && setActive("journal")} className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors flex items-center gap-0.5">
+              View all trades <ArrowRight size={11} />
+            </button>
+          )}
+        </div>
         {recent.length ? (
           <div className="overflow-x-auto tj-scrollbar">
             <table className="w-full text-sm min-w-[560px]">
@@ -399,7 +584,14 @@ export const DashboardPage = ({ trades, challenges, onOpenTrade, profile, onLogT
               </tbody>
             </table>
           </div>
-        ) : <EmptyState icon={BookOpen} title="No trades logged" sub="Click “Log Trade” in the top bar to add your first entry." />}
+        ) : (
+          <EmptyState
+            icon={BookOpen}
+            title="No trades logged"
+            sub="Log your first trade to start building your trading history."
+            action={<button onClick={() => onLogTrade && onLogTrade()} className="mt-3 text-xs font-semibold text-[var(--text-inverse)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-3.5 py-2 rounded-lg transition-all active:scale-95">Log Trade</button>}
+          />
+        )}
       </Card>
     </div>
   );
