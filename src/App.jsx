@@ -255,7 +255,7 @@ export default function App() {
     dashboard: ["Dashboard", "Your trading performance at a glance"],
     "market-plan": ["Daily Market Plan", "Write your bias, key levels, and setups before the session starts"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
-    journal: ["Trade Journal", "Every trade, logged and filterable"],
+    journal: ["Trade Journal", "Every trade, documented, searchable, and built for review."],
     journaling: ["Weekly & Monthly Review", "Step back from individual trades and understand the bigger picture"],
     notebook: ["Notebook", "Playbooks, psychology notes, and anything worth remembering"],
     analytics: ["Analytics & Insights", "Break down your edge by asset, day, and session"],
@@ -530,7 +530,7 @@ export default function App() {
               <>
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} userId={session?.user?.id} accounts={accounts} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
-                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
+                {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} onLogTrade={() => setLogModalOpen(true)} />}
                 {active === "journaling" && (
                   <UpgradeGate profile={profile} feature="Weekly/Monthly Review" description="Structured reflection on your trading beyond the individual trade — built automatically from your journal.">
                     <JournalingPage session={session} trades={trades} toast={addToast} />

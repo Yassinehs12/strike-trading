@@ -17,7 +17,7 @@ export function tradesToCSV(trades) {
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
 }
 
-async function tradesToPDF(trades, meta = {}) {
+export async function tradesToPDF(trades, meta = {}) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape" });

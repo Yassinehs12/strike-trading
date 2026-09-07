@@ -1,13 +1,46 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  BookOpen, Search, ChevronLeft, ChevronRight, Filter, ArrowUpRight, ArrowDownRight, Trash2, Download, Loader2, Upload, FileText, Lock, ArrowLeftRight, CalendarDays,
+  BookOpen, Search, ChevronLeft, ChevronRight, Filter, ArrowUpRight, ArrowDownRight, Trash2, Eye, Download, Loader2, Upload, FileText, Lock, ArrowLeftRight, CalendarDays, Plus, Wallet, X, SlidersHorizontal, ChevronDown,
 } from "lucide-react";
 import { AssetOptions, Card, EmptyState, SortHeader, StatusPill, useToast } from "../components/ui/Primitives";
 import { clamp, fmtUSD2 } from "../lib/format";
-import { AccountsBar } from "../components/trades/TradeComponents";
-import { csvToTrades, downloadBlob, tradesToCSV } from "../lib/csv";
-import { PAGE_SIZE } from "../constants";
+import { AddAccountModal } from "../components/trades/TradeComponents";
+import { csvToTrades, downloadBlob, tradesToCSV, tradesToPDF } from "../lib/csv";
+import { ASSET_GROUPS, SESSIONS } from "../constants";
 import { isProPlan } from "../lib/plan";
+import { computeKPIs } from "../lib/tradeCalculations";
+
+// Reverse lookup: "NAS100" -> "Index", "XAUUSD" -> "Metal", etc. Only ever
+// consulted for assets that exist in ASSET_GROUPS — anything typed in
+// manually (e.g. via CSV import) that isn't in the list simply gets no
+// sub-label rather than a guessed/invented one.
+const ASSET_TYPE_LABELS = { Forex: "Forex", Metals: "Metal", Energy: "Energy", Indices: "Index", Crypto: "Crypto", Stocks: "Stock" };
+const ASSET_TYPE_MAP = Object.entries(ASSET_GROUPS).reduce((map, [group, list]) => {
+  list.forEach((a) => { map[a] = ASSET_TYPE_LABELS[group]; });
+  return map;
+}, {});
+
+// "4HBOS / 1H / 5MIN / 1MIN OB" -> "4HBOS" for a scannable table cell. The
+// full string is never discarded — it's still available via the title
+// attribute (tooltip) and in the trade detail drawer.
+const shortSetup = (setup) => {
+  if (!setup) return "—";
+  const first = setup.split("/")[0].trim();
+  return first.length > 18 ? `${first.slice(0, 17)}…` : first || "—";
+};
+
+const fmtDateShort = (iso) => {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
+};
+
+const SummaryStat = ({ label, value, tone }) => (
+  <div className="flex items-baseline gap-1.5">
+    <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">{label}</span>
+    <span className={`tj-mono text-sm font-bold ${tone || "text-[var(--text-primary)]"}`}>{value}</span>
+  </div>
+);
 
 export const CalendarCard = ({ trades, onOpenTrade, compact = false, showWeeklySummary = false }) => {
   const [cursor, setCursor] = useState(() => {
@@ -177,17 +210,23 @@ export const CalendarCard = ({ trades, onOpenTrade, compact = false, showWeeklyS
 };
 
 /* ============================================================
-   ANALYTICS PAGE
+   TRADE JOURNAL PAGE
    ============================================================ */
 
 
-export const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, accounts = [], onAddAccount, onEditAccount, onRemoveAccount, accountLimit = 3 }) => {
+const DEFAULT_FILTERS = { asset: "All", setup: "All", outcome: "All", session: "All", search: "" };
+const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
+
+export const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, profile, accounts = [], onAddAccount, onEditAccount, onRemoveAccount, accountLimit = 3, onLogTrade }) => {
   const [selectedAccountId, setSelectedAccountId] = useState(null);
-  const [filters, setFilters] = useState({ asset: "All", setup: "All", outcome: "All", search: "" });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
   const [importing, setImporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
   const importInputRef = useRef(null);
   const toast = useToast();
 
@@ -206,6 +245,7 @@ export const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, pro
       if (filters.asset !== "All" && t.asset !== filters.asset) return false;
       if (filters.setup !== "All" && t.setup !== filters.setup) return false;
       if (filters.outcome !== "All" && t.status !== filters.outcome) return false;
+      if (filters.session !== "All" && t.session !== filters.session) return false;
       if (filters.search && !t.asset.toLowerCase().includes(filters.search.toLowerCase())) return false;
       return true;
     });
@@ -219,10 +259,24 @@ export const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, pro
     return list;
   }, [accountFilteredTrades, filters, sortConfig]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
+  const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
   const setFilter = (k, v) => { setFilters((f) => ({ ...f, [k]: v })); setPage(1); };
+  const clearFilters = () => { setFilters(DEFAULT_FILTERS); setPage(1); };
   const onSort = (key) => setSortConfig((sc) => ({ key, dir: sc.key === key && sc.dir === "desc" ? "asc" : "desc" }));
+  const activeFilterCount = Object.keys(DEFAULT_FILTERS).filter((k) => filters[k] !== DEFAULT_FILTERS[k]).length;
+
+  // KPIs for the currently selected account/filter scope — reuses the same
+  // computeKPIs the Analytics page relies on, so these numbers always agree.
+  const kpis = useMemo(() => computeKPIs(accountFilteredTrades), [accountFilteredTrades]);
+  const accountStatsMap = useMemo(() => {
+    const map = {};
+    accounts.forEach((a) => { map[a.id] = computeKPIs(trades.filter((t) => t.accountId === a.id)); });
+    return map;
+  }, [trades, accounts]);
+  const allAccountsStats = useMemo(() => computeKPIs(trades), [trades]);
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || null;
 
   const exportCSV = () => {
     if (!isProPlan(profile)) { toast("CSV export is a Pro feature.", "error"); return; }
@@ -263,87 +317,239 @@ export const JournalPage = ({ trades, onDelete, onOpenTrade, onImportTrades, pro
     }
   };
 
+  const confirmDelete = (id) => {
+    if (window.confirm("Delete this trade? This can't be undone.")) onDelete(id);
+  };
+
+  const openAddAccount = () => {
+    if (accounts.length >= accountLimit) {
+      toast(`You've reached the ${accountLimit}-account limit on your current plan.`, "error");
+      return;
+    }
+    setAccountModalOpen(true);
+  };
+
+  const trueEmpty = trades.length === 0;
+  const noResults = !trueEmpty && filtered.length === 0;
+
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <AccountsBar
-        accounts={accounts}
-        selectedId={selectedAccountId}
-        onSelect={setSelectedAccountId}
-        onAdd={onAddAccount}
-        onEdit={onEditAccount}
-        onRemove={onRemoveAccount}
-        limit={accountLimit}
-      />
+      {/* PAGE HEADER */}
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] tracking-tight">Trade Journal</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-0.5">Every trade, documented, searchable, and built for review.</p>
+      </div>
+
+      {/* ACCOUNT SWITCHER */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--bg-tertiary)]/50 border border-white/10 overflow-x-auto tj-scrollbar max-w-full">
+          <button
+            onClick={() => { setSelectedAccountId(null); setPage(1); }}
+            className={`flex flex-col items-start px-3 py-1.5 rounded-lg transition-colors shrink-0 ${
+              selectedAccountId === null ? "bg-[var(--bg-secondary)] shadow-sm" : "hover:bg-white/5"
+            }`}
+          >
+            <span className={`text-xs font-semibold ${selectedAccountId === null ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]"}`}>All Accounts</span>
+            <span className="text-[10px] tj-mono text-[var(--text-faint)]">
+              {allAccountsStats.total} trades · <span className={allAccountsStats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}>{allAccountsStats.netProfit >= 0 ? "+" : ""}{fmtUSD2(allAccountsStats.netProfit)}</span>
+            </span>
+          </button>
+          {accounts.map((a) => {
+            const stats = accountStatsMap[a.id];
+            const active = selectedAccountId === a.id;
+            return (
+              <div key={a.id} className="relative group shrink-0">
+                <button
+                  onClick={() => { setSelectedAccountId(a.id); setPage(1); }}
+                  className={`flex flex-col items-start pl-3 pr-6 py-1.5 rounded-lg transition-colors ${active ? "bg-[var(--bg-secondary)] shadow-sm" : "hover:bg-white/5"}`}
+                >
+                  <span className={`text-xs font-semibold flex items-center gap-1 ${active ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]"}`}>
+                    <Wallet size={10} /> {a.name}
+                  </span>
+                  <span className="text-[10px] tj-mono text-[var(--text-faint)]">
+                    {stats?.total ?? 0} trades · <span className={(stats?.netProfit ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"}>{(stats?.netProfit ?? 0) >= 0 ? "+" : ""}{fmtUSD2(stats?.netProfit ?? 0)}</span>
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveAccount(a.id); if (selectedAccountId === a.id) setSelectedAccountId(null); }}
+                  className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-opacity"
+                  aria-label={`Remove ${a.name}`}
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          onClick={openAddAccount}
+          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-white/15 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--accent)]/50 transition-colors shrink-0"
+        >
+          <Plus size={11} /> Add Account <span className="text-[var(--text-faint)]">({accounts.length}/{accountLimit === Infinity ? "∞" : accountLimit})</span>
+        </button>
+      </div>
+      <AddAccountModal open={accountModalOpen} onClose={() => setAccountModalOpen(false)} onSave={onAddAccount} editing={null} />
+
+      {/* JOURNAL SUMMARY */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
+        <span className="text-xs font-bold uppercase tracking-wide text-[var(--accent)]">{selectedAccount ? selectedAccount.name : "All Accounts"}</span>
+        <SummaryStat label="Trades" value={kpis.total} />
+        <SummaryStat label="Net P&L" value={`${kpis.netProfit >= 0 ? "+" : ""}${fmtUSD2(kpis.netProfit)}`} tone={kpis.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} />
+        <SummaryStat label="Win Rate" value={`${kpis.winRate.toFixed(2)}%`} />
+        <SummaryStat label="Profit Factor" value={Number.isFinite(kpis.profitFactor) ? kpis.profitFactor.toFixed(2) : "∞"} />
+        <SummaryStat label="Expectancy" value={`${kpis.expectancy >= 0 ? "+" : ""}${fmtUSD2(kpis.expectancy)}`} tone={kpis.expectancy >= 0 ? "text-emerald-400" : "text-rose-400"} />
+      </div>
+
+      {/* FILTER BAR */}
       <Card className="p-3 md:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 flex-1 min-w-[160px]">
             <Search size={14} className="text-[var(--text-muted)]" />
-            <input placeholder="Search asset..." className="bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
+            <input placeholder="Search trades..." className="bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder-zinc-600 w-full" value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
           </div>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.asset} onChange={(e) => setFilter("asset", e.target.value)}><option>All</option><AssetOptions /></select>
-          <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option>All</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
           <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)}><option>All</option><option>Win</option><option>Loss</option><option>BE</option></select>
-          <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">{!isProPlan(profile) ? <Lock size={13} /> : <Download size={13} />} CSV</button>
-          <button onClick={exportPDF} disabled={exportingPdf} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] disabled:opacity-40 text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
-            {exportingPdf ? <Loader2 size={13} className="animate-spin" /> : !isProPlan(profile) ? <Lock size={13} /> : <FileText size={13} />} PDF
+          <button
+            onClick={() => setMoreFiltersOpen((v) => !v)}
+            className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors ${moreFiltersOpen ? "border-[var(--accent)]/50 text-[var(--accent)] bg-[var(--accent)]/10" : "border-white/10 text-[var(--text-secondary)] hover:border-white/20"}`}
+          >
+            <SlidersHorizontal size={13} /> Filters <ChevronDown size={12} className={`transition-transform ${moreFiltersOpen ? "rotate-180" : ""}`} />
           </button>
-          <input ref={importInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
-          <button onClick={() => importInputRef.current?.click()} disabled={importing}
-            title="Import trades from a CSV file (e.g. exported from MT4/MT5 or a prop firm)"
-            className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] disabled:opacity-40 text-[var(--text-primary)] text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
-            {importing ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Import CSV
-          </button>
-          <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] ml-auto"><Filter size={12} /> {filtered.length} trades</div>
+          {activeFilterCount > 0 && (
+            <button onClick={clearFilters} className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-rose-400 transition-colors">
+              <X size={12} /> Clear filters
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 ml-auto pl-2 border-l border-white/10">
+            <button onClick={exportCSV} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] text-[var(--text-secondary)] text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors">{!isProPlan(profile) ? <Lock size={12} /> : <Download size={12} />} CSV</button>
+            <button onClick={exportPDF} disabled={exportingPdf} className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] disabled:opacity-40 text-[var(--text-secondary)] text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors">
+              {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : !isProPlan(profile) ? <Lock size={12} /> : <FileText size={12} />} PDF
+            </button>
+            <input ref={importInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
+            <button onClick={() => importInputRef.current?.click()} disabled={importing}
+              title="Import trades from a CSV file (e.g. exported from MT4/MT5 or a prop firm)"
+              className="flex items-center gap-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-quaternary)] disabled:opacity-40 text-[var(--text-secondary)] text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors">
+              {importing ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} Import
+            </button>
+          </div>
+        </div>
+
+        {moreFiltersOpen && (
+          <div className="flex flex-wrap items-center gap-2 mt-2.5 pt-2.5 border-t border-white/10">
+            <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.setup} onChange={(e) => setFilter("setup", e.target.value)}><option value="All">All setups</option>{setupOptions.map((s) => <option key={s}>{s}</option>)}</select>
+            <select className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)]" value={filters.session} onChange={(e) => setFilter("session", e.target.value)}><option value="All">All sessions</option>{SESSIONS.map((s) => <option key={s}>{s}</option>)}</select>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-2.5">
+          <Filter size={11} /> {filtered.length} trade{filtered.length === 1 ? "" : "s"}
         </div>
       </Card>
 
+      {/* TRADE TABLE */}
       <Card className="overflow-hidden">
-        {pageData.length === 0 && filtered.length === 0 && trades.length === 0 ? (
-          <EmptyState icon={BookOpen} title="No trades logged yet" sub="Your journal is empty — log a trade to get started." />
+        {trueEmpty ? (
+          <EmptyState
+            icon={BookOpen}
+            title="No trades yet"
+            sub="Your trading history will appear here once you log your first trade."
+            action={
+              <div className="flex items-center gap-2 mt-4">
+                {onLogTrade && (
+                  <button onClick={onLogTrade} className="flex items-center gap-1.5 tj-gradient-bg hover:opacity-90 text-[var(--text-inverse)] font-semibold text-sm px-4 py-2 rounded-lg transition-all">
+                    <Plus size={14} /> Log Trade
+                  </button>
+                )}
+                <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-1.5 border border-white/10 hover:border-white/20 text-[var(--text-secondary)] font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
+                  <Upload size={14} /> Import CSV
+                </button>
+                <input ref={importInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
+              </div>
+            }
+          />
+        ) : noResults ? (
+          <EmptyState
+            icon={Search}
+            title="No trades match your filters."
+            sub="Try adjusting your search or filters."
+            action={
+              <button onClick={clearFilters} className="mt-4 flex items-center gap-1.5 border border-white/10 hover:border-white/20 text-[var(--text-secondary)] font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
+                <X size={14} /> Clear Filters
+              </button>
+            }
+          />
         ) : (
           <>
             <div className="overflow-x-auto tj-scrollbar">
-              <table className="w-full text-sm min-w-[860px]">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead>
                   <tr className="text-left text-xs text-[var(--text-muted)] bg-[var(--bg-primary)]/60 border-b border-white/10">
                     <SortHeader label="Date" sortKey="date" sortConfig={sortConfig} onSort={onSort} />
                     <SortHeader label="Asset" sortKey="asset" sortConfig={sortConfig} onSort={onSort} />
-                    <th className="px-4 py-3 font-medium">Dir</th>
-                    <th className="px-4 py-3 font-medium">Entry</th>
-                    <th className="px-4 py-3 font-medium">Exit</th>
-                    <th className="px-4 py-3 font-medium">Setup</th>
-                    <th className="px-4 py-3 font-medium">Session</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-2.5 font-medium">Direction</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Entry</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Exit</th>
+                    <th className="px-4 py-2.5 font-medium">Setup</th>
+                    <th className="px-4 py-2.5 font-medium">Session</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
                     <SortHeader label="P&L" sortKey="pnl" sortConfig={sortConfig} onSort={onSort} />
-                    <th className="px-4 py-3"></th>
+                    <th className="px-4 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pageData.map((t) => (
-                    <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-secondary)]/40 transition-colors group cursor-pointer">
-                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.date}</td>
-                      <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{t.asset}</td>
-                      <td className="px-4 py-3"><span className={`flex items-center gap-1 text-xs font-medium ${t.direction === "Long" ? "text-emerald-400" : "text-rose-400"}`}>{t.direction === "Long" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />} {t.direction}</span></td>
-                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.entry}</td>
-                      <td className="px-4 py-3 tj-mono text-xs text-[var(--text-tertiary)]">{t.exit}</td>
-                      <td className="px-4 py-3 text-[var(--text-tertiary)]">{t.setup}</td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{t.session}</td>
-                      <td className="px-4 py-3"><StatusPill status={t.status} /></td>
-                      <td className={`px-4 py-3 text-right tj-mono font-semibold ${t.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{t.pnl >= 0 ? "+" : ""}{fmtUSD2(t.pnl)}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} className="opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                  {pageData.length === 0 && <tr><td colSpan={10} className="text-center py-10 text-[var(--text-muted)] text-sm">No trades match these filters.</td></tr>}
+                  {pageData.map((t) => {
+                    const isLong = t.direction === "Long";
+                    const assetType = ASSET_TYPE_MAP[t.asset];
+                    return (
+                      <tr key={t.id} onClick={() => onOpenTrade(t)} className="border-b border-[var(--border-primary)] hover:bg-[var(--bg-secondary)]/40 transition-colors group cursor-pointer">
+                        <td className="px-4 py-2.5 tj-mono text-xs text-[var(--text-tertiary)] whitespace-nowrap">{fmtDateShort(t.date)}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="font-semibold text-[var(--text-primary)] leading-tight">{t.asset}</div>
+                          {assetType && <div className="text-[10px] text-[var(--text-faint)] leading-tight">{assetType}</div>}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold tracking-wide px-1.5 py-0.5 rounded ${isLong ? "text-emerald-400 bg-emerald-500/10" : "text-rose-400 bg-rose-500/10"}`}>
+                            {isLong ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />} {isLong ? "LONG" : "SHORT"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 tj-mono text-xs text-[var(--text-tertiary)] text-right">{t.entry}</td>
+                        <td className="px-4 py-2.5 tj-mono text-xs text-[var(--text-tertiary)] text-right">{t.exit}</td>
+                        <td className="px-4 py-2.5 text-[var(--text-tertiary)] text-xs" title={t.setup || undefined}>{shortSetup(t.setup)}</td>
+                        <td className="px-4 py-2.5">
+                          {t.session ? <span className="text-[11px] text-[var(--text-tertiary)] bg-white/5 border border-white/10 rounded px-1.5 py-0.5">{t.session}</span> : <span className="text-[var(--text-faint)] text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-2.5"><StatusPill status={t.status} /></td>
+                        <td className={`px-4 py-2.5 text-right tj-mono font-bold ${t.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{t.pnl >= 0 ? "+" : ""}{fmtUSD2(t.pnl)}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); onOpenTrade(t); }} aria-label="View trade" className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors"><Eye size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); confirmDelete(t.id); }} aria-label="Delete trade" className="text-[var(--text-faint)] hover:text-rose-400 transition-colors"><Trash2 size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
-              <span className="text-xs text-[var(--text-muted)]">Page {page} of {totalPages}</span>
-              <div className="flex gap-2">
-                <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="p-1.5 rounded-lg border border-white/10 disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronLeft size={15} /></button>
-                <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)} className="p-1.5 rounded-lg border border-white/10 disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronRight size={15} /></button>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <span>Rows per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-2 py-1 text-xs text-[var(--text-secondary)]"
+                >
+                  {ROWS_PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-[var(--text-muted)]">Page {page} of {totalPages}</span>
+                <div className="flex gap-2">
+                  <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="p-1.5 rounded-lg border border-white/10 disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronLeft size={15} /></button>
+                  <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)} className="p-1.5 rounded-lg border border-white/10 disabled:opacity-30 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"><ChevronRight size={15} /></button>
+                </div>
               </div>
             </div>
           </>
