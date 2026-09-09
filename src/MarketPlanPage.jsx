@@ -102,37 +102,22 @@ function totalWordCount(chunks) {
   return SECTIONS.reduce((n, s) => n + wordCount(chunks[s.key]), 0);
 }
 
+// Only reads the bias TAG the picker itself writes at the very start of the
+// text (e.g. "Bullish. Short on Gold and Nasdaq…"). Deliberately does NOT
+// scan the rest of the sentence for words like "long"/"short" — those
+// usually describe a specific setup's direction, not the overall daily
+// bias, and scanning the whole string caused false "ambiguous" reads
+// (e.g. "Bullish... short on Nasdaq" registering as both bull and bear).
 function detectBias(text) {
-  const t = (text || "").toLowerCase();
-  const hasBull = /\bbullish\b|\blong\b/.test(t);
-  const hasBear = /\bbearish\b|\bshort\b/.test(t);
-  if (hasBull && !hasBear) return "Bullish";
-  if (hasBear && !hasBull) return "Bearish";
-  if (t.trim()) return "Neutral";
-  return null;
+  const m = (text || "").trim().match(/^(bullish|bearish|neutral)\b/i);
+  if (!m) return null;
+  const w = m[1].toLowerCase();
+  return w[0].toUpperCase() + w.slice(1);
 }
 
 function extractMaxLossPct(text) {
   const m = (text || "").match(/(\d+(?:\.\d+)?)\s*%/);
   return m ? m[1] : null;
-}
-
-// Rough "which markets did they mention" scan against a small watchlist of
-// common tickers/instruments — purely cosmetic, for the glance summary.
-const KNOWN_MARKETS = [
-  "gold", "xauusd", "nasdaq", "nq", "es", "spx", "s&p", "dow", "dji",
-  "eurusd", "gbpusd", "usdjpy", "btc", "bitcoin", "eth", "oil", "wti", "dxy",
-];
-function extractMarkets(text) {
-  const t = (text || "").toLowerCase();
-  const found = new Set();
-  KNOWN_MARKETS.forEach((m) => {
-    if (t.includes(m)) {
-      const label = { xauusd: "GOLD", nq: "NASDAQ", es: "S&P 500", spx: "S&P 500", "s&p": "S&P 500", dji: "DOW", dxy: "DXY" }[m] || m.toUpperCase();
-      found.add(label);
-    }
-  });
-  return Array.from(found).slice(0, 3);
 }
 
 function countSetupLines(text) {
@@ -207,9 +192,11 @@ function SectionEditor({ section, value, onChange, filled, readOnly, autoFocus }
 
   const applyBias = (label) => {
     if (readOnly) return;
-    // Replace an existing bias word if present, otherwise prepend one.
-    const stripped = value.replace(/\b(bullish|bearish|neutral)\b/i, "").replace(/^[\s,.-]+/, "");
-    const next = stripped.trim() ? `${label}. ${stripped.trim()}` : label;
+    // Only strip a LEADING bias tag (the one this picker writes) — never
+    // touch the word if it shows up later in the sentence describing a
+    // specific setup (e.g. "...short on Nasdaq").
+    const stripped = value.trim().replace(/^(bullish|bearish|neutral)\b[\s.,:-]*/i, "");
+    const next = stripped ? `${label}. ${stripped}` : label;
     onChange(next);
   };
 
@@ -309,7 +296,6 @@ export default function MarketPlanPage({ session, toast }) {
   const words = totalWordCount(chunks);
   const bias = detectBias(chunks.bias);
   const maxLossPct = extractMaxLossPct(chunks.maxloss);
-  const markets = useMemo(() => extractMarkets(`${chunks.levels} ${chunks.setups}`), [chunks.levels, chunks.setups]);
   const setupCount = countSetupLines(chunks.setups);
   const isComplete = filled === SECTIONS.length;
   const hasAnyContent = filled > 0;
@@ -463,11 +449,6 @@ export default function MarketPlanPage({ session, toast }) {
                   <span className="text-[var(--text-faint)]">—</span>
                 )}
               </GlanceItem>
-              {markets.length > 0 && (
-                <GlanceItem label="Markets">
-                  <span className="text-[var(--text-secondary)] font-medium">{markets.join(" · ")}</span>
-                </GlanceItem>
-              )}
               <GlanceItem label="Risk">
                 <span className={maxLossPct ? "text-amber-400 font-semibold tj-mono" : "text-[var(--text-faint)]"}>
                   {maxLossPct ? `${maxLossPct}%` : "—"}
