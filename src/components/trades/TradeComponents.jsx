@@ -172,7 +172,7 @@ export const CreateChallengeModal = ({ open, onClose, onCreate }) => {
    ============================================================ */
 
 
-export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [] }) => {
+export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = [], setups = [] }) => {
   const blank = () => ({ date: todayISO(), asset: "", direction: "Long", entry: "", exit: "", lots: "", fees: "", setup: "", setupGrade: "A", emotion: "Neutral", session: "London", status: "Win", holdingMinutes: "", notes: "", challengeId: "", accountIds: [], screenshots: [], pnl: "", riskAmount: "", checklist: { setupConfirmed: false, riskSized: false, newsChecked: false } });
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
@@ -260,8 +260,19 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
           <input type="number" step="any" className={inputCls} placeholder="e.g. 100" value={form.riskAmount} onChange={(e) => set("riskAmount", e.target.value)} />
         </Field>
         <Field label="Fees / Commissions"><input type="number" step="any" className={inputCls} placeholder="0" value={form.fees} onChange={(e) => set("fees", e.target.value)} /></Field>
-        <Field label="Setup / Strategy">
-          <input className={inputCls} placeholder="e.g. Breakout, FVG, Trend Following — your own note" value={form.setup} onChange={(e) => set("setup", e.target.value)} />
+        <Field label="Setup / Strategy" hint={setups.length ? "Pick one from your Trading Setups library, or type your own note." : undefined}>
+          <input
+            className={inputCls}
+            list="setup-library-options"
+            placeholder="e.g. Breakout, FVG, Trend Following — your own note"
+            value={form.setup}
+            onChange={(e) => set("setup", e.target.value)}
+          />
+          {setups.length > 0 && (
+            <datalist id="setup-library-options">
+              {setups.filter((s) => s.status !== "archived").map((s) => <option key={s.id} value={s.name} />)}
+            </datalist>
+          )}
         </Field>
         <Field label="Setup Quality">
           <div className="flex rounded-lg overflow-hidden border border-white/10">

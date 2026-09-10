@@ -42,7 +42,7 @@ const SECTIONS = [
     short: "Setups",
     prompt: "What exact setup are you waiting for?",
     placeholder: "5m CHoCH off the FVG, confirm with displacement, enter on retest…",
-    variant: "default",
+    variant: "setups",
   },
   {
     key: "maxloss",
@@ -174,7 +174,42 @@ function BiasPicker({ value, onPick, disabled }) {
   );
 }
 
-function SectionEditor({ section, value, onChange, filled, readOnly, autoFocus }) {
+// Quick-insert chips for setups already defined in the trader's Trading
+// Setups library — clicking one appends its name to the free-text section
+// instead of replacing it, since a plan can reference more than one setup.
+// Purely additive UI: the underlying content is still one plain string, so
+// this never touches the storage contract described above.
+function SetupChips({ options, value, onPick, disabled }) {
+  if (!options?.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+      {options.map((s) => {
+        const already = new RegExp(`(^|\\W)${s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\W|$)`, "i").test(value || "");
+        return (
+          <button
+            key={s.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              const trimmed = (value || "").trim();
+              onPick(trimmed ? `${trimmed}, ${s.name}` : s.name);
+            }}
+            className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all duration-150
+              ${already
+                ? "bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]"
+                : "bg-white/[0.02] border-white/[0.08] text-[var(--text-faint)] hover:text-[var(--text-tertiary)] hover:border-white/20"}
+              ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            <Crosshair size={11} />
+            {s.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionEditor({ section, value, onChange, filled, readOnly, autoFocus, setupOptions }) {
   const Icon = section.icon;
   const bias = section.variant === "bias" ? detectBias(value) : null;
   const maxLossPct = section.variant === "risk" ? extractMaxLossPct(value) : null;
@@ -240,6 +275,10 @@ function SectionEditor({ section, value, onChange, filled, readOnly, autoFocus }
         </div>
       )}
 
+      {section.variant === "setups" && setupOptions?.length > 0 && (
+        <SetupChips options={setupOptions} value={value} onPick={onChange} disabled={readOnly} />
+      )}
+
       <div
         className={`rounded-lg border transition-colors duration-150 ${
           focused
@@ -272,7 +311,8 @@ function SectionEditor({ section, value, onChange, filled, readOnly, autoFocus }
 
 /* ---------------- main page ---------------- */
 
-export default function MarketPlanPage({ session, toast }) {
+export default function MarketPlanPage({ session, toast, setups = [] }) {
+  const activeSetupOptions = setups.filter((s) => s.status !== "archived");
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
   const [content, setContent] = useState("");

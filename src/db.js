@@ -1133,6 +1133,71 @@ export async function deleteGoalDB(id) {
   if (error) throw error;
 }
 
+/* ---------- trading setups (personal setup library) ---------- */
+const setupFromDB = (r) => ({
+  id: r.id,
+  name: r.name,
+  description: r.description ?? "",
+  markets: r.markets || [],
+  direction: r.direction || "neutral",
+  htfTimeframe: r.htf_timeframe || "",
+  entryTimeframe: r.entry_timeframe || "",
+  entryRules: r.entry_rules || [],
+  invalidationRules: r.invalidation_rules || [],
+  typicalRiskPct: r.typical_risk_pct != null ? Number(r.typical_risk_pct) : null,
+  minRR: r.min_rr || "",
+  stopLossMethod: r.stop_loss_method || "",
+  takeProfitMethod: r.take_profit_method || "",
+  maxEntries: r.max_entries != null ? Number(r.max_entries) : null,
+  notes: r.notes ?? "",
+  examples: r.examples || [],
+  status: r.status || "active",
+  createdAt: r.created_at,
+});
+
+const setupToDB = (s, userId) => ({
+  user_id: userId,
+  name: s.name,
+  description: s.description || "",
+  markets: s.markets || [],
+  direction: s.direction || "neutral",
+  htf_timeframe: s.htfTimeframe || "",
+  entry_timeframe: s.entryTimeframe || "",
+  entry_rules: s.entryRules || [],
+  invalidation_rules: s.invalidationRules || [],
+  typical_risk_pct: s.typicalRiskPct === "" || s.typicalRiskPct == null ? null : Number(s.typicalRiskPct),
+  min_rr: s.minRR || "",
+  stop_loss_method: s.stopLossMethod || "",
+  take_profit_method: s.takeProfitMethod || "",
+  max_entries: s.maxEntries === "" || s.maxEntries == null ? null : Number(s.maxEntries),
+  notes: s.notes || "",
+  examples: s.examples || [],
+  status: s.status || "active",
+});
+
+export async function fetchSetups(userId) {
+  const { data, error } = await supabase.from("trading_setups").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map(setupFromDB);
+}
+
+export async function insertSetup(setup, userId) {
+  const { data, error } = await supabase.from("trading_setups").insert(setupToDB(setup, userId)).select().single();
+  if (error) throw error;
+  return setupFromDB(data);
+}
+
+export async function updateSetupDB(setup, userId) {
+  const { data, error } = await supabase.from("trading_setups").update(setupToDB(setup, userId)).eq("id", setup.id).select().single();
+  if (error) throw error;
+  return setupFromDB(data);
+}
+
+export async function deleteSetupDB(id) {
+  const { error } = await supabase.from("trading_setups").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /* ---------- audit log (admin/moderation actions) ----------
    Best-effort: callers should .catch(() => {}) so a logging hiccup
    never blocks the underlying admin action from completing. */

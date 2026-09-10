@@ -14,7 +14,7 @@ import {
   AtSign, CheckCheck, UserPlus, MessageCircle, Megaphone, Inbox, ChevronDown,
 } from "lucide-react";
 import { supabase, setKeepSignedIn, hasPersistedSession } from "./supabaseClient";
-import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade } from "./db";
+import { fetchTrades, fetchChallenges, insertTrade, updateTradeDB, deleteTradeDB, insertChallenge, updateChallengeDB, deleteChallengeDB, fetchProfile, createProfile, updateProfileUsername, fetchPendingFriendRequests, subscribeToFriendRequests, acceptFriendRequest, fetchNotifications, markNotificationRead, markAllNotificationsRead, subscribeToNotifications, setLeaderboardOptIn, submitTradeSpotlight, applyReferralCode, setShowPublicStats, fetchTradingAccounts, insertTradingAccount, updateTradingAccount, deleteTradingAccount, fetchSnapTradeAccounts, getSnapTradeConnectUrl, syncSnapTradeAccounts, disconnectSnapTradeAccount, disconnectAllSnapTrade, fetchSetups, insertSetup, updateSetupDB, deleteSetupDB } from "./db";
 import { badgeFromKey } from "./Badges";
 import { computePsychologyReport } from "./psychology";
 import { filterTradesByPeriod } from "./insights";
@@ -56,6 +56,7 @@ import { computeChallengeStats } from "./lib/tradeCalculations";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { AuthPage, ProfileSetup, ResetPasswordScreen } from "./pages/AuthPage";
 import { ChallengesPage } from "./pages/ChallengesPage";
+import { SetupsPage } from "./pages/SetupsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EconomicCalendarPage } from "./pages/EconomicCalendarPage";
 import { JournalPage } from "./pages/JournalPage";
@@ -84,6 +85,7 @@ export default function App() {
   const [trades, setTrades] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [setups, setSetups] = useState([]);
   const [active, setActive] = useState(tabFromPath);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -168,8 +170,8 @@ export default function App() {
   useEffect(() => {
     if (!session?.user) { if (session === null) setLoading(false); return; }
     setLoading(true);
-    Promise.all([fetchTrades(), fetchChallenges(), fetchTradingAccounts(session.user.id)])
-      .then(([t, c, a]) => { setTrades(t); setChallenges(c); setAccounts(a); setDataError(""); })
+    Promise.all([fetchTrades(), fetchChallenges(), fetchTradingAccounts(session.user.id), fetchSetups(session.user.id)])
+      .then(([t, c, a, su]) => { setTrades(t); setChallenges(c); setAccounts(a); setSetups(su); setDataError(""); })
       .catch((err) => setDataError(err.message || "Failed to load your data."))
       .finally(() => setLoading(false));
     // Deliberately keyed on the user id, not the whole session object.
@@ -254,6 +256,7 @@ export default function App() {
   const titles = {
     dashboard: ["Dashboard", "Your trading performance at a glance"],
     "market-plan": ["Daily Market Plan", "Write your bias, key levels, and setups before the session starts"],
+    setups: ["Trading Setups", "Build, organize, and improve your trading setups"],
     challenges: ["Funding Challenges", "Live rule compliance for every evaluation"],
     journal: ["Trade Journal", "Every trade, documented, searchable, and built for review."],
     journaling: ["Weekly & Monthly Review", "Step back from individual trades and understand the bigger picture"],
@@ -339,6 +342,40 @@ export default function App() {
       setChallenges((prev) => prev.filter((c) => c.id !== id));
       addToast("Challenge removed", "info");
     } catch (err) { addToast(err.message || "Failed to delete challenge", "error"); }
+  };
+
+  const addSetup = async (s) => {
+    try {
+      const saved = await insertSetup(s, session.user.id);
+      setSetups((prev) => [saved, ...prev]);
+      addToast(`${saved.name} setup created`);
+      return saved;
+    } catch (err) { addToast(err.message || "Failed to create setup", "error"); throw err; }
+  };
+
+  const updateSetup = async (s) => {
+    try {
+      const saved = await updateSetupDB(s, session.user.id);
+      setSetups((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
+      addToast("Setup updated");
+      return saved;
+    } catch (err) { addToast(err.message || "Failed to update setup", "error"); throw err; }
+  };
+
+  const deleteSetup = async (id) => {
+    try {
+      await deleteSetupDB(id);
+      setSetups((prev) => prev.filter((s) => s.id !== id));
+      addToast("Setup deleted", "info");
+    } catch (err) { addToast(err.message || "Failed to delete setup", "error"); }
+  };
+
+  const toggleSetupArchive = async (setup) => {
+    try {
+      const saved = await updateSetupDB({ ...setup, status: setup.status === "archived" ? "active" : "archived" }, session.user.id);
+      setSetups((prev) => prev.map((x) => (x.id === saved.id ? saved : x)));
+      addToast(saved.status === "archived" ? "Setup archived" : "Setup restored", "info");
+    } catch (err) { addToast(err.message || "Failed to update setup", "error"); }
   };
 
   // Free-tier account limit. Bump this — or better, replace it with a
@@ -537,7 +574,8 @@ export default function App() {
                   </UpgradeGate>
                 )}
                 {active === "notebook" && <NotebookPage session={session} toast={addToast} />}
-                {active === "market-plan" && <MarketPlanPage session={session} toast={addToast} />}
+                {active === "market-plan" && <MarketPlanPage session={session} toast={addToast} setups={setups} />}
+                {active === "setups" && <SetupsPage setups={setups} trades={trades} onCreate={addSetup} onUpdate={updateSetup} onDelete={deleteSetup} onToggleArchive={toggleSetupArchive} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}
                 {active === "econ-calendar" && <EconomicCalendarPage />}
@@ -560,7 +598,7 @@ export default function App() {
             )}
           </main>
         </div>
-        <LogTradeModal open={logModalOpen} onClose={() => setLogModalOpen(false)} onCreate={addTrade} challenges={challenges} accounts={accounts} />
+        <LogTradeModal open={logModalOpen} onClose={() => setLogModalOpen(false)} onCreate={addTrade} challenges={challenges} accounts={accounts} setups={setups} />
         <TradeDrawer trade={selectedTrade} onClose={() => setSelectedTrade(null)} onSave={updateTrade} onDelete={deleteTrade} session={session} profile={profile} addToast={addToast} />
         <UserProfileModal userId={viewingUserId} currentUserId={session?.user?.id} currentUsername={profile?.username || "Trader"} onClose={() => setViewingUserId(null)} />
         <ToastContainer toasts={toasts} />

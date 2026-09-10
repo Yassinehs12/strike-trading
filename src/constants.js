@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle, Percent, CalendarDays, Compass, LineChart, Sprout, Globe2, Wrench, Users,
+  LayoutDashboard, ShieldCheck, BookOpen, BarChart3, Target, AlertTriangle, Gauge, Link2, Settings as SettingsIcon, CalendarClock, Grid3x3, Mail, MessagesSquare, UserCircle, ShieldAlert, Trophy, Star, BookMarked, Shield, Palette, Calculator, Plug, NotebookPen, AtSign, UserPlus, MessageCircle, Percent, CalendarDays, Compass, LineChart, Sprout, Globe2, Wrench, Users, Crosshair,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -36,6 +36,7 @@ export const NAV_GROUPS = [
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "market-plan", label: "Daily Market Plan", icon: CalendarDays },
+      { id: "setups", label: "Trading Setups", icon: Crosshair },
       { id: "challenges", label: "Challenges", icon: ShieldCheck },
       { id: "journal", label: "Trade Journal", icon: BookOpen },
     ],
