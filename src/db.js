@@ -990,6 +990,7 @@ const notebookNoteFromDB = (r) => ({
   tags: r.tags ?? [],
   pinned: !!r.pinned,
   color: r.color ?? "default",
+  category: r.category ?? "general",
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 });
@@ -1013,6 +1014,7 @@ export async function createNotebookNote(note, userId) {
     tags: note.tags || [],
     pinned: !!note.pinned,
     color: note.color || "default",
+    category: note.category || "general",
   };
   const { data, error } = await supabase.from("notebook_notes").insert(payload).select().single();
   if (error) throw error;
@@ -1026,6 +1028,7 @@ export async function updateNotebookNote(id, patch) {
   if (patch.tags !== undefined) payload.tags = patch.tags || [];
   if (patch.pinned !== undefined) payload.pinned = !!patch.pinned;
   if (patch.color !== undefined) payload.color = patch.color || "default";
+  if (patch.category !== undefined) payload.category = patch.category || "general";
   const { data, error } = await supabase.from("notebook_notes").update(payload).eq("id", id).select().single();
   if (error) throw error;
   return notebookNoteFromDB(data);
