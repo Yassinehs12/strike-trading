@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   MessagesSquare, Plus, X, Trash2, Send, Loader2, ArrowLeft, User, Clock, MessageCircle, Radio, ImagePlus, Search, Pencil, Check, Star,
+  Users, Flame,
 } from "lucide-react";
 import {
   fetchForumPosts, insertForumPost, deleteForumPost, uploadForumImage, updateForumPost,
@@ -8,7 +9,9 @@ import {
   fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage,
   fetchBlockedUserIds, fetchAdminUserIds, notifyMentions,
   fetchReactions, toggleReaction, fetchActiveSpotlight, fetchProfilesByIds,
+  fetchLandingStats,
 } from "./db";
+import { useOnlineUsers } from "./lib/presence";
 import UserProfileModal from "./UserProfileModal";
 import AdminBadge from "./AdminBadge";
 
@@ -459,7 +462,7 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
   const visible = messages.filter((m) => !blockedIds.includes(m.user_id));
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[420px]">
+    <div className="flex flex-col h-[calc(100vh-340px)] min-h-[380px]">
       <div className="flex items-center gap-2 mb-3 text-xs font-medium text-emerald-400">
         <Radio size={12} className="animate-pulse" /> Live — messages appear in real time
       </div>
@@ -547,6 +550,109 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
   );
 };
 
+/* ---------- sidebar: stats-aware, real-data-only widgets ---------- */
+
+const SidebarCard = ({ title, icon: Icon, children }) => (
+  <Card className="p-4">
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-3">
+      <Icon size={13} /> {title}
+    </div>
+    {children}
+  </Card>
+);
+
+const SidebarSkeleton = ({ rows = 3 }) => (
+  <div className="space-y-2.5 animate-pulse">
+    {Array.from({ length: rows }).map((_, i) => (
+      <div key={i} className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-full bg-white/[0.06] shrink-0" />
+        <div className="h-2.5 rounded bg-white/[0.06]" style={{ width: `${55 + (i % 3) * 12}%` }} />
+      </div>
+    ))}
+  </div>
+);
+
+function TrendingDiscussions({ posts, postReactions, loading, onOpenPost }) {
+  const trending = useMemo(() => {
+    if (!posts.length) return [];
+    return posts
+      .map((p) => ({ post: p, score: postReactions.filter((r) => r.post_id === p.id).length }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || new Date(b.post.created_at) - new Date(a.post.created_at))
+      .slice(0, 4);
+  }, [posts, postReactions]);
+
+  return (
+    <SidebarCard title="Trending" icon={Flame}>
+      {loading ? (
+        <SidebarSkeleton rows={3} />
+      ) : trending.length === 0 ? (
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed">Start a conversation to see what's trending.</p>
+      ) : (
+        <div className="space-y-1">
+          {trending.map(({ post, score }) => (
+            <button
+              key={post.id}
+              onClick={() => onOpenPost(post)}
+              className="w-full text-left px-2 py-1.5 -mx-2 rounded-lg hover:bg-white/[0.04] transition-colors group"
+            >
+              <p className="text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] line-clamp-1 transition-colors">{post.title}</p>
+              <p className="text-[11px] text-[var(--text-faint)] mt-0.5">{score} reaction{score === 1 ? "" : "s"} · {post.username}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </SidebarCard>
+  );
+}
+
+function ActiveTraders({ onlineIds, profiles, currentUserId, adminIds, loading, onViewProfile }) {
+  const others = useMemo(
+    () => Array.from(onlineIds).filter((id) => id !== currentUserId),
+    [onlineIds, currentUserId]
+  );
+
+  return (
+    <SidebarCard title="Active Traders" icon={Users}>
+      {loading ? (
+        <SidebarSkeleton rows={3} />
+      ) : others.length === 0 ? (
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed">No other traders online right now.</p>
+      ) : (
+        <div className="space-y-2">
+          {others.slice(0, 8).map((id) => {
+            const p = profiles[id];
+            const name = p?.username || "Trader";
+            return (
+              <button
+                key={id}
+                onClick={() => onViewProfile(id)}
+                className="w-full flex items-center gap-2.5 px-2 py-1 -mx-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
+              >
+                <div className="relative shrink-0">
+                  {p?.avatar_url ? (
+                    <img src={p.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[10px] font-bold text-[var(--accent)]">
+                      {name[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[var(--bg-secondary)]" />
+                </div>
+                <span className="text-sm text-[var(--text-secondary)] truncate">{name}</span>
+                {adminIds.includes(id) && <AdminBadge />}
+              </button>
+            );
+          })}
+          {others.length > 8 && (
+            <p className="text-[11px] text-[var(--text-faint)] pt-1">+{others.length - 8} more online</p>
+          )}
+        </div>
+      )}
+    </SidebarCard>
+  );
+}
+
 export default function ForumPage({ session, profile }) {
   const [tab, setTab] = useState("posts"); // "posts" | "chat"
   const [posts, setPosts] = useState([]);
@@ -562,9 +668,14 @@ export default function ForumPage({ session, profile }) {
   const [postReactions, setPostReactions] = useState([]);
   const [spotlight, setSpotlight] = useState(null);
   const [authorProfiles, setAuthorProfiles] = useState({});
+  const [memberCount, setMemberCount] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [onlineProfiles, setOnlineProfiles] = useState({});
+  const knownOnlineIds = useRef(new Set());
 
   const currentUser = { userId: session?.user?.id, username: profile?.username || session?.user?.email || "Trader" };
   const isAdmin = !!profile?.is_admin;
+  const onlineIds = useOnlineUsers();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -577,9 +688,20 @@ export default function ForumPage({ session, profile }) {
       .catch((err) => setError(err.message || "Failed to load the forum."))
       .finally(() => setLoading(false));
     fetchActiveSpotlight().then(setSpotlight).catch(() => {});
+    setStatsLoading(true);
+    fetchLandingStats().then((s) => setMemberCount(s.traders)).catch(() => {}).finally(() => setStatsLoading(false));
   }, [currentUser.userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Keep avatars/usernames for whoever's currently online, without
+  // re-fetching profiles we already have.
+  useEffect(() => {
+    const missing = Array.from(onlineIds).filter((id) => !knownOnlineIds.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => knownOnlineIds.current.add(id));
+    fetchProfilesByIds(missing).then((map) => setOnlineProfiles((prev) => ({ ...prev, ...map }))).catch(() => {});
+  }, [onlineIds]);
 
   const togglePostReaction = async (postId, emoji) => {
     const already = postReactions.find((r) => r.user_id === currentUser.userId && r.emoji === emoji && r.post_id === postId);
@@ -642,16 +764,49 @@ export default function ForumPage({ session, profile }) {
     );
   }
 
+  const onlineCount = onlineIds.size;
+  const discussionsCount = posts.length;
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-[var(--text-muted)]">Connect with other traders — share setups, ask questions, talk strategy.</p>
+    <div className="p-4 md:p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-[var(--text-primary)] mb-1">Community</h1>
+          <p className="text-sm text-[var(--text-muted)]">Connect with traders, share setups, discuss markets, and learn together.</p>
+        </div>
         {tab === "posts" && (
           <button onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95">
+            className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent)] text-[var(--text-inverse)] font-semibold text-sm px-3.5 py-2 rounded-lg transition-all active:scale-95 shrink-0">
             <Plus size={16} strokeWidth={2.5} /> New Post
           </button>
         )}
+      </div>
+
+      {/* Stats strip */}
+      <div className="flex items-center gap-5 flex-wrap text-sm">
+        <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+          <Users size={14} className="text-[var(--text-faint)]" />
+          {statsLoading || memberCount == null ? (
+            <span className="inline-block w-10 h-3 rounded bg-white/[0.06] animate-pulse" />
+          ) : (
+            <span className="font-semibold text-[var(--text-primary)] tabular-nums">{memberCount.toLocaleString()}</span>
+          )}
+          <span className="text-[var(--text-muted)]">Members</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+          </span>
+          <span className="font-semibold text-[var(--text-primary)] tabular-nums">{onlineCount}</span>
+          <span className="text-[var(--text-muted)]">Online</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+          <MessagesSquare size={14} className="text-[var(--text-faint)]" />
+          <span className="font-semibold text-[var(--text-primary)] tabular-nums">{discussionsCount}</span>
+          <span className="text-[var(--text-muted)]">Discussions</span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -662,7 +817,11 @@ export default function ForumPage({ session, profile }) {
           </button>
           <button onClick={() => setTab("chat")}
             className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${tab === "chat" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>
-            <Radio size={14} /> Live Chat
+            <span className="relative flex h-2 w-2">
+              {tab === "chat" && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${tab === "chat" ? "bg-emerald-400" : "bg-[var(--text-faint)]"}`} />
+            </span>
+            Live Chat
           </button>
         </div>
         {tab === "posts" && (
@@ -673,6 +832,8 @@ export default function ForumPage({ session, profile }) {
         )}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5 items-start">
+      <div className="min-w-0 space-y-4">
       {tab === "posts" && spotlight && (
         <Card className="p-4 border-amber-500/30 bg-gradient-to-br from-amber-500/[0.06] to-transparent">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 mb-2">
@@ -758,6 +919,20 @@ export default function ForumPage({ session, profile }) {
           )}
         </>
       )}
+      </div>
+
+      <div className="space-y-4 lg:sticky lg:top-4">
+        <TrendingDiscussions posts={posts} postReactions={postReactions} loading={loading} onOpenPost={(p) => { setTab("posts"); openThread(p); }} />
+        <ActiveTraders
+          onlineIds={onlineIds}
+          profiles={onlineProfiles}
+          currentUserId={currentUser.userId}
+          adminIds={adminIds}
+          loading={loading}
+          onViewProfile={setViewingUserId}
+        />
+      </div>
+      </div>
 
       <NewPostModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={createPost} />
       <UserProfileModal userId={viewingUserId} currentUserId={currentUser.userId} currentUsername={currentUser.username} onClose={() => setViewingUserId(null)} />
