@@ -390,8 +390,8 @@ export const EconomicCalendarPage = () => {
 
         {/* Table (desktop) / cards (mobile) */}
         <div className="rounded-lg overflow-hidden border border-[var(--border-primary)]">
-          <div className="hidden sm:grid grid-cols-[80px_100px_1fr_90px_90px_90px_110px] gap-2 px-3 py-2.5 bg-[var(--bg-tertiary)] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)] sticky top-0 z-10">
-            <span>{selectedRange === "This Week" ? "Time" : "Time"}</span><span>Currency</span><span>Event</span><span className="text-right">Previous</span><span className="text-right">Forecast</span><span className="text-right">Actual</span><span></span>
+          <div className="hidden sm:grid grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2.5 bg-[var(--bg-tertiary)] text-[10px] font-semibold uppercase tracking-wide text-[var(--text-faint)] sticky top-0 z-10">
+            <span>{selectedRange === "This Week" ? "Time" : "Time"}</span><span>Currency</span><span>Event</span><span className="text-right">Previous</span><span className="text-right">Forecast</span><span></span>
           </div>
 
           {loading ? (
@@ -428,7 +428,7 @@ export const EconomicCalendarPage = () => {
                   const passed = e.date <= now;
                   return (
                     <button key={e.id} onClick={() => setDetailEvent(e)}
-                      className={`w-full text-left grid grid-cols-2 sm:grid-cols-[80px_100px_1fr_90px_90px_90px_110px] gap-2 px-3 py-2.5 border-t border-[var(--border-primary)]/60 border-l-2 ${IMPACT_ROW_BORDER[e.impact] || "border-l-transparent"} items-center transition-colors hover:bg-[var(--bg-tertiary)]/50 ${i % 2 === 1 ? "bg-[var(--bg-primary)]/40" : ""} ${passed ? "opacity-60 hover:opacity-100" : ""}`}>
+                      className={`w-full text-left grid grid-cols-2 sm:grid-cols-[80px_100px_1fr_100px_100px_110px] gap-2 px-3 py-2.5 border-t border-[var(--border-primary)]/60 border-l-2 ${IMPACT_ROW_BORDER[e.impact] || "border-l-transparent"} items-center transition-colors hover:bg-[var(--bg-tertiary)]/50 ${i % 2 === 1 ? "bg-[var(--bg-primary)]/40" : ""} ${passed ? "opacity-60 hover:opacity-100" : ""}`}>
                       <span className="text-xs text-[var(--text-secondary)] tj-mono">{fmtTime(e.date)}</span>
                       <span className="text-xs text-[var(--text-secondary)] font-semibold flex items-center gap-1.5">
                         <span className="text-sm leading-none">{FLAG[e.country] || "🏳️"}</span> {e.country}
@@ -441,7 +441,6 @@ export const EconomicCalendarPage = () => {
                       </span>
                       <span className="text-xs text-[var(--text-muted)] tj-mono text-right">{e.previous || "—"}</span>
                       <span className="text-xs text-[var(--text-muted)] tj-mono text-right">{e.forecast || "—"}</span>
-                      <span className={`text-xs tj-mono font-semibold text-right ${e.actual ? "text-[var(--text-primary)]" : "text-[var(--text-faint)]"}`}>{e.actual || "—"}</span>
                       <span className="hidden sm:flex justify-end">
                         {passed ? (
                           <span className="text-[10px] font-semibold px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-faint)]">Passed</span>
@@ -475,11 +474,10 @@ export const EconomicCalendarPage = () => {
               </button>
             </div>
             <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-4 ${IMPACT_BADGE[detailEvent.impact]}`}>{IMPACT_LABEL[detailEvent.impact]}</span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { label: "Previous", value: detailEvent.previous },
                 { label: "Forecast", value: detailEvent.forecast },
-                { label: "Actual", value: detailEvent.actual },
               ].map((f) => (
                 <div key={f.label} className="rounded-lg border border-[var(--border-primary)] bg-[var(--bg-tertiary)]/40 px-2.5 py-2 text-center">
                   <div className="text-[9px] uppercase tracking-wide text-[var(--text-faint)]">{f.label}</div>
