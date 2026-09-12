@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Mail, Loader2, Search, SquarePen, MessageCircle } from "lucide-react";
 import { fetchConversations, fetchProfileById, searchProfilesByUsername } from "./db";
+import { useOnlineUsers } from "./lib/presence";
 import MessageThread from "./MessageThread";
 import UserProfileModal from "./UserProfileModal";
 
@@ -14,14 +15,19 @@ function timeShort(dateStr) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-const Avatar = ({ profile, size = 44 }) => (
-  profile?.avatar_url ? (
-    <img src={profile.avatar_url} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />
-  ) : (
-    <div className="rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center font-bold text-[var(--text-secondary)] shrink-0" style={{ width: size, height: size, fontSize: size * 0.36 }}>
-      {(profile?.username || "?")[0].toUpperCase()}
-    </div>
-  )
+const Avatar = ({ profile, size = 44, online = false }) => (
+  <div className="relative shrink-0" style={{ width: size, height: size }}>
+    {profile?.avatar_url ? (
+      <img src={profile.avatar_url} alt="" className="rounded-full object-cover w-full h-full" />
+    ) : (
+      <div className="rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center font-bold text-[var(--text-secondary)] w-full h-full" style={{ fontSize: size * 0.36 }}>
+        {(profile?.username || "?")[0].toUpperCase()}
+      </div>
+    )}
+    {online && (
+      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[var(--bg-secondary)]" />
+    )}
+  </div>
 );
 
 // New-conversation popover: search for a trader by username to start a chat.
@@ -86,6 +92,7 @@ export default function MessagesPage({ session, profile }) {
   const [newMsgOpen, setNewMsgOpen] = useState(false);
   const [viewingUserId, setViewingUserId] = useState(null);
   const [filterUnread, setFilterUnread] = useState(true);
+  const onlineIds = useOnlineUsers();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -133,7 +140,15 @@ export default function MessagesPage({ session, profile }) {
       <div className={`w-full sm:w-[340px] shrink-0 border-r border-white/10 flex flex-col ${activeUser ? "hidden sm:flex" : "flex"}`}>
         <div className="p-4 border-b border-white/10 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-[var(--text-primary)]">Messages</h2>
+            <div>
+              <h2 className="text-sm font-bold text-[var(--text-primary)]">Messages</h2>
+              {conversations.length > 0 && (
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                  {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
+                  {unreadCount > 0 && <> · <span className="text-[var(--accent)] font-medium">{unreadCount} unread</span></>}
+                </p>
+              )}
+            </div>
             <div className="relative">
               <button onClick={() => setNewMsgOpen((v) => !v)}
                 className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors">
@@ -197,7 +212,7 @@ export default function MessagesPage({ session, profile }) {
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left border-l-2 transition-colors ${
                     isActive ? "bg-[var(--accent)]/[0.08] border-[var(--accent)]" : "border-transparent hover:bg-white/[0.04]"
                   }`}>
-                  <Avatar profile={c.profile} />
+                  <Avatar profile={c.profile} online={onlineIds.has(c.otherId)} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`text-sm truncate ${unread ? "font-bold text-[var(--text-primary)]" : "font-semibold text-[var(--text-primary)]"}`}>{c.profile.username}</span>

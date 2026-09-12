@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Send, Loader2, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, CheckCheck } from "lucide-react";
+import { X, Send, Loader2, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, CheckCheck, ArrowDown, Download } from "lucide-react";
 import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages, uploadDmImage, deleteDirectMessage, markConversationRead } from "./db";
+import { useOnlineUsers } from "./lib/presence";
 
 const inputCls = "w-full bg-[var(--bg-primary)] border border-white/10 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30 outline-none rounded-lg px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-colors";
 
@@ -39,6 +40,47 @@ function groupMessages(messages) {
   return days;
 }
 
+// Centered dark-overlay preview for chart/screenshot messages — click to
+// close, download link only (no fake "open" action that isn't backed by
+// real functionality).
+function ImageLightbox({ src, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!src) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 sm:p-8"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 rounded-full p-2 transition-colors"
+        aria-label="Close preview"
+      >
+        <X size={18} />
+      </button>
+      <a
+        href={src}
+        download
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 flex items-center gap-1.5 text-white/80 hover:text-white bg-white/10 hover:bg-white/15 rounded-full px-3 py-2 text-xs font-medium transition-colors"
+      >
+        <Download size={14} /> Download
+      </a>
+      <img
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-full max-h-full rounded-lg object-contain shadow-2xl"
+      />
+    </div>
+  );
+}
+
 export default function MessageThread({ currentUserId, currentUsername, otherUser, onClose, onBack, onViewProfile, className = "" }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,17 +92,39 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [menuOpenId, setMenuOpenId] = useState(null);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [nearBottom, setNearBottom] = useState(true);
+  const [hasNewBelow, setHasNewBelow] = useState(false);
   const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const seenIds = useRef(new Set());
+  const nearBottomRef = useRef(true);
+  const onlineIds = useOnlineUsers();
+  const isOnline = otherUser && onlineIds.has(otherUser.id);
 
-  const scrollToBottom = (behavior = "smooth") => bottomRef.current?.scrollIntoView({ behavior });
+  const scrollToBottom = (behavior = "smooth") => {
+    bottomRef.current?.scrollIntoView({ behavior });
+    setHasNewBelow(false);
+  };
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 120;
+    setNearBottom(atBottom);
+    nearBottomRef.current = atBottom;
+    if (atBottom) setHasNewBelow(false);
+  };
 
   useEffect(() => {
     if (!otherUser) return;
     setLoading(true);
     seenIds.current = new Set();
+    nearBottomRef.current = true;
+    setHasNewBelow(false);
     fetchDirectMessages(currentUserId, otherUser.id)
       .then((msgs) => {
         msgs.forEach((m) => seenIds.current.add(m.id));
@@ -81,7 +145,11 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       if (seenIds.current.has(msg.id)) return;
       seenIds.current.add(msg.id);
       setMessages((prev) => [...prev, msg]);
-      setTimeout(() => scrollToBottom("smooth"), 0);
+      if (nearBottomRef.current) {
+        setTimeout(() => scrollToBottom("smooth"), 0);
+      } else {
+        setHasNewBelow(true);
+      }
       // The user is actively looking at this thread when it arrives, so
       // treat it as read immediately rather than leaving it unread until
       // they reopen the conversation.
@@ -105,7 +173,11 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
           if (newOnes.length === 0) return;
           newOnes.forEach((m) => seenIds.current.add(m.id));
           setMessages(fresh);
-          setTimeout(() => scrollToBottom("smooth"), 0);
+          if (nearBottomRef.current) {
+            setTimeout(() => scrollToBottom("smooth"), 0);
+          } else {
+            setHasNewBelow(true);
+          }
         })
         .catch(() => {});
     }, 3000);
@@ -194,8 +266,13 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{otherUser.username}</h3>
-            <p className="text-[11px] text-[var(--text-muted)]">{onViewProfile ? "View profile" : "Direct message"}</p>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{otherUser.username}</h3>
+              {isOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              {isOnline ? <span className="text-emerald-400">Online</span> : (onViewProfile ? "View profile" : "Direct message")}
+            </p>
           </div>
         </button>
         {onClose && (
@@ -204,11 +281,15 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
       </div>
 
       {error && (
-        <div className="mx-4 mt-3 text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5 shrink-0">{error}</div>
+        <div className="mx-4 mt-3 flex items-center justify-between gap-3 text-sm text-rose-400 bg-rose-950/40 border border-rose-900 rounded-lg px-4 py-2.5 shrink-0">
+          <span>{error}</span>
+          <button onClick={() => { setError(""); send(); }} className="text-xs font-semibold text-rose-300 hover:text-rose-200 shrink-0 underline">Retry</button>
+        </div>
       )}
 
       {/* Thread */}
-      <div className="flex-1 overflow-y-auto tj-scrollbar p-4 space-y-4 min-h-0">
+      <div className="relative flex-1 min-h-0">
+      <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto tj-scrollbar p-4 space-y-4">
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 size={20} className="text-[var(--accent)] animate-spin" /></div>
         ) : messages.length === 0 ? (
@@ -254,7 +335,12 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
                         ) : (
                           <>
                             {m.image_url && (
-                              <img src={m.image_url} alt="" className="rounded-lg max-h-72 max-w-full mb-1 object-contain" />
+                              <img
+                                src={m.image_url}
+                                alt=""
+                                onClick={() => setLightboxSrc(m.image_url)}
+                                className="rounded-lg max-h-72 max-w-full mb-1 object-contain cursor-zoom-in hover:opacity-90 transition-opacity"
+                              />
                             )}
                             {m.body && <p className="text-sm whitespace-pre-wrap leading-snug">{m.body}</p>}
                           </>
@@ -272,6 +358,15 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
           ))
         )}
         <div ref={bottomRef} />
+      </div>
+      {hasNewBelow && (
+        <button
+          onClick={() => scrollToBottom("smooth")}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[var(--accent)] text-[var(--text-inverse)] text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg hover:bg-[var(--accent)] transition-all animate-in fade-in"
+        >
+          <ArrowDown size={12} /> New message
+        </button>
+      )}
       </div>
 
       {imagePreview && (
@@ -310,6 +405,7 @@ export default function MessageThread({ currentUserId, currentUsername, otherUse
           {sending || uploadingImage ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
+      <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </div>
   );
 }
