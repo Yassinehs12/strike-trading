@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  AlertTriangle, Loader2, Sparkles, CheckCircle, Mail, Lock, Eye, EyeOff, UserCircle, Check,
+  AlertTriangle, Loader2, Sparkles, CheckCircle, Mail, Lock, Eye, EyeOff, UserCircle, Check, ArrowLeft,
 } from "lucide-react";
 import { createProfile, applyReferralCode } from "../db";
 import { supabase } from "../supabaseClient";
@@ -124,7 +124,7 @@ const AUTH_CANDLES = [
 ];
 
 const AuthTerminalPreview = () => (
-  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+  <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 backdrop-blur-sm shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)]">
     <div className="flex items-center justify-between mb-2.5">
       <span className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 lp-pulse-dot" /> Live account — XAUUSD
@@ -172,6 +172,11 @@ const AuthTerminalPreview = () => (
     </div>
   </div>
 );
+
+/* Auth-page-only input treatment — a touch taller, tighter focus ring than
+   the app-wide inputCls, without changing that shared constant for every
+   other form in the product. */
+const authInputCls = "w-full bg-[var(--bg-primary)]/80 border border-white/[0.08] focus:border-[var(--accent)]/70 focus:ring-2 focus:ring-[var(--accent)]/15 hover:border-white/[0.14] outline-none rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-all duration-150";
 
 export const AuthPage = ({ onBack }) => {
   const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
@@ -260,23 +265,24 @@ export const AuthPage = ({ onBack }) => {
           in light mode, making the text invisible against it. */}
       <div className="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col justify-between p-12 bg-[#050810]">
         <div
-          className="absolute inset-0 opacity-[0.05]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "44px 44px" }}
         />
-        <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full opacity-20 blur-[100px] pointer-events-none" style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
+        <div className="absolute -top-32 -left-20 w-[380px] h-[380px] rounded-full opacity-[0.08] blur-[110px] pointer-events-none" style={{ background: "radial-gradient(circle, #4F7CFF, transparent 70%)" }} />
+        <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full opacity-[0.16] blur-[100px] pointer-events-none" style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
 
         <a href="/" className="relative flex items-center gap-2">
           <LogoFull size={30} textClass="text-lg" forceLight />
         </a>
 
-        <div className="relative">
+        <div className="relative tj-animate-in">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 mb-6">
             <Sparkles size={12} className="text-[var(--accent)]" /> Built for every kind of trader
           </span>
-          <h1 className="text-4xl font-extrabold leading-tight mb-4 text-white">
+          <h1 className="text-[2.65rem] font-extrabold leading-[1.08] tracking-tight mb-4 text-white">
             Trade with a system,<br /> not a feeling.
           </h1>
-          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md mb-6">
+          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md mb-7">
             Log every trade, track your funding challenge rules in real time, and see the analytics that actually explain your edge.
           </p>
 
@@ -305,33 +311,33 @@ export const AuthPage = ({ onBack }) => {
       {/* Right — the actual form */}
       <div className="flex-1 relative flex items-center justify-center p-4 sm:p-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 85% 0%, var(--accent-soft), transparent 45%)" }} />
-        <div className="w-full max-w-sm relative">
+        <div className="w-full max-w-[380px] relative">
           <div className="lg:hidden flex items-center justify-center mb-8">
             <LogoFull size={32} textClass="text-lg" />
           </div>
 
           {onBack && (
-            <button onClick={onBack} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] mb-5 flex items-center gap-1 transition-colors">
-              ← Back to home
+            <button onClick={onBack} className="group text-xs text-[var(--text-muted)] hover:text-[var(--accent)] mb-6 flex items-center gap-1.5 transition-colors">
+              <ArrowLeft size={12} className="transition-transform group-hover:-translate-x-0.5" /> Back to home
             </button>
           )}
 
           {mode === "forgot" ? (
             <div className="tj-animate-in">
-              <h2 className="text-xl font-extrabold mb-1.5">Reset your password</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight mb-1.5">Reset your password</h2>
               <p className="text-sm text-[var(--text-muted)] mb-6">We'll email you a link to set a new password.</p>
-              <Card className="p-6">
+              <Card className="p-7 rounded-2xl border-white/[0.08] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)]">
               <form onSubmit={submitForgotPassword}>
                 <Field label="Email">
                   <div className="relative">
                     <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                    <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <input type="email" className={`${authInputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                 </Field>
                 {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
                 {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-90 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)]">
+                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-95 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.45)]">
                   {loading ? <Loader2 size={15} className="animate-spin" /> : null}
                   Send Reset Link
                 </button>
@@ -343,24 +349,24 @@ export const AuthPage = ({ onBack }) => {
             </div>
           ) : (
             <div className="tj-animate-in">
-              <h2 className="text-xl font-extrabold mb-1.5">{mode === "signup" ? "Create your account" : "Welcome back"}</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight mb-1.5">{mode === "signup" ? "Create your account" : "Welcome back"}</h2>
               <p className="text-sm text-[var(--text-muted)] mb-6">
                 {mode === "signup" ? "Free to start — no credit card required." : "Sign in to get back to your journal."}
               </p>
 
-              <Card className="p-6">
+              <Card className="p-7 rounded-2xl border-white/[0.08] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)]">
               <form onSubmit={submitEmail}>
                 <Field label="Email">
                   <div className="relative">
                     <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                    <input type="email" className={`${inputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <input type="email" className={`${authInputCls} pl-9`} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                 </Field>
                 <Field label="Password">
                   <div className="relative">
                     <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                    <input type={showPassword ? "text" : "password"} className={`${inputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                    <input type={showPassword ? "text" : "password"} className={`${authInputCls} pl-9 pr-9`} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
                       {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
@@ -371,11 +377,11 @@ export const AuthPage = ({ onBack }) => {
                     <Field label="Username">
                       <div className="relative">
                         <UserCircle size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                        <input className={`${inputCls} pl-9`} placeholder="edgehunter_23" value={username} onChange={(e) => setUsername(e.target.value)} />
+                        <input className={`${authInputCls} pl-9`} placeholder="edgehunter_23" value={username} onChange={(e) => setUsername(e.target.value)} />
                       </div>
                     </Field>
                     <Field label="Age">
-                      <input type="number" className={inputCls} placeholder="18+" value={age} onChange={(e) => setAge(e.target.value)} />
+                      <input type="number" className={authInputCls} placeholder="18+" value={age} onChange={(e) => setAge(e.target.value)} />
                     </Field>
                   </div>
                 )}
@@ -387,11 +393,11 @@ export const AuthPage = ({ onBack }) => {
                         type="checkbox"
                         checked={keepSignedIn}
                         onChange={(e) => setKeepSignedInState(e.target.checked)}
-                        className="w-3.5 h-3.5 rounded border-[var(--border-secondary)] accent-[var(--accent)]"
+                        className="w-3.5 h-3.5 rounded border-[var(--border-secondary)] accent-[var(--accent)] cursor-pointer"
                       />
                       Keep me signed in
                     </label>
-                    <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs text-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                    <button type="button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }} className="text-xs font-medium text-[var(--accent)] hover:opacity-80 transition-opacity">
                       Forgot password?
                     </button>
                   </div>
@@ -401,7 +407,7 @@ export const AuthPage = ({ onBack }) => {
                 {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
 
                 <button type="submit" disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-90 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)]">
+                  className="w-full flex items-center justify-center gap-2 tj-gradient-bg hover:opacity-95 disabled:opacity-50 active:scale-[0.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all shadow-[0_8px_24px_-8px_rgba(139,92,246,0.45)]">
                   {loading ? <Loader2 size={15} className="animate-spin" /> : null}
                   {mode === "signup" ? "Create Account" : "Sign In"}
                 </button>
