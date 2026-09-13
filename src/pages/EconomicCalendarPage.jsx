@@ -70,8 +70,10 @@ function fmtCountdown(ms) {
   return `${m}m`;
 }
 
+// Shared by dateGroupLabel and the "Show Passed Events" filter below.
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
 function dateGroupLabel(d, now) {
-  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
   if (sameDay(d, now)) return `Today · ${d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}`;
@@ -179,7 +181,15 @@ export const EconomicCalendarPage = () => {
       .filter((e) => e.date >= start && e.date <= end)
       .filter((e) => impacts.includes(e.impact))
       .filter((e) => currencies.includes(e.country))
-      .filter((e) => showPassed || e.date > now)
+      // "Show Passed Events" is meant to hide events that already released
+      // *today*, so traders can focus on what's still coming. It must NOT
+      // wipe out entire past days — otherwise flipping it off makes the
+      // "Yesterday" tab (and past days inside "This Week") always show
+      // zero events, since every event on a past day is trivially "passed".
+      // Only suppress an event here if it's actually on today's date and
+      // already behind us; anything on a different calendar day (past or
+      // future) is unaffected by the toggle.
+      .filter((e) => showPassed || e.date > now || !sameDay(e.date, now))
       .sort((a, b) => a.date - b.date);
   }, [events, selectedRange, today, impacts, currencies, showPassed, now]);
 
