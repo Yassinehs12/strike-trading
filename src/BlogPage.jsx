@@ -1,5 +1,8 @@
-import React from "react";
-import { ArrowLeft, Clock, Tag as TagIcon, Newspaper } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import {
+  ArrowLeft, ArrowRight, Clock, Tag as TagIcon, Newspaper, Search, X,
+  Shield, Brain, Repeat2, Megaphone, Award, TrendingUp, Mail, Check,
+} from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { usePageMeta } from "./lib/seo";
@@ -169,6 +172,7 @@ export const POSTS = [
   },
 ];
 
+
 const readTime = (content) => {
   const words = content.reduce((acc, block) => {
     if (block.text) return acc + block.text.split(/\s+/).length;
@@ -181,11 +185,73 @@ const readTime = (content) => {
 const formatDate = (iso) =>
   new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+/* ============================================================
+   CATEGORY IDENTITY
+   Every tag already present in POSTS gets a color + icon so the
+   Blog reads as edited/curated rather than an undifferentiated
+   list. Nothing here is per-article data — purely presentation.
+   Add an entry when a genuinely new tag is introduced above;
+   anything missing falls back to DEFAULT_CATEGORY_STYLE.
+   ============================================================ */
+const CATEGORY_STYLES = {
+  "Habits": { icon: Repeat2, gradient: "linear-gradient(135deg, #4F7CFF 0%, #22233A 100%)" },
+  "Risk Management": { icon: Shield, gradient: "linear-gradient(135deg, #F472B6 0%, #2A1E33 100%)" },
+  "Psychology": { icon: Brain, gradient: "linear-gradient(135deg, #A855F7 0%, #201A33 100%)" },
+  "Prop Firm": { icon: Award, gradient: "linear-gradient(135deg, #F59E0B 0%, #2A2416 100%)" },
+  "Announcement": { icon: Megaphone, gradient: "linear-gradient(135deg, #22D3A5 0%, #142722 100%)" },
+};
+const DEFAULT_CATEGORY_STYLE = { icon: TrendingUp, gradient: "linear-gradient(135deg, #4F7CFF 0%, #22233A 100%)" };
+
+const categoryStyle = (tag) => CATEGORY_STYLES[tag] || DEFAULT_CATEGORY_STYLE;
+
+/* Abstract, generative cover art — a faint candlestick/price-line motif
+   over a category-tinted gradient. Purely decorative (no fabricated
+   photos of screens, coins, or trading floors), consistent everywhere
+   a given category appears. */
+const CoverArt = ({ tag, className = "", compact = false }) => {
+  const { icon: Icon, gradient } = categoryStyle(tag);
+  // Deterministic "random" candlestick heights from the tag string so
+  // the same category always renders the same silhouette.
+  const seed = (tag || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const bars = Array.from({ length: 14 }, (_, i) => {
+    const h = 20 + ((seed * (i + 3)) % 55);
+    const up = (seed + i) % 2 === 0;
+    return { h, up };
+  });
+  return (
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={{ background: gradient }}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 280 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full opacity-40">
+        {bars.map((b, i) => (
+          <rect
+            key={i}
+            x={i * 20 + 4}
+            y={100 - b.h}
+            width={10}
+            height={b.h}
+            rx={1.5}
+            fill={b.up ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)"}
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 100%)" }} />
+      <div className={`absolute ${compact ? "bottom-2 right-2" : "bottom-3 right-3"} rounded-lg bg-black/25 backdrop-blur-sm p-2`}>
+        <Icon size={compact ? 14 : 18} className="text-white/90" />
+      </div>
+    </div>
+  );
+};
+
 const Shell = ({ children, maxW = "max-w-2xl" }) => (
   <div className="blog-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
       .blog-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+      .blog-scrollbar-none::-webkit-scrollbar { display: none; }
+      .blog-scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
     `}</style>
 
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--bg-primary)]/70 border-b border-white/10">
@@ -202,97 +268,400 @@ const Shell = ({ children, maxW = "max-w-2xl" }) => (
       </div>
     </header>
 
-    <main className={`${maxW} mx-auto px-4 py-10 md:py-14`}>{children}</main>
+    <main>{children}</main>
 
     <footer className="border-t border-white/5 py-8 px-4 mt-8">
-      <div className={`${maxW} mx-auto text-xs text-[var(--text-faint)] text-center`}>
-        © {new Date().getFullYear()} Strike Journal. All rights reserved.
+      <div className={`${maxW} mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-faint)]`}>
+        <span>© {new Date().getFullYear()} Strike Journal. All rights reserved.</span>
+        <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          <a href="/blog" className="font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Blog</a>
+          <a href="/changelog" className="font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Changelog</a>
+          <a href="/privacy" className="font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
+          <a href="/terms" className="font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
+        </nav>
       </div>
     </footer>
   </div>
 );
 
-const PostCard = ({ post }) => (
-  <a href={`/blog/${post.slug}`} className="block group">
-    <div className="border border-white/10 rounded-xl p-5 hover:border-[var(--accent)]/40 hover:bg-white/[0.02] transition-colors">
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        {post.tags?.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-            <TagIcon size={10} /> {t}
-          </span>
-        ))}
+/* ============================================================
+   HERO
+   ============================================================ */
+const BlogHero = () => (
+  <div className="relative overflow-hidden border-b border-white/10">
+    <div
+      className="absolute inset-0 opacity-[0.35]"
+      style={{
+        background: "radial-gradient(60% 80% at 15% 0%, rgba(79,124,255,0.18) 0%, rgba(0,0,0,0) 60%), radial-gradient(50% 70% at 85% 20%, rgba(168,85,247,0.16) 0%, rgba(0,0,0,0) 60%)",
+      }}
+      aria-hidden="true"
+    />
+    <div
+      className="absolute inset-0 opacity-[0.05]"
+      style={{
+        backgroundImage: "linear-gradient(var(--text-faint) 1px, transparent 1px), linear-gradient(90deg, var(--text-faint) 1px, transparent 1px)",
+        backgroundSize: "36px 36px",
+      }}
+      aria-hidden="true"
+    />
+    <div className="relative max-w-6xl mx-auto px-4 pt-14 pb-10 md:pt-20 md:pb-14">
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] mb-4">
+        <Newspaper size={12} /> Strikejournal Insights
+      </span>
+      <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.08] max-w-xl mb-4">
+        Trade smarter.<br />Understand your edge.
+      </h1>
+      <p className="text-sm md:text-base text-[var(--text-tertiary)] max-w-lg leading-relaxed">
+        Practical insights on trading psychology, risk management, strategy, and the habits that help traders improve.
+      </p>
+    </div>
+  </div>
+);
+
+/* ============================================================
+   CATEGORIES + SEARCH
+   ============================================================ */
+const CategoryBar = ({ categories, active, onSelect, query, onQueryChange }) => (
+  <div className="sticky top-16 z-40 bg-[var(--bg-primary)]/85 backdrop-blur-md border-b border-white/10">
+    <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex items-center gap-2 overflow-x-auto blog-scrollbar-none -mx-1 px-1">
+        {categories.map((cat) => {
+          const isActive = cat === active;
+          return (
+            <button
+              key={cat}
+              onClick={() => onSelect(cat)}
+              className={`shrink-0 whitespace-nowrap text-xs font-semibold px-3.5 py-1.5 rounded-full border transition-colors ${
+                isActive
+                  ? "text-white border-transparent"
+                  : "text-[var(--text-tertiary)] border-[var(--border-primary)] hover:text-[var(--text-primary)] hover:border-[var(--border-secondary)]"
+              }`}
+              style={isActive ? { background: "var(--accent-gradient)" } : undefined}
+              aria-pressed={isActive}
+            >
+              {cat}
+            </button>
+          );
+        })}
       </div>
-      <h2 className="text-lg font-extrabold mb-1.5 group-hover:text-[var(--accent)] transition-colors">{post.title}</h2>
-      <p className="text-sm text-[var(--text-tertiary)] leading-relaxed mb-3 line-clamp-2">{post.excerpt}</p>
-      <div className="flex items-center gap-3 text-xs text-[var(--text-faint)]">
-        <span>{formatDate(post.date)}</span>
-        <span className="flex items-center gap-1"><Clock size={11} /> {readTime(post.content)} min read</span>
+
+      <div className="relative sm:ml-auto sm:w-56 shrink-0">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Search articles..."
+          aria-label="Search articles"
+          className="w-full text-xs bg-[var(--card-bg)] border border-[var(--border-primary)] rounded-full pl-8 pr-8 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15 transition-colors"
+        />
+        {query && (
+          <button
+            onClick={() => onQueryChange("")}
+            aria-label="Clear search"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+/* ============================================================
+   FEATURED ARTICLE
+   ============================================================ */
+const FeaturedPost = ({ post }) => (
+  <a href={`/blog/${post.slug}`} className="group block">
+    <span className="inline-block text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] mb-3">Featured</span>
+    <div className="grid md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-[var(--card-border)] bg-[var(--card-bg)] transition-colors group-hover:border-[var(--accent)]/40" style={{ boxShadow: "var(--card-shadow)" }}>
+      <CoverArt tag={post.tags?.[0]} className="h-56 md:h-full min-h-[220px]" />
+      <div className="p-6 md:p-8 flex flex-col justify-center">
+        {post.tags?.[0] && (
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--accent)] mb-2.5">{post.tags[0]}</span>
+        )}
+        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight leading-snug mb-2.5 group-hover:text-[var(--accent)] transition-colors">
+          {post.title}
+        </h2>
+        <p className="text-sm text-[var(--text-tertiary)] leading-relaxed mb-4 line-clamp-3">{post.excerpt}</p>
+        <div className="flex items-center gap-3 text-xs text-[var(--text-faint)] mb-4">
+          <span>{readTime(post.content)} min read</span>
+          <span>·</span>
+          <span>{formatDate(post.date)}</span>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)]">
+          Read article <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </div>
     </div>
   </a>
 );
 
+/* ============================================================
+   ARTICLE CARD (grid)
+   ============================================================ */
+const PostCard = ({ post }) => (
+  <a href={`/blog/${post.slug}`} className="group block h-full">
+    <div
+      className="h-full flex flex-col rounded-xl overflow-hidden border border-[var(--card-border)] bg-[var(--card-bg)] transition-all duration-200 group-hover:border-[var(--accent)]/40 group-hover:-translate-y-0.5"
+      style={{ boxShadow: "var(--card-shadow)" }}
+    >
+      <div className="overflow-hidden">
+        <CoverArt tag={post.tags?.[0]} className="h-36 transition-transform duration-300 group-hover:scale-[1.04]" compact />
+      </div>
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {post.tags?.map((t) => (
+            <span key={t} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+              <TagIcon size={9} /> {t}
+            </span>
+          ))}
+        </div>
+        <h3 className="text-[15px] font-bold leading-snug mb-1.5 group-hover:text-[var(--accent)] transition-colors">
+          {post.title}
+        </h3>
+        <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed mb-3 line-clamp-2 flex-1">{post.excerpt}</p>
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-faint)] pt-3 border-t border-white/5">
+          <span className="flex items-center gap-1"><Clock size={10} /> {readTime(post.content)} min read</span>
+          <span>·</span>
+          <span>{formatDate(post.date)}</span>
+        </div>
+      </div>
+    </div>
+  </a>
+);
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+const EmptyState = ({ onClear }) => (
+  <div className="flex flex-col items-center text-center py-16 px-4">
+    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-[var(--card-bg)] border border-[var(--border-primary)] mb-4">
+      <Search size={16} className="text-[var(--text-faint)]" />
+    </div>
+    <h3 className="text-base font-bold mb-1">No articles found</h3>
+    <p className="text-sm text-[var(--text-faint)] mb-5">Try a different search term or category.</p>
+    <button
+      onClick={onClear}
+      className="text-sm font-semibold text-[var(--accent)] hover:underline"
+    >
+      Clear filters
+    </button>
+  </div>
+);
+
+/* ============================================================
+   NEWSLETTER
+   ============================================================ */
+const Newsletter = () => {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    // No newsletter backend is wired up yet — this only reflects the
+    // UI state locally rather than pretending a subscription happened.
+    setSubmitted(true);
+  };
+
+  return (
+    <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 md:p-10 text-center" style={{ boxShadow: "var(--card-shadow)" }}>
+      <div className="w-10 h-10 rounded-full mx-auto flex items-center justify-center mb-4" style={{ background: "var(--accent-gradient)" }}>
+        <Mail size={16} className="text-white" />
+      </div>
+      <h2 className="text-xl md:text-2xl font-extrabold tracking-tight mb-2">Get better at trading.</h2>
+      <p className="text-sm text-[var(--text-tertiary)] max-w-sm mx-auto mb-6">
+        One useful trading insight delivered to your inbox. No noise. No hype.
+      </p>
+      {submitted ? (
+        <div className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">
+          <Check size={16} /> You're on the list.
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-2.5 max-w-sm mx-auto">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email address"
+            aria-label="Email address"
+            className="w-full text-sm bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-3.5 py-2.5 text-[var(--text-primary)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/15 transition-colors"
+          />
+          <button
+            type="submit"
+            className="w-full sm:w-auto shrink-0 text-sm font-bold text-white px-5 py-2.5 rounded-lg transition-opacity hover:opacity-90"
+            style={{ background: "var(--accent-gradient)" }}
+          >
+            Subscribe
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};
+
+/* ============================================================
+   STRIKEJOURNAL CTA
+   ============================================================ */
+const JournalCta = () => (
+  <div className="text-center py-10">
+    <h2 className="text-xl md:text-2xl font-extrabold tracking-tight mb-2 max-w-md mx-auto leading-snug">
+      Don't just read about your trading. Start understanding it.
+    </h2>
+    <p className="text-sm text-[var(--text-tertiary)] max-w-sm mx-auto mb-6">
+      Journal your trades, track your performance, and discover the patterns behind your results.
+    </p>
+    <a
+      href="/"
+      className="inline-flex items-center gap-1.5 text-sm font-bold text-white px-5 py-2.5 rounded-lg transition-opacity hover:opacity-90"
+      style={{ background: "var(--accent-gradient)" }}
+    >
+      Start Journaling <ArrowRight size={14} />
+    </a>
+  </div>
+);
+
+/* ============================================================
+   BLOG LIST PAGE
+   ============================================================ */
 export const BlogListPage = () => {
   usePageMeta({
     title: "Blog",
     description: "Notes on trading, prop firm challenges, and building a trading journal that actually gets used — from the Strike Journal team.",
     path: "/blog",
   });
+
+  const [active, setActive] = useState("All");
+  const [query, setQuery] = useState("");
+
+  const categories = useMemo(() => {
+    const tags = new Set();
+    POSTS.forEach((p) => p.tags?.forEach((t) => tags.add(t)));
+    return ["All", ...Array.from(tags)];
+  }, []);
+
+  const isDefaultView = active === "All" && query.trim() === "";
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return POSTS.filter((p) => {
+      const matchesCategory = active === "All" || p.tags?.includes(active);
+      const matchesQuery =
+        !q ||
+        p.title.toLowerCase().includes(q) ||
+        p.excerpt.toLowerCase().includes(q) ||
+        p.tags?.some((t) => t.toLowerCase().includes(q));
+      return matchesCategory && matchesQuery;
+    });
+  }, [active, query]);
+
+  const featured = isDefaultView ? filtered[0] : null;
+  const rest = featured ? filtered.slice(1) : filtered;
+
+  const clearFilters = () => {
+    setActive("All");
+    setQuery("");
+  };
+
   return (
-  <Shell>
-    <div className="flex items-center gap-2 mb-1">
-      <Newspaper size={20} className="text-[var(--accent)]" />
-      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Blog</h1>
-    </div>
-    <p className="text-sm text-[var(--text-faint)] mb-8">Notes on trading, building Strike Journal, and the community.</p>
+    <Shell maxW="max-w-6xl">
+      <BlogHero />
+      <CategoryBar categories={categories} active={active} onSelect={setActive} query={query} onQueryChange={setQuery} />
 
-    <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 pb-8 border-b border-white/10">
-      <a href="/blog" className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Blog</a>
-      <a href="/changelog" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Changelog</a>
-      <a href="/privacy" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a>
-      <a href="/terms" className="text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a>
-    </nav>
+      <div className="max-w-6xl mx-auto px-4 py-10 md:py-12">
+        {filtered.length === 0 ? (
+          <EmptyState onClear={clearFilters} />
+        ) : (
+          <>
+            {featured && (
+              <div className="mb-10 md:mb-14">
+                <FeaturedPost post={featured} />
+              </div>
+            )}
 
-    {POSTS.length === 0 ? (
-      <p className="text-sm text-[var(--text-faint)]">No posts yet — check back soon.</p>
-    ) : (
-      <div className="space-y-4">
-        {POSTS.map((post) => <PostCard key={post.slug} post={post} />)}
+            {rest.length > 0 && (
+              <>
+                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-faint)] mb-5">
+                  {isDefaultView ? "Latest Insights" : `${filtered.length} article${filtered.length === 1 ? "" : "s"}`}
+                </h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {rest.map((post) => <PostCard key={post.slug} post={post} />)}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        <div className="my-14 md:my-16">
+          <Newsletter />
+        </div>
+
+        <JournalCta />
       </div>
-    )}
-  </Shell>
+    </Shell>
   );
 };
 
+/* ============================================================
+   ARTICLE CONTENT BLOCKS
+   ============================================================ */
 const Block = ({ block }) => {
   switch (block.type) {
     case "h2":
-      return <h2 className="text-lg font-bold text-[var(--text-primary)] mt-8 mb-3 tracking-tight">{block.text}</h2>;
+      return <h2 className="text-lg md:text-xl font-bold text-[var(--text-primary)] mt-9 mb-3.5 tracking-tight">{block.text}</h2>;
     case "list":
       return (
-        <ul className="list-disc pl-5 space-y-1.5 mb-4">
+        <ul className="list-disc pl-5 space-y-2 mb-5">
           {block.items.map((item, i) => (
-            <li key={i} className="text-sm text-[var(--text-tertiary)] leading-relaxed">{item}</li>
+            <li key={i} className="text-[15px] text-[var(--text-tertiary)] leading-[1.75]">{item}</li>
           ))}
         </ul>
       );
     case "quote":
       return (
-        <blockquote className="border-l-2 border-[var(--accent)] pl-4 py-1 my-5 text-[var(--text-primary)] italic text-[15px] leading-relaxed">
+        <blockquote className="border-l-2 border-[var(--accent)] pl-5 py-1.5 my-6 text-[var(--text-primary)] italic text-base leading-relaxed">
           {block.text}
         </blockquote>
       );
     case "cta":
       return (
-        <a href={block.href} className="block my-6 rounded-xl border border-[var(--border-primary)] px-4 py-3 text-sm font-semibold text-[var(--accent)] hover:underline" style={{ backgroundColor: "var(--card-bg)" }}>
+        <a href={block.href} className="block my-7 rounded-xl border border-[var(--border-primary)] px-4 py-3.5 text-sm font-semibold text-[var(--accent)] hover:underline hover:border-[var(--accent)]/40 transition-colors" style={{ backgroundColor: "var(--card-bg)" }}>
           {block.text} →
         </a>
       );
     default:
-      return <p className="text-sm text-[var(--text-tertiary)] leading-relaxed mb-4">{block.text}</p>;
+      return <p className="text-[15px] text-[var(--text-tertiary)] leading-[1.75] mb-5">{block.text}</p>;
   }
 };
 
+/* ============================================================
+   RELATED ARTICLES
+   ============================================================ */
+const RelatedArticles = ({ current }) => {
+  const related = useMemo(() => {
+    return POSTS
+      .filter((p) => p.slug !== current.slug && p.tags?.some((t) => current.tags?.includes(t)))
+      .slice(0, 3);
+  }, [current]);
+
+  if (related.length === 0) return null;
+
+  return (
+    <div className="mt-14 pt-10 border-t border-white/10">
+      <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-faint)] mb-5">Continue learning</h2>
+      <div className="grid sm:grid-cols-3 gap-4">
+        {related.map((post) => <PostCard key={post.slug} post={post} />)}
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
+   BLOG POST PAGE
+   ============================================================ */
 export const BlogPostPage = ({ slug }) => {
   const post = POSTS.find((p) => p.slug === slug);
 
@@ -305,7 +674,7 @@ export const BlogPostPage = ({ slug }) => {
   if (!post) {
     return (
       <Shell>
-        <div className="flex flex-col items-center text-center py-16">
+        <div className="max-w-2xl mx-auto px-4 py-14 flex flex-col items-center text-center">
           <h1 className="text-lg font-bold mb-1.5">Post not found</h1>
           <p className="text-sm text-[var(--text-muted)] mb-6">This post may have been moved or doesn't exist.</p>
           <a href="/blog" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -318,36 +687,49 @@ export const BlogPostPage = ({ slug }) => {
 
   return (
     <Shell>
-      <a href="/blog" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors mb-6">
-        <ArrowLeft size={12} /> All posts
-      </a>
+      <div className="max-w-2xl mx-auto px-4 py-10 md:py-14">
+        <a href="/blog" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors mb-6">
+          <ArrowLeft size={12} /> All posts
+        </a>
 
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
-        {post.tags?.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-            <TagIcon size={10} /> {t}
+        {post.tags?.[0] && (
+          <span className="inline-block text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] mb-3">
+            {post.tags[0]}
           </span>
-        ))}
-      </div>
+        )}
 
-      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3">{post.title}</h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight leading-tight mb-3">{post.title}</h1>
+        <p className="text-base text-[var(--text-tertiary)] leading-relaxed mb-5">{post.excerpt}</p>
 
-      <div className="flex items-center gap-3 text-xs text-[var(--text-faint)] mb-8 pb-8 border-b border-white/10">
-        <span>{formatDate(post.date)}</span>
-        <span className="flex items-center gap-1"><Clock size={11} /> {readTime(post.content)} min read</span>
-      </div>
+        <div className="flex items-center gap-3 text-xs text-[var(--text-faint)] mb-6">
+          <span>{formatDate(post.date)}</span>
+          <span className="flex items-center gap-1"><Clock size={11} /> {readTime(post.content)} min read</span>
+        </div>
 
-      <article>
-        {post.content.map((block, i) => <Block key={i} block={block} />)}
-      </article>
+        <CoverArt tag={post.tags?.[0]} className="h-48 md:h-64 rounded-xl mb-8" />
 
-      <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
-        <a href="/blog" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
-          ← All posts
-        </a>
-        <a href="/" className="text-sm font-semibold text-[var(--accent)] hover:underline">
-          Start your journal →
-        </a>
+        <article>
+          {post.content.map((block, i) => <Block key={i} block={block} />)}
+        </article>
+
+        <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-white/10">
+          {post.tags?.map((t) => (
+            <span key={t} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+              <TagIcon size={10} /> {t}
+            </span>
+          ))}
+        </div>
+
+        <RelatedArticles current={post} />
+
+        <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
+          <a href="/blog" className="text-sm font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+            ← All posts
+          </a>
+          <a href="/" className="text-sm font-semibold text-[var(--accent)] hover:underline">
+            Start your journal →
+          </a>
+        </div>
       </div>
     </Shell>
   );
