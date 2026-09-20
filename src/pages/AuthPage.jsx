@@ -8,6 +8,7 @@ import { setKeepSignedIn } from "../supabaseClient";
 import { LogoFull } from "../Logo";
 import { Card, Field, GlobalStyle } from "../components/ui/Primitives";
 import { inputCls } from "../constants";
+import { usePageMeta } from "../lib/seo";
 
 export const ProfileSetup = ({ session, onComplete, pendingProfile }) => {
   const [username, setUsername] = useState(pendingProfile?.username || "");
@@ -179,6 +180,11 @@ const AuthTerminalPreview = () => (
 const authInputCls = "w-full bg-[var(--bg-primary)]/80 border border-white/[0.08] focus:border-[var(--accent)]/70 focus:ring-2 focus:ring-[var(--accent)]/15 hover:border-white/[0.14] outline-none rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-zinc-600 transition-all duration-150";
 
 export const AuthPage = ({ onBack }) => {
+  usePageMeta({
+    title: "Sign In or Create Your Free Account",
+    description: "Sign in to Strike Journal or create a free account to start journaling trades and tracking your prop firm funding challenges.",
+    path: "/",
+  });
   const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

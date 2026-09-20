@@ -3,6 +3,7 @@ import { ArrowLeft, Trophy, Flame, ShieldCheck, TrendingUp, Target, Loader2, Sha
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { fetchPublicProfileByUsername, fetchPublicReportCard } from "./db";
+import { usePageMeta } from "./lib/seo";
 
 const StatTile = ({ icon: Icon, label, value, accent = "text-[var(--text-primary)]" }) => (
   <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-4">
@@ -31,6 +32,13 @@ const NotFoundState = ({ username }) => (
 );
 
 export default function ReportCardPage({ username }) {
+  usePageMeta({
+    title: username ? `@${username} — Trading Report Card` : "Trading Report Card",
+    description: username
+      ? `See @${username}'s public trading report card on Strike Journal — their trading stats, streaks, and funding challenge progress.`
+      : "A public trading report card on Strike Journal — trading stats, streaks, and funding challenge progress.",
+    path: `/u/${encodeURIComponent(username || "")}`,
+  });
   const [status, setStatus] = useState("loading"); // loading | ready | not_found | error
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);

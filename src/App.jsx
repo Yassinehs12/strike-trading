@@ -25,6 +25,7 @@ import { PrivacyPolicy, TermsOfService } from "./LegalPages";
 import PricingPage from "./PricingPage";
 import ChangelogPage from "./ChangelogPage";
 import ReportCardPage from "./ReportCardPage";
+import { usePageMeta } from "./lib/seo";
 import { BlogListPage, BlogPostPage } from "./BlogPage";
 import CalculatorPage from "./CalculatorPage";
 import PositionCalculatorPage from "./pages/PositionCalculatorPage";
@@ -68,6 +69,14 @@ import { todayISO } from "./lib/format";
 // Temporary feature flags — set back to true to restore. Not deleting the
 // underlying components/tabs so re-enabling is a one-line change.
 const SHOW_SUPPORT_WIDGET = false;
+
+// Sets the browser-tab title for whichever in-app page is open (Dashboard,
+// Trade Journal, etc). Rendered only inside the signed-in shell so it never
+// competes with the public pages' own usePageMeta calls.
+const AppPageMeta = ({ title, path }) => {
+  usePageMeta({ title, path });
+  return null;
+};
 
 export default function App() {
   // If there's no saved auth token at all, we already know for certain
@@ -553,6 +562,7 @@ export default function App() {
     <ToastContext.Provider value={addToast}>
       <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex">
         <GlobalStyle />
+        <AppPageMeta title={titles[active]?.[0]} path={`/${active}`} />
         <Sidebar active={active} setActive={setActive} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} user={session.user} profile={profile} onSignOut={signOut} />
         <div className="flex-1 min-w-0 flex flex-col">
           <InstallBanner />
