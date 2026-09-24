@@ -982,6 +982,85 @@ export async function deleteJournalEntry(id) {
   if (error) throw error;
 }
 
+/* ---------- daily post-market review (one per user per trading day) ---------- */
+const dailyReviewFromDB = (r) => ({
+  id: r.id,
+  reviewDate: r.review_date,
+  status: r.status, // "draft" | "completed"
+  marketStructure: r.market_structure,
+  marketBias: r.market_bias,
+  newsImpact: r.news_impact,
+  marketNotes: r.market_notes ?? "",
+  execution: r.execution || {},
+  executionNotes: r.execution_notes ?? "",
+  emotions: r.emotions || [],
+  confidence: r.confidence,
+  discipline: r.discipline,
+  emotionalControl: r.emotional_control,
+  feelingNotes: r.feeling_notes ?? "",
+  selfExecution: r.self_execution,
+  selfDiscipline: r.self_discipline,
+  selfPsychology: r.self_psychology,
+  didWell: r.did_well ?? "",
+  didPoorly: r.did_poorly ?? "",
+  improveTomorrow: r.improve_tomorrow ?? "",
+  completedAt: r.completed_at,
+  updatedAt: r.updated_at,
+});
+
+export async function fetchDailyReview(userId, dateStr) {
+  const { data, error } = await supabase
+    .from("daily_reviews").select("*")
+    .eq("user_id", userId).eq("review_date", dateStr)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? dailyReviewFromDB(data) : null;
+}
+
+// Lightweight index (date + status only) for the "recent days" strip.
+export async function fetchDailyReviewIndex(userId, limit = 60) {
+  const { data, error } = await supabase
+    .from("daily_reviews").select("review_date, status")
+    .eq("user_id", userId).order("review_date", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data.map((r) => ({ reviewDate: r.review_date, status: r.status }));
+}
+
+// Upserts on (user_id, review_date) — saving again edits the day's review, never duplicates it.
+export async function upsertDailyReview(userId, dateStr, form, status, existingCompletedAt = null) {
+  const payload = {
+    user_id: userId,
+    review_date: dateStr,
+    status,
+    market_structure: form.marketStructure || null,
+    market_bias: form.marketBias || null,
+    news_impact: typeof form.newsImpact === "boolean" ? form.newsImpact : null,
+    market_notes: form.marketNotes.trim(),
+    execution: form.execution || {},
+    execution_notes: form.executionNotes.trim(),
+    emotions: form.emotions || [],
+    confidence: form.confidence ?? null,
+    discipline: form.discipline ?? null,
+    emotional_control: form.emotionalControl ?? null,
+    feeling_notes: form.feelingNotes.trim(),
+    self_execution: form.selfExecution ?? null,
+    self_discipline: form.selfDiscipline ?? null,
+    self_psychology: form.selfPsychology ?? null,
+    did_well: form.didWell.trim(),
+    did_poorly: form.didPoorly.trim(),
+    improve_tomorrow: form.improveTomorrow.trim(),
+    completed_at: status === "completed" ? (existingCompletedAt || new Date().toISOString()) : null,
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("daily_reviews")
+    .upsert(payload, { onConflict: "user_id,review_date" })
+    .select()
+    .single();
+  if (error) throw error;
+  return dailyReviewFromDB(data);
+}
+
 /* ---------- notebook (freeform notes — playbooks, psychology, mistakes to avoid, etc.) ---------- */
 const notebookNoteFromDB = (r) => ({
   id: r.id,
