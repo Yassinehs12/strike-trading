@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Camera, LineChart, MessagesSquare, CalendarDays, Target, Star, Copy, Check, Users, Eye, EyeOff, ImageDown } from "lucide-react";
 import { updateProfileDetails, uploadAvatar, fetchOwnStats, fetchPublicBadgeStats, fetchPublicTradingStats, setShowPublicStats, fetchMyInviteInfo, fetchMemberBadges } from "./db";
+import { isProPlan } from "./lib/plan";
+import { Clock } from "lucide-react";
 import Badges, { computeBadges, mergeBadges } from "./Badges";
 import { downloadShareCard } from "./ShareCard";
 
@@ -21,6 +23,34 @@ const SectionHeader = ({ title, subtitle, icon, noMargin }) => (
 );
 
 export default function ProfilePage({ session, profile, onProfileUpdate, toast }) {
+  const isTrialPeriod = (() => {
+    if (!profile?.trial_started_at || !profile.plan_expires_at) return false;
+    const started = new Date(profile.trial_started_at).getTime();
+    const expires = new Date(profile.plan_expires_at).getTime();
+    // Only a trial (not a stacked paid period) if expiry is within ~3 days of when the trial started.
+    return expires - started <= 3.5 * 24 * 60 * 60 * 1000;
+  })();
+
+  const trialTimeLeft = (() => {
+    if (!isProPlan(profile) || !isTrialPeriod) return null;
+    const msLeft = new Date(profile.plan_expires_at).getTime() - Date.now();
+    if (msLeft <= 0) return null;
+    const hours = Math.floor(msLeft / (60 * 60 * 1000));
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const rem = hours % 24;
+      return `${days}d ${rem}h`;
+    }
+    if (hours >= 1) return `${hours}h`;
+    return `${Math.max(1, Math.floor(msLeft / (60 * 1000)))}m`;
+  })();
+
+  // Paid Pro (not a trial): show the renewal/expiry date instead of a countdown.
+  const proExpiryDate = (() => {
+    if (!isProPlan(profile) || isTrialPeriod || !profile?.plan_expires_at) return null;
+    return new Date(profile.plan_expires_at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  })();
+
   const [bio, setBio] = useState(profile?.bio || "");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -150,6 +180,21 @@ export default function ProfilePage({ session, profile, onProfileUpdate, toast }
               <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-1">
                 <CalendarDays size={12} /> Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "—"}
               </div>
+              {trialTimeLeft && (
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-full px-2.5 py-1 mt-2">
+                  <Clock size={12} /> Pro trial: {trialTimeLeft} left
+                </div>
+              )}
+              {proExpiryDate && (
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded-full px-2.5 py-1 mt-2">
+                  <Clock size={12} /> Pro · expires {proExpiryDate}
+                </div>
+              )}
+              {isProPlan(profile) && !profile?.plan_expires_at && (
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded-full px-2.5 py-1 mt-2">
+                  <Clock size={12} /> Pro member
+                </div>
+              )}
             </div>
 
             <button onClick={shareCard} disabled={generatingCard}
