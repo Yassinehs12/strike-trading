@@ -135,7 +135,7 @@ const Hero = ({ onGetStarted, onSignIn, stats }) => (
     <div className="relative max-w-5xl mx-auto text-center">
       <div className="lp-rise-1 inline-flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--border-primary)] rounded-full pl-2 pr-4 py-1.5 mb-8">
         <span className="w-2 h-2 rounded-full bg-emerald-400 lp-pulse-dot" />
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Live rule tracking for prop firm evaluations</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">3-day free Pro trial · No card required</span>
       </div>
 
       <h1 className="lp-rise-2 lp-display text-5xl md:text-7xl font-bold leading-[1.05] mb-6 text-[var(--text-primary)]">
@@ -147,12 +147,13 @@ const Hero = ({ onGetStarted, onSignIn, stats }) => (
 
       <div className="lp-rise-3 flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
         <button onClick={onGetStarted} className="group flex items-center gap-2 lp-gradient-bg text-white font-bold px-7 py-3.5 rounded-xl shadow-[0_0_40px_-8px_rgba(168,85,247,0.6)] hover:shadow-[0_0_55px_-6px_rgba(168,85,247,0.8)] transition-shadow">
-          Start free — no card required <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+          Start your 3-day free trial <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
         <button onClick={onSignIn} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-semibold px-7 py-3.5 transition-colors">
           Sign in
         </button>
       </div>
+      <p className="lp-rise-3 -mt-12 mb-16 text-xs text-[var(--text-muted)]">Full Pro access for 3 days, then keep journaling on the free plan. No credit card required.</p>
 
       <div className="lp-rise-4 relative max-w-3xl mx-auto">
         <div className="lp-card rounded-2xl p-5 md:p-8">
@@ -389,9 +390,9 @@ const FinalCTA = ({ onGetStarted }) => (
     <div className="lp-glow lp-gradient-bg w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
     <div className="relative max-w-2xl mx-auto text-center">
       <h2 className="lp-display text-3xl md:text-5xl font-bold text-[var(--text-primary)] mb-5">Start trading like the data's actually watching.</h2>
-      <p className="text-[var(--text-tertiary)] mb-9 text-lg">Free to start. No credit card. Your first trade takes under a minute to log.</p>
+      <p className="text-[var(--text-tertiary)] mb-9 text-lg">Try Pro free for 3 days. No credit card. Your first trade takes under a minute to log.</p>
       <button onClick={onGetStarted} className="group inline-flex items-center gap-2 lp-gradient-bg text-white font-bold px-8 py-4 rounded-xl shadow-[0_0_40px_-8px_rgba(168,85,247,0.6)] hover:shadow-[0_0_55px_-6px_rgba(168,85,247,0.8)] transition-shadow">
-        Create your free account <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+        Start your 3-day free trial <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
       </button>
     </div>
   </section>
@@ -483,7 +484,7 @@ const Footer = () => (
 export default function LandingPage({ onGetStarted, onSignIn }) {
   usePageMeta({
     title: "Strike Journal — Trading Journal & Prop Firm Challenge Tracker",
-    description: "Log trades, track prop firm challenge rules in real time, and see the analytics that explain your edge. Free trading journal — no credit card required.",
+    description: "Log trades, track prop firm challenge rules in real time, and see the analytics that explain your edge. Free trading journal with a 3-day Pro trial — no credit card required.",
     path: "/",
   });
 

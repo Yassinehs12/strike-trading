@@ -100,6 +100,21 @@ export default function PricingPage() {
   }, []);
 
   const alreadyPro = isProPlan(profile);
+  // Trial is available only when the column exists (null) and Pro isn't active.
+  const trialAvailable = !!session && !alreadyPro && profile && profile.trial_started_at === null;
+  const [trialBusy, setTrialBusy] = useState(false);
+
+  const startTrial = async () => {
+    setTrialBusy(true); setError("");
+    try {
+      const { error: rpcError } = await supabase.rpc("start_pro_trial");
+      if (rpcError) throw new Error(rpcError.message);
+      window.location.href = "/";
+    } catch (e) {
+      setError(e.message || "Could not start the trial. Please try again.");
+      setTrialBusy(false);
+    }
+  };
 
   const startCheckout = async () => {
     if (!session) { window.location.href = "/"; return; }
@@ -150,6 +165,37 @@ export default function PricingPage() {
           </p>
         </section>
 
+        {trialAvailable && (
+          <div className="max-w-3xl mx-auto mb-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-sm text-emerald-400">
+              <Sparkles size={16} className="shrink-0" aria-hidden="true" />
+              <span><span className="font-semibold">Claim your 3-day free Pro trial</span> — full access, no card required, cancel anytime.</span>
+            </div>
+            <button
+              onClick={startTrial}
+              disabled={trialBusy}
+              className={`shrink-0 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-semibold text-sm px-5 py-2.5 rounded-lg transition-all inline-flex items-center justify-center gap-2 ${focus}`}
+            >
+              {trialBusy && <Loader2 size={14} className="animate-spin" />}
+              Claim free trial <ArrowRight size={15} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        {!session && (
+          <div className="max-w-3xl mx-auto mb-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-sm text-emerald-400">
+              <Sparkles size={16} className="shrink-0" aria-hidden="true" />
+              <span><span className="font-semibold">3-day free Pro trial</span> — create an account to claim it, no card required.</span>
+            </div>
+            <a
+              href="/"
+              className={`shrink-0 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 rounded-lg transition-all inline-flex items-center justify-center gap-2 ${focus}`}
+            >
+              Create free account <ArrowRight size={15} aria-hidden="true" />
+            </a>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto mb-16 items-stretch">
           <div className="rounded-2xl border p-6 sm:p-7 flex flex-col transition-colors hover:border-[var(--text-faint)]" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
             <h2 className="font-bold text-lg mb-1">Free</h2>
@@ -169,6 +215,9 @@ export default function PricingPage() {
             <span className="absolute -top-3 left-6 bg-[var(--accent)] text-white text-[10px] tracking-wider font-bold px-3 py-1 rounded-full">MOST POPULAR</span>
             <h2 className="font-bold text-lg mb-1">Pro</h2>
             <p className="text-sm text-[var(--text-muted)] mb-5">For traders running multiple accounts or funded challenges.</p>
+            <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-400">
+              <span className="font-semibold">3-day free trial</span> of Pro. Create an account and start it in one click. No card required.
+            </div>
             <div role="group" aria-label="Billing interval" className="inline-flex self-start rounded-lg p-0.5 mb-5 bg-[var(--bg-tertiary)] text-xs font-semibold">
               {["monthly", "yearly"].map((k) => (
                 <button key={k} type="button" aria-pressed={interval === k} onClick={() => setInterval_(k)}
@@ -182,13 +231,26 @@ export default function PricingPage() {
               ${PRICES[interval].amount}<span className="text-sm font-medium text-[var(--text-muted)]">{PRICES[interval].suffix}</span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mb-6" aria-live="polite">{PRICES[interval].note}</p>
+            {trialAvailable && (
+              <button
+                onClick={startTrial}
+                disabled={trialBusy || busy}
+                className={`w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-3 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2 ${focus}`}
+              >
+                {trialBusy && <Loader2 size={14} className="animate-spin" />}
+                Start your 3-day free trial <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            )}
             <button
               onClick={startCheckout}
-              disabled={busy || alreadyPro}
-              className={`w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-3 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2 ${focus}`}
+              disabled={busy || trialBusy || alreadyPro}
+              className={trialAvailable
+                ? `w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-60 font-semibold text-sm px-4 py-2.5 rounded-lg border mb-2 inline-flex items-center justify-center gap-2 transition-colors ${focus}`
+                : `w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-3 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2 ${focus}`}
+              style={trialAvailable ? { borderColor: "var(--card-border)" } : undefined}
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
-              {alreadyPro ? "You're on Pro" : session ? <>Upgrade to Pro <ArrowRight size={15} aria-hidden="true" /></> : "Sign in to upgrade"}
+              {alreadyPro ? "You're on Pro" : session ? (trialAvailable ? "Or upgrade now" : <>Upgrade to Pro <ArrowRight size={15} aria-hidden="true" /></>) : "Start your 3-day free trial"}
             </button>
             {error && <p role="alert" className="text-xs text-center text-red-400 mb-1">{error}</p>}
             <p className="text-[11px] text-center text-[var(--text-muted)] mb-6">
