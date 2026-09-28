@@ -393,7 +393,7 @@ export default function App() {
   // real per-plan lookup — once membership plans exist. Every "Add
   // Account" entry point in the app funnels through addAccount below, so
   // this one constant is the single place that controls the gate.
-  const FREE_ACCOUNT_LIMIT = isProPlan(profile) ? Infinity : 2;
+  const FREE_ACCOUNT_LIMIT = isProPlan(profile) ? Infinity : 1;
 
   const addAccount = async (a) => {
     if (accounts.length >= FREE_ACCOUNT_LIMIT) {
@@ -580,14 +580,22 @@ export default function App() {
                 {active === "dashboard" && <DashboardPage trades={trades} challenges={challenges} onOpenTrade={setSelectedTrade} profile={profile} onLogTrade={() => setLogModalOpen(true)} setActive={setActive} userId={session?.user?.id} accounts={accounts} />}
                 {active === "challenges" && <ChallengesPage challenges={challenges} trades={trades} onCreate={addChallenge} onDelete={deleteChallenge} onMarkFunded={markFunded} onRequestPayout={requestPayout} />}
                 {active === "journal" && <JournalPage trades={trades} onDelete={deleteTrade} onOpenTrade={setSelectedTrade} onImportTrades={bulkImportTrades} profile={profile} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} onLogTrade={() => setLogModalOpen(true)} />}
-                {active === "daily-review" && <DailyReviewPage session={session} trades={trades} toast={addToast} />}
+                {active === "daily-review" && (
+                  <UpgradeGate profile={profile} feature="Daily Review" description="Close out your trading day: what happened, how you executed, and what to improve tomorrow.">
+                    <DailyReviewPage session={session} trades={trades} toast={addToast} />
+                  </UpgradeGate>
+                )}
                 {active === "journaling" && (
                   <UpgradeGate profile={profile} feature="Weekly/Monthly Review" description="Structured reflection on your trading beyond the individual trade — built automatically from your journal.">
                     <JournalingPage session={session} trades={trades} toast={addToast} />
                   </UpgradeGate>
                 )}
                 {active === "notebook" && <NotebookPage session={session} toast={addToast} />}
-                {active === "market-plan" && <MarketPlanPage session={session} toast={addToast} setups={setups} />}
+                {active === "market-plan" && (
+                  <UpgradeGate profile={profile} feature="Daily Market Plan" description="Write your bias, key levels, and setups before the session starts.">
+                    <MarketPlanPage session={session} toast={addToast} setups={setups} />
+                  </UpgradeGate>
+                )}
                 {active === "setups" && <SetupsPage setups={setups} trades={trades} onCreate={addSetup} onUpdate={updateSetup} onDelete={deleteSetup} onToggleArchive={toggleSetupArchive} />}
                 {active === "analytics" && <AnalyticsPage trades={trades} accounts={accounts} onAddAccount={addAccount} onEditAccount={editAccount} onRemoveAccount={removeAccount} accountLimit={FREE_ACCOUNT_LIMIT} />}
                 {active === "goals" && <GoalsPage session={session} trades={trades} toast={addToast} />}

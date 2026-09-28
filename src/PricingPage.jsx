@@ -12,10 +12,11 @@ const FEATURES = [
   { label: "Dashboard & basic analytics", free: true, pro: true },
   { label: "Community, leaderboard & badges", free: true, pro: true },
   { label: "Public Report Card", free: true, pro: true },
-  { label: "Trading accounts", free: "2 accounts", pro: "Unlimited" },
+  { label: "Trading accounts", free: "1 account", pro: "Unlimited" },
   { label: "Broker Sync (MT4/MT5, live brokerages)", free: false, pro: true },
   { label: "Psychology Report", free: false, pro: true },
   { label: "CSV / PDF export", free: false, pro: true },
+  { label: "Daily Review & Daily Market Plan", free: false, pro: true },
   { label: "Weekly / Monthly Review", free: false, pro: true },
 ];
 
@@ -34,7 +35,7 @@ const FREE_LIST = [
   "Trade journal",
   "Dashboard & basic analytics",
   "Funding challenge tracker",
-  "Up to 2 trading accounts",
+  "1 trading account",
   "Community, leaderboard & badges",
   "Public Report Card",
 ];
@@ -43,6 +44,7 @@ const PRO_LIST = [
   "Unlimited trading accounts",
   "Broker Sync (MT4/MT5, live brokerages)",
   "Psychology Report",
+  "Daily Review & Daily Market Plan",
   "Weekly / Monthly Review",
   "CSV / PDF export",
 ];
@@ -53,8 +55,8 @@ const VALUE = [
   { icon: Layers, title: "Unlimited Accounts", text: "Track every funded challenge and trading account in one place." },
 ];
 const PRO_FAQS = [
-  { q: "Can I use Strike Journal for free?", a: "Yes. The journal, dashboard, funding challenge tracker, community and up to 2 trading accounts are free, with no credit card required." },
-  { q: "What's included in Pro?", a: "Unlimited trading accounts, Broker Sync, the Psychology Report, Weekly/Monthly Review, and CSV/PDF export." },
+  { q: "Can I use Strike Journal for free?", a: "Yes. The journal, dashboard, funding challenge tracker, community and 1 trading account are free, with no credit card required. New accounts also get a 3-day Pro trial." },
+  { q: "What's included in Pro?", a: "Unlimited trading accounts, Broker Sync, the Psychology Report, Daily Review, Daily Market Plan, Weekly/Monthly Review, and CSV/PDF export. New accounts start with a 3-day Pro trial." },
   { q: "Can I switch between monthly and yearly?", a: "Yes. Each payment is for a single period, so you can choose monthly or yearly the next time you pay. Early payments stack onto your current expiry." },
   { q: "Does Pro automatically renew?", a: "No. Every payment covers one period only and there is no auto-renewal." },
   { q: "What payment methods are supported?", a: "Crypto through NOWPayments, including BTC, ETH, USDT and more." },
@@ -153,7 +155,7 @@ export default function PricingPage() {
             <h2 className="font-bold text-lg mb-1">Free</h2>
             <p className="text-sm text-[var(--text-muted)] mb-5">Everything you need to start journaling seriously.</p>
             <div className="text-4xl font-extrabold tracking-tight mb-1">$0</div>
-            <p className="text-xs text-[var(--text-muted)] mb-6">Free forever</p>
+            <p className="text-xs text-[var(--text-muted)] mb-6">Free forever, plus a 3-day Pro trial when you sign up</p>
             <button disabled className="w-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] font-semibold text-sm px-4 py-3 rounded-lg mb-6 cursor-default">
               {alreadyPro ? "Free tier" : "Your current plan"}
             </button>
