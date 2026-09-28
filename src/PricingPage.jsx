@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, X as XIcon, Sparkles, Loader2 } from "lucide-react";
+import { Check, X as XIcon, Sparkles, Loader2, Lock, BarChart3, RefreshCw, Download, Layers, ChevronDown, ArrowRight } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { isProPlan } from "./lib/plan";
 import { LogoFull } from "./Logo";
@@ -28,6 +28,53 @@ const Cell = ({ value }) => {
 const PRICES = {
   monthly: { amount: "9.99", suffix: "/month", note: "Billed monthly" },
   yearly: { amount: "99", suffix: "/year", note: "Save ~17% vs monthly ($19.89 less per year)" },
+};
+
+const FREE_LIST = [
+  "Trade journal",
+  "Dashboard & basic analytics",
+  "Funding challenge tracker",
+  "Up to 2 trading accounts",
+  "Community, leaderboard & badges",
+  "Public Report Card",
+];
+const PRO_LIST = [
+  "Everything in Free",
+  "Unlimited trading accounts",
+  "Broker Sync (MT4/MT5, live brokerages)",
+  "Psychology Report",
+  "Weekly / Monthly Review",
+  "CSV / PDF export",
+];
+const VALUE = [
+  { icon: BarChart3, title: "Psychology Report", text: "Discipline scoring and emotional-pattern breakdowns computed from your trade tags." },
+  { icon: RefreshCw, title: "Broker Sync", text: "Sync trades from MT4/MT5 and supported brokerages instead of entering them by hand." },
+  { icon: Download, title: "CSV & PDF Exports", text: "Export your journal and performance data whenever you need it." },
+  { icon: Layers, title: "Unlimited Accounts", text: "Track every funded challenge and trading account in one place." },
+];
+const PRO_FAQS = [
+  { q: "Can I use Strike Journal for free?", a: "Yes. The journal, dashboard, funding challenge tracker, community and up to 2 trading accounts are free, with no credit card required." },
+  { q: "What's included in Pro?", a: "Unlimited trading accounts, Broker Sync, the Psychology Report, Weekly/Monthly Review, and CSV/PDF export." },
+  { q: "Can I switch between monthly and yearly?", a: "Yes. Each payment is for a single period, so you can choose monthly or yearly the next time you pay. Early payments stack onto your current expiry." },
+  { q: "Does Pro automatically renew?", a: "No. Every payment covers one period only and there is no auto-renewal." },
+  { q: "What payment methods are supported?", a: "Crypto through NOWPayments, including BTC, ETH, USDT and more." },
+  { q: "Can I cancel or let my Pro period expire?", a: "There is nothing to cancel. When your period ends, your account returns to the Free plan unless you pay again." },
+];
+
+const FaqItem = ({ q, a, id }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b" style={{ borderColor: "var(--card-border)" }}>
+      <h3>
+        <button type="button" aria-expanded={open} aria-controls={`faq-${id}`} onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between gap-4 text-left py-4 text-sm font-semibold rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]">
+          {q}
+          <ChevronDown size={16} className={`shrink-0 text-[var(--text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </h3>
+      <div id={`faq-${id}`} role="region" hidden={!open} className="pb-4 text-sm text-[var(--text-muted)] leading-relaxed">{a}</div>
+    </div>
+  );
 };
 
 export default function PricingPage() {
@@ -71,89 +118,135 @@ export default function PricingPage() {
     description: "Strike Journal is free to start — full trade journal, funding challenge tracker, and community access. Upgrade to Pro for unlimited accounts and advanced analytics.",
     path: "/pricing",
   });
+
+  const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+  const ListItem = ({ children, accent }) => (
+    <li className="flex items-start gap-2.5 text-sm text-[var(--text-secondary)]">
+      <Check size={16} className={`mt-0.5 shrink-0 ${accent ? "text-[var(--accent)]" : "text-emerald-400"}`} aria-hidden="true" />
+      <span>{children}</span>
+    </li>
+  );
+
   return (
-    <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <header className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">
-        <a href="/"><LogoFull size={28} textClass="text-base" /></a>
+    <div className="tj-root min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-x-hidden">
+      <header className="max-w-5xl mx-auto flex items-center justify-between px-5 sm:px-6 py-5 sm:py-6">
+        <a href="/" className={`rounded ${focus}`}><LogoFull size={28} textClass="text-base" /></a>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Back to home</a>
+          <a href="/" className={`text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors rounded ${focus}`}>Back to home</a>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 pb-24">
-        <div className="text-center max-w-xl mx-auto mb-12">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[var(--accent)] mb-4">
-            <Sparkles size={12} /> Simple pricing
+      <main className="max-w-5xl mx-auto px-5 sm:px-6 pb-24">
+        <section className="text-center max-w-2xl mx-auto pt-6 sm:pt-10 mb-12 sm:mb-14">
+          <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest font-semibold px-3 py-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[var(--accent)] mb-6">
+            <Sparkles size={12} aria-hidden="true" /> Simple pricing
           </span>
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-3">Free to start. Upgrade when you're serious.</h1>
-          <p className="text-[var(--text-muted)] text-sm leading-relaxed">
-            Strike Journal is free to use for journaling and tracking your funding challenges. Pro unlocks
-            automated broker sync, deeper analytics, and export tools for traders running multiple accounts.
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-5">Free to start. Upgrade when you're serious.</h1>
+          <p className="text-[var(--text-muted)] text-base leading-relaxed">
+            Everything you need to journal, analyze, and improve your trading. Start free and unlock advanced tools when you're ready.
           </p>
-        </div>
+        </section>
 
-        <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto mb-10">
-          <div className="rounded-2xl border p-6" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
+        <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto mb-16 items-stretch">
+          <div className="rounded-2xl border p-6 sm:p-7 flex flex-col transition-colors hover:border-[var(--text-faint)]" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
             <h2 className="font-bold text-lg mb-1">Free</h2>
-            <p className="text-xs text-[var(--text-muted)] mb-4">Everything you need to start journaling seriously.</p>
-            <div className="text-3xl font-extrabold mb-6">$0</div>
-            <button disabled className="w-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] font-semibold text-sm px-4 py-2.5 rounded-lg mb-2 cursor-default">
+            <p className="text-sm text-[var(--text-muted)] mb-5">Everything you need to start journaling seriously.</p>
+            <div className="text-4xl font-extrabold tracking-tight mb-1">$0</div>
+            <p className="text-xs text-[var(--text-muted)] mb-6">Free forever</p>
+            <button disabled className="w-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] font-semibold text-sm px-4 py-3 rounded-lg mb-6 cursor-default">
               {alreadyPro ? "Free tier" : "Your current plan"}
             </button>
+            <ul className="space-y-3 border-t pt-6" style={{ borderColor: "var(--card-border)" }}>
+              {FREE_LIST.map((f) => <ListItem key={f}>{f}</ListItem>)}
+            </ul>
           </div>
 
-          <div className="rounded-2xl border-2 border-[var(--accent)] p-6 relative" style={{ backgroundColor: "var(--card-bg)" }}>
-            <span className="absolute -top-3 left-6 bg-[var(--accent)] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">MOST POPULAR</span>
+          <div className="rounded-2xl border-2 border-[var(--accent)] p-6 sm:p-7 relative flex flex-col shadow-[0_8px_40px_-12px_rgba(139,92,246,0.45)]"
+            style={{ backgroundColor: "var(--card-bg)", backgroundImage: "linear-gradient(180deg, var(--accent-soft), transparent 40%)" }}>
+            <span className="absolute -top-3 left-6 bg-[var(--accent)] text-white text-[10px] tracking-wider font-bold px-3 py-1 rounded-full">MOST POPULAR</span>
             <h2 className="font-bold text-lg mb-1">Pro</h2>
-            <p className="text-xs text-[var(--text-muted)] mb-4">For traders running multiple accounts or funded challenges.</p>
-            <div className="inline-flex rounded-lg p-0.5 mb-4 bg-[var(--bg-tertiary)] text-xs font-semibold">
+            <p className="text-sm text-[var(--text-muted)] mb-5">For traders running multiple accounts or funded challenges.</p>
+            <div role="group" aria-label="Billing interval" className="inline-flex self-start rounded-lg p-0.5 mb-5 bg-[var(--bg-tertiary)] text-xs font-semibold">
               {["monthly", "yearly"].map((k) => (
-                <button key={k} onClick={() => setInterval_(k)}
-                  className={`px-3 py-1.5 rounded-md transition-all capitalize ${interval === k ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)]"}`}>
+                <button key={k} type="button" aria-pressed={interval === k} onClick={() => setInterval_(k)}
+                  className={`px-3.5 py-1.5 rounded-md transition-all capitalize inline-flex items-center gap-1.5 ${focus} ${interval === k ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>
                   {k}
+                  {k === "yearly" && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${interval === k ? "bg-white/20" : "bg-emerald-500/15 text-emerald-400"}`}>Save 17%</span>}
                 </button>
               ))}
             </div>
-            <div className="text-3xl font-extrabold mb-1">
+            <div className="text-4xl font-extrabold tracking-tight mb-1">
               ${PRICES[interval].amount}<span className="text-sm font-medium text-[var(--text-muted)]">{PRICES[interval].suffix}</span>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mb-5">{PRICES[interval].note}</p>
+            <p className="text-xs text-[var(--text-muted)] mb-6" aria-live="polite">{PRICES[interval].note}</p>
             <button
               onClick={startCheckout}
               disabled={busy || alreadyPro}
-              className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2"
+              className={`w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-3 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2 ${focus}`}
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
-              {alreadyPro ? "You're on Pro" : session ? "Pay with crypto" : "Sign in to upgrade"}
+              {alreadyPro ? "You're on Pro" : session ? <>Upgrade to Pro <ArrowRight size={15} aria-hidden="true" /></> : "Sign in to upgrade"}
             </button>
-            {error && <p className="text-xs text-center text-red-400">{error}</p>}
-            <p className="text-[11px] text-center text-[var(--text-muted)]">
-              Secure crypto checkout via NOWPayments (BTC, ETH, USDT and more). One-time payment per period, no auto-renewal.
+            {error && <p role="alert" className="text-xs text-center text-red-400 mb-1">{error}</p>}
+            <p className="text-[11px] text-center text-[var(--text-muted)] mb-6">
+              Secure crypto checkout via NOWPayments<br />BTC · ETH · USDT and more. One-time payment per period, no auto-renewal.
             </p>
+            <ul className="space-y-3 border-t pt-6 mt-auto" style={{ borderColor: "var(--card-border)" }}>
+              {PRO_LIST.map((f) => <ListItem key={f} accent>{f}</ListItem>)}
+            </ul>
           </div>
         </div>
 
-        <div className="rounded-2xl border overflow-hidden max-w-3xl mx-auto" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: "var(--card-border)" }}>
-                <th className="text-left font-semibold px-5 py-3 text-[var(--text-secondary)]">Feature</th>
-                <th className="text-center font-semibold px-5 py-3 text-[var(--text-secondary)] w-28">Free</th>
-                <th className="text-center font-semibold px-5 py-3 text-[var(--accent)] w-28">Pro</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FEATURES.map((f, i) => (
-                <tr key={f.label} className={i !== FEATURES.length - 1 ? "border-b" : ""} style={{ borderColor: "var(--card-border)" }}>
-                  <td className="px-5 py-3 text-[var(--text-primary)]">{f.label}</td>
-                  <td className="px-5 py-3 text-center"><Cell value={f.free} /></td>
-                  <td className="px-5 py-3 text-center"><Cell value={f.pro} /></td>
+        <section className="max-w-3xl mx-auto mb-16" aria-labelledby="why-pro">
+          <h2 id="why-pro" className="text-2xl font-bold text-center mb-8 tracking-tight">Why upgrade to Pro?</h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {VALUE.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="rounded-xl border p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--accent)]/50" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
+                <div className="w-9 h-9 rounded-lg bg-[var(--accent)]/12 flex items-center justify-center mb-3"><Icon size={18} className="text-[var(--accent)]" aria-hidden="true" /></div>
+                <h3 className="font-semibold text-sm mb-1">{title}</h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-3xl mx-auto mb-16" aria-labelledby="compare">
+          <h2 id="compare" className="text-2xl font-bold text-center mb-8 tracking-tight">Compare plans</h2>
+          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ borderColor: "var(--card-border)" }}>
+                  <th scope="col" className="text-left font-semibold px-4 sm:px-5 py-3 text-[var(--text-secondary)]">Feature</th>
+                  <th scope="col" className="text-center font-semibold px-2 sm:px-5 py-3 text-[var(--text-secondary)] w-24 sm:w-28">Free</th>
+                  <th scope="col" className="text-center font-semibold px-2 sm:px-5 py-3 text-[var(--accent)] w-24 sm:w-28">Pro</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {FEATURES.map((f, i) => (
+                  <tr key={f.label} className={i !== FEATURES.length - 1 ? "border-b" : ""} style={{ borderColor: "var(--card-border)" }}>
+                    <th scope="row" className="font-normal text-left px-4 sm:px-5 py-3 text-[var(--text-primary)]">{f.label}</th>
+                    <td className="px-2 sm:px-5 py-3 text-center"><Cell value={f.free} /></td>
+                    <td className="px-2 sm:px-5 py-3 text-center"><Cell value={f.pro} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div className="max-w-3xl mx-auto mb-16 rounded-xl border px-5 py-4 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-1 text-center text-sm" style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}>
+          <span className="inline-flex items-center gap-2 font-semibold"><Lock size={14} className="text-[var(--accent)]" aria-hidden="true" /> Secure checkout</span>
+          <span className="text-[var(--text-muted)]">BTC · ETH · USDT · and more</span>
+          <span className="text-[var(--text-muted)]">One-time payment · No automatic renewal</span>
         </div>
+
+        <section className="max-w-2xl mx-auto" aria-labelledby="faq">
+          <h2 id="faq" className="text-2xl font-bold text-center mb-6 tracking-tight">Frequently asked questions</h2>
+          <div className="border-t" style={{ borderColor: "var(--card-border)" }}>
+            {PRO_FAQS.map((f, i) => <FaqItem key={f.q} id={i} q={f.q} a={f.a} />)}
+          </div>
+        </section>
       </main>
     </div>
   );
