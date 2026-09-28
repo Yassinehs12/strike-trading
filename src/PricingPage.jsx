@@ -1,5 +1,7 @@
-import React from "react";
-import { Check, X as XIcon, Sparkles } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, X as XIcon, Sparkles, Loader2 } from "lucide-react";
+import { supabase } from "./supabaseClient";
+import { isProPlan } from "./lib/plan";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { usePageMeta } from "./lib/seo";
@@ -23,7 +25,47 @@ const Cell = ({ value }) => {
   return <span className="text-xs font-medium text-[var(--text-secondary)]">{value}</span>;
 };
 
+const PRICES = {
+  monthly: { amount: "9.99", suffix: "/month", note: "Billed monthly" },
+  yearly: { amount: "99", suffix: "/year", note: "Save ~17% vs monthly ($19.89 less per year)" },
+};
+
 export default function PricingPage() {
+  const [interval, setInterval_] = useState("monthly");
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      setSession(data.session);
+      if (data.session) {
+        const { data: p } = await supabase.from("profiles").select("*").eq("id", data.session.user.id).maybeSingle();
+        if (!cancelled) setProfile(p);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const alreadyPro = isProPlan(profile);
+
+  const startCheckout = async () => {
+    if (!session) { window.location.href = "/"; return; }
+    setBusy(true); setError("");
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("nowpayments-create-invoice", { body: { interval } });
+      if (fnError) throw new Error(data?.error || fnError.message);
+      if (!data?.url) throw new Error(data?.error || "Could not start checkout.");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e.message || "Something went wrong. Please try again.");
+      setBusy(false);
+    }
+  };
+
   usePageMeta({
     title: "Pricing",
     description: "Strike Journal is free to start — full trade journal, funding challenge tracker, and community access. Upgrade to Pro for unlimited accounts and advanced analytics.",
@@ -57,7 +99,7 @@ export default function PricingPage() {
             <p className="text-xs text-[var(--text-muted)] mb-4">Everything you need to start journaling seriously.</p>
             <div className="text-3xl font-extrabold mb-6">$0</div>
             <button disabled className="w-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] font-semibold text-sm px-4 py-2.5 rounded-lg mb-2 cursor-default">
-              Your current plan
+              {alreadyPro ? "Free tier" : "Your current plan"}
             </button>
           </div>
 
@@ -65,15 +107,29 @@ export default function PricingPage() {
             <span className="absolute -top-3 left-6 bg-[var(--accent)] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">MOST POPULAR</span>
             <h2 className="font-bold text-lg mb-1">Pro</h2>
             <p className="text-xs text-[var(--text-muted)] mb-4">For traders running multiple accounts or funded challenges.</p>
-            <div className="text-3xl font-extrabold mb-6">Coming soon</div>
+            <div className="inline-flex rounded-lg p-0.5 mb-4 bg-[var(--bg-tertiary)] text-xs font-semibold">
+              {["monthly", "yearly"].map((k) => (
+                <button key={k} onClick={() => setInterval_(k)}
+                  className={`px-3 py-1.5 rounded-md transition-all capitalize ${interval === k ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)]"}`}>
+                  {k}
+                </button>
+              ))}
+            </div>
+            <div className="text-3xl font-extrabold mb-1">
+              ${PRICES[interval].amount}<span className="text-sm font-medium text-[var(--text-muted)]">{PRICES[interval].suffix}</span>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mb-5">{PRICES[interval].note}</p>
             <button
-              onClick={(e) => { e.currentTarget.nextSibling.classList.remove("hidden"); e.currentTarget.classList.add("hidden"); }}
-              className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all mb-2"
+              onClick={startCheckout}
+              disabled={busy || alreadyPro}
+              className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-all mb-2 inline-flex items-center justify-center gap-2"
             >
-              Get notified
+              {busy && <Loader2 size={14} className="animate-spin" />}
+              {alreadyPro ? "You're on Pro" : session ? "Pay with crypto" : "Sign in to upgrade"}
             </button>
-            <p className="hidden text-xs text-center text-[var(--text-muted)]">
-              Billing isn't live yet — drop in the Strike community and an admin can get you early Pro access.
+            {error && <p className="text-xs text-center text-red-400">{error}</p>}
+            <p className="text-[11px] text-center text-[var(--text-muted)]">
+              Secure crypto checkout via NOWPayments (BTC, ETH, USDT and more). One-time payment per period, no auto-renewal.
             </p>
           </div>
         </div>
