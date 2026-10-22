@@ -274,11 +274,11 @@ const ReviewSummary = ({ form, review, onEdit }) => {
                 return <Chip key={e} selected tone={tone}>{e}</Chip>;
               }) : <span className="text-xs text-[var(--text-faint)]">No emotions selected</span>}
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <ScoreTile label="Confidence" value={form.confidence} />
-              <ScoreTile label="Discipline" value={form.discipline} />
-              <ScoreTile label="Emotional control" value={form.emotionalControl} />
-            </div>
+            {form.emotions.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {form.emotions.map((e) => <ScoreTile key={e} label={e} value={form.emotionRatings?.[e]} />)}
+              </div>
+            )}
             {notes(form.feelingNotes)}
           </SummaryBlock>
         </Card>
@@ -401,9 +401,17 @@ export default function DailyReviewPage({ session, trades, toast }) {
     if (typeof v === "boolean") execution[k] = v; else delete execution[k];
     return { ...f, execution };
   });
-  const toggleEmotion = (label) => setForm((f) => ({
-    ...f, emotions: f.emotions.includes(label) ? f.emotions.filter((e) => e !== label) : [...f.emotions, label],
-  }));
+  const toggleEmotion = (label) => setForm((f) => {
+    const on = f.emotions.includes(label);
+    const emotionRatings = { ...f.emotionRatings };
+    if (on) delete emotionRatings[label];
+    return { ...f, emotions: on ? f.emotions.filter((e) => e !== label) : [...f.emotions, label], emotionRatings };
+  });
+  const setEmotionRating = (label, v) => setForm((f) => {
+    const emotionRatings = { ...f.emotionRatings };
+    if (v == null) delete emotionRatings[label]; else emotionRatings[label] = v;
+    return { ...f, emotionRatings };
+  });
 
   const dayStats = useMemo(() => computeDayStats(trades, date), [trades, date]);
   const tradeDates = useMemo(() => new Set((trades || []).map((t) => t.date)), [trades]);
@@ -616,9 +624,14 @@ export default function DailyReviewPage({ session, trades, toast }) {
                     {EMOTION_OPTIONS.map((e) => <Chip key={e.label} tone={e.tone} selected={form.emotions.includes(e.label)} onClick={() => toggleEmotion(e.label)}>{e.label}</Chip>)}
                   </div>
                 </div>
-                <RatingRow label="Confidence" value={form.confidence} onChange={(v) => setField("confidence", v)} />
-                <RatingRow label="Discipline" value={form.discipline} onChange={(v) => setField("discipline", v)} />
-                <RatingRow label="Emotional control" value={form.emotionalControl} onChange={(v) => setField("emotionalControl", v)} />
+                {form.emotions.length > 0 && (
+                  <div className="space-y-4">
+                    <Label>Rate each feeling — how strongly did you feel it?</Label>
+                    {EMOTION_OPTIONS.filter((e) => form.emotions.includes(e.label)).map((e) => (
+                      <RatingRow key={e.label} label={e.label} value={form.emotionRatings?.[e.label] ?? null} onChange={(v) => setEmotionRating(e.label, v)} />
+                    ))}
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-tertiary)] mb-1.5" htmlFor="dr-feel-notes">How did I feel while trading today? <span className="text-[var(--text-faint)]">(optional)</span></label>
                   <textarea id="dr-feel-notes" rows={2} maxLength={2000} className={inputCls} placeholder="Any moment your emotions took over — or stayed out of the way?"

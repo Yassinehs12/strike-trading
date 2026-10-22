@@ -75,6 +75,6 @@ describe("serializeForm", () => {
     expect(serializeForm(a)).toBe(serializeForm(b));
   });
   it("detects a real change", () => {
-    expect(serializeForm(blank())).not.toBe(serializeForm({ ...blank(), confidence: 5 }));
+    expect(serializeForm(blank())).not.toBe(serializeForm({ ...blank(), emotions: ["Calm"], emotionRatings: { Calm: 5 } }));
   });
 });

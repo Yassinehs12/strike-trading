@@ -32,6 +32,10 @@ export const EMOTION_OPTIONS = [
   { label: "Revenge Trading", tone: "negative" },
 ];
 
+// Per-emotion ratings are persisted inside the existing `execution` JSON column
+// under this key, so no database migration is needed.
+export const EMOTION_RATINGS_KEY = "_emotionRatings";
+
 export const EMPTY_FORM = {
   marketStructure: null,
   marketBias: null,
@@ -40,9 +44,7 @@ export const EMPTY_FORM = {
   execution: {}, // { [questionKey]: true | false }
   executionNotes: "",
   emotions: [],
-  confidence: null,
-  discipline: null,
-  emotionalControl: null,
+  emotionRatings: {}, // { [emotionLabel]: 1-10 } — one rating per selected emotion
   feelingNotes: "",
   selfExecution: null,
   selfDiscipline: null,
@@ -88,7 +90,7 @@ export function sectionStatus(form) {
     market: { done: !!form.marketStructure && !!form.marketBias, required: false },
     execution: { done: execAnswered === EXECUTION_QUESTIONS.length, required: true, answered: execAnswered, total: EXECUTION_QUESTIONS.length },
     psychology: {
-      done: form.emotions.length > 0 && !!form.confidence && !!form.discipline && !!form.emotionalControl,
+      done: form.emotions.length > 0 && form.emotions.every((e) => !!form.emotionRatings?.[e]),
       required: false,
     },
     assessment: { done: !!form.selfExecution && !!form.selfDiscipline && !!form.selfPsychology, required: true },
@@ -126,6 +128,7 @@ export function serializeForm(form) {
       EXECUTION_QUESTIONS.filter((q) => typeof form.execution?.[q.key] === "boolean").map((q) => [q.key, form.execution[q.key]])
     ),
     emotions: [...form.emotions].sort(),
+    emotionRatings: Object.fromEntries(form.emotions.filter((e) => form.emotionRatings?.[e]).sort().map((e) => [e, form.emotionRatings[e]])),
     marketNotes: form.marketNotes.trim(),
     executionNotes: form.executionNotes.trim(),
     feelingNotes: form.feelingNotes.trim(),
@@ -136,18 +139,16 @@ export function serializeForm(form) {
 }
 
 export function formFromReview(r) {
-  if (!r) return { ...EMPTY_FORM, execution: {}, emotions: [] };
+  if (!r) return { ...EMPTY_FORM, execution: {}, emotions: [], emotionRatings: {} };
   return {
     marketStructure: r.marketStructure ?? null,
     marketBias: r.marketBias ?? null,
     newsImpact: r.newsImpact ?? null,
     marketNotes: r.marketNotes ?? "",
-    execution: { ...(r.execution || {}) },
+    execution: Object.fromEntries(Object.entries(r.execution || {}).filter(([k]) => k !== EMOTION_RATINGS_KEY)),
     executionNotes: r.executionNotes ?? "",
     emotions: [...(r.emotions || [])],
-    confidence: r.confidence ?? null,
-    discipline: r.discipline ?? null,
-    emotionalControl: r.emotionalControl ?? null,
+    emotionRatings: { ...(r.emotionRatings || r.execution?.[EMOTION_RATINGS_KEY] || {}) },
     feelingNotes: r.feelingNotes ?? "",
     selfExecution: r.selfExecution ?? null,
     selfDiscipline: r.selfDiscipline ?? null,

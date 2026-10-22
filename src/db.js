@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { EMOTION_RATINGS_KEY } from "./lib/dailyReview";
 
 /* ---------- mapping: DB (snake_case) <-> app (camelCase) ---------- */
 const tradeFromDB = (r) => ({
@@ -994,9 +995,6 @@ const dailyReviewFromDB = (r) => ({
   execution: r.execution || {},
   executionNotes: r.execution_notes ?? "",
   emotions: r.emotions || [],
-  confidence: r.confidence,
-  discipline: r.discipline,
-  emotionalControl: r.emotional_control,
   feelingNotes: r.feeling_notes ?? "",
   selfExecution: r.self_execution,
   selfDiscipline: r.self_discipline,
@@ -1036,12 +1034,12 @@ export async function upsertDailyReview(userId, dateStr, form, status, existingC
     market_bias: form.marketBias || null,
     news_impact: typeof form.newsImpact === "boolean" ? form.newsImpact : null,
     market_notes: form.marketNotes.trim(),
-    execution: form.execution || {},
+    execution: {
+      ...(form.execution || {}),
+      [EMOTION_RATINGS_KEY]: Object.fromEntries((form.emotions || []).filter((e) => form.emotionRatings?.[e]).map((e) => [e, form.emotionRatings[e]])),
+    },
     execution_notes: form.executionNotes.trim(),
     emotions: form.emotions || [],
-    confidence: form.confidence ?? null,
-    discipline: form.discipline ?? null,
-    emotional_control: form.emotionalControl ?? null,
     feeling_notes: form.feelingNotes.trim(),
     self_execution: form.selfExecution ?? null,
     self_discipline: form.selfDiscipline ?? null,
