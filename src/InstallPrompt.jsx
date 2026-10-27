@@ -82,7 +82,8 @@ export function InstallBanner() {
 // time, not only when the auto-banner happens to be showing.
 export function InstallMenuItem({ onOpenIOSHelp }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const { isIOS, isMobile } = getPlatform();
+  const [showDesktopHelp, setShowDesktopHelp] = useState(false);
+  const { isIOS } = getPlatform();
 
   useEffect(() => {
     const onBeforeInstall = (e) => { e.preventDefault(); setDeferredPrompt(e); };
@@ -91,22 +92,57 @@ export function InstallMenuItem({ onOpenIOSHelp }) {
   }, []);
 
   if (isStandalone()) return null;
-  if (!isMobile && !deferredPrompt) return null; // desktop with no install support: hide rather than show a dead button
 
+  // Always show the button. Some browsers (e.g. Brave on desktop) never fire
+  // beforeinstallprompt, so when there's no native prompt we fall back to a
+  // short how-to instead of hiding the button.
   const handleClick = async () => {
     if (isIOS) { onOpenIOSHelp(); return; }
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) { setShowDesktopHelp(true); return; }
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-    >
-      <Download size={16} /> Install App
-    </button>
+    <>
+      <button
+        onClick={handleClick}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+      >
+        <Download size={16} /> Install App
+      </button>
+      {showDesktopHelp && <DesktopInstallModal onClose={() => setShowDesktopHelp(false)} />}
+    </>
+  );
+}
+
+export function DesktopInstallModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full sm:w-96 rounded-2xl overflow-hidden border"
+        style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+          <h3 className="font-bold text-[var(--text-primary)]">Install Strike Journal</h3>
+          <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text-primary)]"><X size={18} /></button>
+        </div>
+        <div className="px-5 pb-6 space-y-4">
+          <p className="text-sm text-[var(--text-muted)]">Your browser handles installing apps itself. Two ways to do it:</p>
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-xs font-bold text-[var(--accent)] shrink-0">1</div>
+            <p className="text-sm text-[var(--text-secondary)] pt-0.5">Click the <strong>install icon</strong> at the right end of the address bar, if you see one.</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-xs font-bold text-[var(--accent)] shrink-0">2</div>
+            <p className="text-sm text-[var(--text-secondary)] pt-0.5">Or open the browser <strong>menu</strong> and choose <strong>Install Strike Journal</strong> (Brave/Chrome/Edge: look under <em>Save and share</em> or <em>Cast, save, and share</em>).</p>
+          </div>
+          <p className="text-[11px] text-[var(--text-faint)] pt-1">Firefox and Safari on desktop don't support installing web apps this way.</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
