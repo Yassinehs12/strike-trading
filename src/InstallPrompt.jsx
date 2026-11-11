@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Share, PlusSquare, Download } from "lucide-react";
 
 const DISMISS_KEY = "sj-install-dismissed-until";
@@ -117,9 +118,12 @@ export function InstallMenuItem({ onOpenIOSHelp }) {
   );
 }
 
+// Modals render through a portal on document.body. They are opened from inside
+// the user dropdown, whose transform/blur would otherwise trap `position: fixed`
+// and clip the modal to the top of the page.
 export function DesktopInstallModal({ onClose }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
         className="w-full sm:w-96 rounded-2xl overflow-hidden border"
         style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)" }}
@@ -142,13 +146,14 @@ export function DesktopInstallModal({ onClose }) {
           <p className="text-[11px] text-[var(--text-faint)] pt-1">Firefox and Safari on desktop don't support installing web apps this way.</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 export function IOSInstallModal({ onClose }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
         className="w-full sm:w-96 rounded-2xl overflow-hidden border"
         style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-primary)" }}
@@ -175,6 +180,7 @@ export function IOSInstallModal({ onClose }) {
           <p className="text-[11px] text-[var(--text-faint)] pt-1">Note: this only works from Safari. Other iOS browsers (Chrome, Brave, etc.) can't add to the home screen due to Apple's restrictions.</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
