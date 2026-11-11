@@ -186,10 +186,10 @@ const HoldingTimeInput = ({ minutes, onChange }) => {
     onChange(t === "" ? "" : String(Math.round(Number(t) * f)));
   };
   return (
-    <div className="flex gap-2">
-      <input type="number" min="0" step="any" className={`${inputCls} flex-1 min-w-0`} placeholder="45" value={text}
+    <div className="grid grid-cols-2 gap-2">
+      <input type="number" min="0" step="any" className={`${inputCls} min-w-0`} placeholder="45" value={text}
         onChange={(e) => update(e.target.value, unit)} />
-      <select className={`${inputCls} w-auto`} value={unit} onChange={(e) => { setUnit(e.target.value); update(text, e.target.value); }}>
+      <select className={`${inputCls} min-w-0`} value={unit} onChange={(e) => { setUnit(e.target.value); update(text, e.target.value); }}>
         {HOLD_UNITS.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
       </select>
     </div>
