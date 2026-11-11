@@ -33,6 +33,19 @@ export const fmtUSD = (n, opts = {}) =>
 export const fmtUSD2 = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
 
+// Holding time is stored in minutes. Show it in the most natural unit,
+// e.g. 45 -> "45m", 150 -> "2h 30m", 3000 -> "2d 2h".
+export const fmtHold = (minutes) => {
+  const m = Math.round(Number(minutes) || 0);
+  if (m < 60) return `${m}m`;
+  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (mm && !d) parts.push(`${mm}m`);
+  return parts.join(" ");
+};
+
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 

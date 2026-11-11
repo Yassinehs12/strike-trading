@@ -6,7 +6,7 @@ import { submitTradeSpotlight } from "../../db";
 import { AssetOptions, Card, Drawer, Field, Modal, StatusPill, useToast } from "../../components/ui/Primitives";
 import { ACCOUNT_TYPES, CHECKLIST_ITEMS, EMOTIONS, SESSIONS, SETUP_GRADES, inputCls } from "../../constants";
 import { PROP_FIRM_PRESETS, computeChallengeStats } from "../../lib/tradeCalculations";
-import { fmtUSD, fmtUSD2, todayISO } from "../../lib/format";
+import { fmtUSD, fmtUSD2, fmtHold, todayISO } from "../../lib/format";
 
 // Formats a trade's outcome as an R-multiple (reward relative to what was
 // risked) — e.g. risked $100, made $250 -> "2.5". Sign matches the trade's
@@ -167,6 +167,35 @@ export const CreateChallengeModal = ({ open, onClose, onCreate }) => {
   );
 };
 
+/* Holding time input: type a number and pick minutes / hours / days.
+   The form value (`minutes`) is always stored in minutes. */
+const HOLD_UNITS = [{ key: "min", label: "Minutes", factor: 1 }, { key: "hr", label: "Hours", factor: 60 }, { key: "day", label: "Days", factor: 1440 }];
+const HoldingTimeInput = ({ minutes, onChange }) => {
+  const initialUnit = () => {
+    const m = Number(minutes) || 0;
+    if (m > 0 && m % 1440 === 0) return "day";
+    if (m > 0 && m % 60 === 0) return "hr";
+    return "min";
+  };
+  const [unit, setUnit] = useState(initialUnit);
+  const factor = HOLD_UNITS.find((u) => u.key === unit).factor;
+  const [text, setText] = useState(() => (Number(minutes) ? String(Number(minutes) / factor) : ""));
+  const update = (t, u) => {
+    setText(t);
+    const f = HOLD_UNITS.find((x) => x.key === u).factor;
+    onChange(t === "" ? "" : String(Math.round(Number(t) * f)));
+  };
+  return (
+    <div className="flex gap-2">
+      <input type="number" min="0" step="any" className={`${inputCls} flex-1 min-w-0`} placeholder="45" value={text}
+        onChange={(e) => update(e.target.value, unit)} />
+      <select className={`${inputCls} w-auto`} value={unit} onChange={(e) => { setUnit(e.target.value); update(text, e.target.value); }}>
+        {HOLD_UNITS.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
+      </select>
+    </div>
+  );
+};
+
 /* ============================================================
    LOG TRADE MODAL
    ============================================================ */
@@ -287,7 +316,7 @@ export const LogTradeModal = ({ open, onClose, onCreate, challenges, accounts = 
         <Field label="Session">
           <select className={inputCls} value={form.session} onChange={(e) => set("session", e.target.value)}>{SESSIONS.map((s) => <option key={s}>{s}</option>)}</select>
         </Field>
-        <Field label="Holding Time (minutes)"><input type="number" className={inputCls} placeholder="45" value={form.holdingMinutes} onChange={(e) => set("holdingMinutes", e.target.value)} /></Field>
+        <Field label="Holding Time"><HoldingTimeInput minutes={form.holdingMinutes} onChange={(v) => set("holdingMinutes", v)} /></Field>
       </div>
       <Field label="Pre-Trade Checklist">
         <ChecklistToggles checklist={form.checklist} onChange={(c) => set("checklist", c)} />
@@ -482,7 +511,7 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[["Entry", trade.entry], ["Exit", trade.exit], ["Lots", trade.lots], ["Fees", fmtUSD2(trade.fees)],
-              ["Setup", trade.setup], ["Session", trade.session], ["Holding", `${trade.holdingMinutes || 0} min`], ["Date", trade.date]].map(([k, v]) => (
+              ["Setup", trade.setup], ["Session", trade.session], ["Holding", fmtHold(trade.holdingMinutes)], ["Date", trade.date]].map(([k, v]) => (
               <div key={k} className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2">
                 <div className="text-xs text-[var(--text-muted)]">{k}</div>
                 <div className="tj-mono text-sm text-[var(--text-primary)] font-medium">{v}</div>
@@ -528,7 +557,7 @@ export const TradeDrawer = ({ trade, onClose, onSave, onDelete, session, profile
             <Field label="Status">
               <select className={inputCls} value={form.status} onChange={(e) => set("status", e.target.value)}><option>Win</option><option>Loss</option><option>BE</option></select>
             </Field>
-            <Field label="Holding (min)"><input type="number" className={inputCls} value={form.holdingMinutes} onChange={(e) => set("holdingMinutes", e.target.value)} /></Field>
+            <Field label="Holding Time"><HoldingTimeInput minutes={form.holdingMinutes} onChange={(v) => set("holdingMinutes", v)} /></Field>
           </div>
           <Field label="Setup Quality">
             <div className="flex rounded-lg overflow-hidden border border-white/10">

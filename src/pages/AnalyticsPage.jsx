@@ -6,7 +6,7 @@ import {
 import {
   BarChart3, Target, Award, TrendingDown, Layers, TrendingUp, Scale, CircleSlash, Clock,
 } from "lucide-react";
-import { fmtUSD2 } from "../lib/format";
+import { fmtUSD2, fmtHold } from "../lib/format";
 import { PIE_COLORS, SESSIONS } from "../constants";
 import { computeKPIs, computeStreaks, computeDrawdownRecovery, computeSetupPerformance, computeDayWinStats, computeDrawdownSeries, equityCurve } from "../lib/tradeCalculations";
 import { AccountsBar } from "../components/trades/TradeComponents";
@@ -316,7 +316,7 @@ export const AnalyticsPage = ({ trades: allTrades, accounts = [], onAddAccount, 
           </div>
           <div className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2.5">
             <div className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Clock size={11} /> Avg Holding Time</div>
-            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{Math.round(streaks.avgHold)}m</div>
+            <div className="tj-mono text-lg font-bold text-[var(--text-primary)]">{fmtHold(streaks.avgHold)}</div>
           </div>
           <div className="bg-[var(--bg-primary)] border border-white/10 rounded-lg px-3 py-2.5">
             <div className="text-xs text-[var(--text-muted)]">Days Since Last Loss</div>
