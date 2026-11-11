@@ -6,7 +6,7 @@ import {
 import {
   fetchForumPosts, insertForumPost, deleteForumPost, uploadForumImage, updateForumPost,
   fetchForumReplies, insertForumReply, deleteForumReply, updateForumReply,
-  fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage,
+  fetchChatMessages, insertChatMessage, subscribeToChatMessages, deleteChatMessage, updateChatMessage, CHAT_EDIT_WINDOW_MS,
   fetchBlockedUserIds, fetchAdminUserIds, notifyMentions,
   fetchReactions, toggleReaction, fetchActiveSpotlight, fetchProfilesByIds,
   fetchLandingStats,
@@ -391,6 +391,38 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
   const bottomRef = useRef(null);
   const seenIds = useRef(new Set());
   const knownProfileIds = useRef(new Set());
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick so the edit button disappears once the 3-minute window closes.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 10000);
+    return () => clearInterval(t);
+  }, []);
+
+  const canEdit = (m) => m.user_id === currentUser.userId && now - new Date(m.created_at).getTime() < CHAT_EDIT_WINDOW_MS;
+
+  const startEdit = (m) => { setEditingId(m.id); setEditText(m.body); setError(""); };
+  const cancelEdit = () => { setEditingId(null); setEditText(""); };
+
+  const saveEdit = async (m) => {
+    const body = editText.trim();
+    if (!body || body === m.body) { cancelEdit(); return; }
+    if (!canEdit(m)) { setError("Edit window has closed — messages can only be edited for 3 minutes."); cancelEdit(); return; }
+    setSavingEdit(true);
+    try {
+      const saved = await updateChatMessage(m.id, body);
+      setMessages((prev) => prev.map((x) => (x.id === saved.id ? { ...x, ...saved } : x)));
+      cancelEdit();
+    } catch (err) {
+      setError(err.message || "Failed to edit message.");
+      cancelEdit();
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const scrollToBottom = (behavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -423,6 +455,8 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
       setMessages((prev) => [...prev, msg]);
       loadProfilesFor([msg.user_id]);
       setTimeout(() => scrollToBottom("smooth"), 0);
+    }, (msg) => {
+      setMessages((prev) => prev.map((x) => (x.id === msg.id ? { ...x, ...msg } : x)));
     });
 
     return unsubscribe;
@@ -521,7 +555,31 @@ const LiveChat = ({ currentUser, onViewProfile, blockedIds = [], isAdmin, adminI
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <p className="text-sm text-[var(--text-secondary)] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
+                    {editingId === m.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input autoFocus className={`${inputCls} flex-1`} value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(m); if (e.key === "Escape") cancelEdit(); }} />
+                        <button onClick={() => saveEdit(m)} disabled={savingEdit || !editText.trim()}
+                          className="text-emerald-400 hover:text-emerald-300 disabled:opacity-40 shrink-0" title="Save">
+                          {savingEdit ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        </button>
+                        <button onClick={cancelEdit} className="text-[var(--text-faint)] hover:text-[var(--text-primary)] shrink-0" title="Cancel">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--text-secondary)] leading-snug whitespace-pre-wrap break-words">
+                        {m.body}{m.edited_at && <span className="text-[10px] text-[var(--text-faint)]"> (edited)</span>}
+                      </p>
+                    )}
+                    {editingId !== m.id && canEdit(m) && (
+                      <button onClick={() => startEdit(m)}
+                        className="opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-[var(--accent)] transition-all shrink-0"
+                        title="Edit message (first 3 minutes)">
+                        <Pencil size={12} />
+                      </button>
+                    )}
                     {isAdmin && (
                       <button onClick={() => removeMessage(m.id)}
                         className="opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-rose-400 transition-all shrink-0"

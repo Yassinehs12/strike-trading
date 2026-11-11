@@ -651,7 +651,7 @@ export async function insertChatMessage(userId, username, body) {
 }
 
 // Subscribes to new chat messages in realtime. Returns an unsubscribe function.
-export function subscribeToChatMessages(onInsert) {
+export function subscribeToChatMessages(onInsert, onUpdate) {
   const channel = supabase
     .channel("chat_messages_realtime")
     .on(
@@ -659,8 +659,29 @@ export function subscribeToChatMessages(onInsert) {
       { event: "INSERT", schema: "public", table: "chat_messages" },
       (payload) => onInsert(payload.new)
     )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "chat_messages" },
+      (payload) => onUpdate?.(payload.new)
+    )
     .subscribe();
   return () => supabase.removeChannel(channel);
+}
+
+// Authors may edit within CHAT_EDIT_WINDOW_MS of posting. The database
+// (RLS policy in supabase-migrations/chat_message_edit.sql) enforces this too.
+export const CHAT_EDIT_WINDOW_MS = 3 * 60 * 1000;
+
+export async function updateChatMessage(id, body) {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .update({ body })
+    .eq("id", id)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Edit window has closed — messages can only be edited for 3 minutes.");
+  return data;
 }
 
 export async function deleteChatMessage(id) {
