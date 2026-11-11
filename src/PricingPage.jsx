@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, X as XIcon, Sparkles, Loader2, Lock, BarChart3, RefreshCw, Download, Layers, ChevronDown, ArrowRight } from "lucide-react";
+import { Check, X as XIcon, Sparkles, Loader2, Lock, BarChart3, Download, Layers, ChevronDown, ArrowRight } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { isProPlan } from "./lib/plan";
 import { LogoFull } from "./Logo";
@@ -13,7 +13,6 @@ const FEATURES = [
   { label: "Community, leaderboard & badges", free: true, pro: true },
   { label: "Public Report Card", free: true, pro: true },
   { label: "Trading accounts", free: "1 account", pro: "Unlimited" },
-  { label: "Broker Sync (MT4/MT5, live brokerages)", free: false, pro: true },
   { label: "Psychology Report", free: false, pro: true },
   { label: "CSV / PDF export", free: false, pro: true },
   { label: "Daily Review & Daily Market Plan", free: false, pro: true },
@@ -42,7 +41,6 @@ const FREE_LIST = [
 const PRO_LIST = [
   "Everything in Free",
   "Unlimited trading accounts",
-  "Broker Sync (MT4/MT5, live brokerages)",
   "Psychology Report",
   "Daily Review & Daily Market Plan",
   "Weekly / Monthly Review",
@@ -50,13 +48,12 @@ const PRO_LIST = [
 ];
 const VALUE = [
   { icon: BarChart3, title: "Psychology Report", text: "Discipline scoring and emotional-pattern breakdowns computed from your trade tags." },
-  { icon: RefreshCw, title: "Broker Sync", text: "Sync trades from MT4/MT5 and supported brokerages instead of entering them by hand." },
   { icon: Download, title: "CSV & PDF Exports", text: "Export your journal and performance data whenever you need it." },
   { icon: Layers, title: "Unlimited Accounts", text: "Track every funded challenge and trading account in one place." },
 ];
 const PRO_FAQS = [
   { q: "Can I use Strike Journal for free?", a: "Yes. The journal, dashboard, funding challenge tracker, community and 1 trading account are free, with no credit card required. New accounts also get a 3-day Pro trial." },
-  { q: "What's included in Pro?", a: "Unlimited trading accounts, Broker Sync, the Psychology Report, Daily Review, Daily Market Plan, Weekly/Monthly Review, and CSV/PDF export. New accounts start with a 3-day Pro trial." },
+  { q: "What's included in Pro?", a: "Unlimited trading accounts, the Psychology Report, Daily Review, Daily Market Plan, Weekly/Monthly Review, and CSV/PDF export. New accounts start with a 3-day Pro trial." },
   { q: "Can I switch between monthly and yearly?", a: "Yes. Each payment is for a single period, so you can choose monthly or yearly the next time you pay. Early payments stack onto your current expiry." },
   { q: "Does Pro automatically renew?", a: "No. Every payment covers one period only and there is no auto-renewal." },
   { q: "What payment methods are supported?", a: "Crypto through NOWPayments, including BTC, ETH, USDT and more." },

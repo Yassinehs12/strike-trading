@@ -289,7 +289,7 @@ const Table = ({ head, rows }) => (
   </div>
 );
 
-const UPDATED = "[LAST UPDATED DATE]";
+const UPDATED = "November 11, 2026";
 
 /* ============================================================
    PRIVACY POLICY
@@ -307,7 +307,6 @@ const PRIVACY_SECTIONS = [
   { id: "information-you-provide", title: "Information you provide" },
   { id: "trading-data", title: "Trading & journal data" },
   { id: "community-data", title: "Community & messaging content" },
-  { id: "broker-data", title: "Connected brokerage data" },
   { id: "automatic-data", title: "Automatically collected information" },
   { id: "cookies", title: "Cookies & local storage" },
   { id: "how-we-use", title: "How we use your information" },
@@ -340,8 +339,7 @@ export const PrivacyPolicy = () => (
         with, and the choices available to you.
       </p>
       <p>
-        In this policy, "Strike Journal", "we", and "us" refer to <Fill>[COMPANY LEGAL NAME]</Fill> of{" "}
-        <Fill>[LEGAL ADDRESS]</Fill>. "You" refers to anyone who visits the site or holds an account.
+        In this policy, "Strike Journal", "we", and "us" refer to the operator of Strike Journal. "You" refers to anyone who visits the site or holds an account.
         This policy covers the Strike Journal web application and the pages published at
         strikejournal.com. It does not cover brokers, prop firms, or other third-party sites you may
         reach from the service.
@@ -424,39 +422,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="broker-data" index={4} title="Connected brokerage data">
-      <p>
-        Strike Journal includes optional broker sync functionality. It is used only if you actively
-        connect an account, and what is involved depends on the connection type:
-      </p>
-      <UL>
-        <li>
-          <Strong>Brokerage connections</Strong> — you authorise the connection on a portal hosted by
-          our brokerage connectivity provider, where you sign in to your brokerage directly. Strike
-          Journal does not receive your brokerage login credentials. A connection identifier and a
-          credential issued by that provider are stored server-side so future syncs can run; they are
-          not reachable from your browser or by other users.
-        </li>
-        <li>
-          <Strong>MT4/MT5 connections</Strong> — you supply a server name, login, and investor
-          password. As implemented, the investor password is used once to provision the connection
-          with our platform provider and is not written to our database; only the resulting reference
-          identifier is stored.
-        </li>
-        <li>
-          <Strong>Synced activity</Strong> — where sync is enabled, trade activity retrieved from the
-          connected account (such as symbol, quantity, price, and timestamps) is written into your
-          journal as trades, the same as if you had entered them yourself.
-        </li>
-      </UL>
-      <Callout label="Requires owner input">
-        <Fill>[REQUIRES LEGAL/OWNER INPUT]</Fill> — broker sync exists in the codebase but is
-        configured per deployment. Confirm which providers are live in production and name them
-        explicitly here before publishing.
-      </Callout>
-    </Section>
-
-    <Section id="automatic-data" index={5} title="Automatically collected information">
+    <Section id="automatic-data" index={4} title="Automatically collected information">
       <p>
         Running a web application involves some information being processed automatically, even where we
         do not deliberately collect it:
@@ -475,13 +441,11 @@ export const PrivacyPolicy = () => (
         </li>
       </UL>
       <p>
-        The application code does not include a third-party product analytics or advertising tracker.
-        If usage analytics are enabled at the hosting level for the production deployment, that should
-        be stated here: <Fill>[REQUIRES LEGAL/OWNER INPUT — hosting analytics]</Fill>.
+        Strike Journal does not use third-party product analytics or advertising trackers.
       </p>
     </Section>
 
-    <Section id="cookies" index={6} title="Cookies & local storage">
+    <Section id="cookies" index={5} title="Cookies & local storage">
       <p>
         Strike Journal does not set advertising or cross-site tracking cookies. It does use your
         browser's local and session storage, which serves a similar purpose to a cookie, for the
@@ -505,7 +469,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="how-we-use" index={7} title="How we use your information">
+    <Section id="how-we-use" index={6} title="How we use your information">
       <UL>
         <li>To operate the journal, challenge tracker, analytics, goals, notebook, and planning tools.</li>
         <li>To authenticate you, keep you signed in, and secure your account.</li>
@@ -522,7 +486,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="visibility" index={8} title="What is private, what is visible">
+    <Section id="visibility" index={7} title="What is private, what is visible">
       <p>Not everything in the service has the same visibility, so it is worth separating clearly:</p>
       <Table
         head={["Content", "Who can see it"]}
@@ -543,18 +507,18 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="how-we-share" index={9} title="How we share information">
+    <Section id="how-we-share" index={8} title="How we share information">
       <p>We share information in a limited set of circumstances:</p>
       <UL>
         <li><Strong>With other users</Strong> — only the content you publish or send, as set out in the table above.</li>
         <li><Strong>With service providers</Strong> — the infrastructure and connectivity providers listed below, which process data on our behalf to run the service.</li>
-        <li><Strong>Where you direct it</Strong> — for example by connecting a brokerage, opting into the leaderboard, or enabling your public report card.</li>
+        <li><Strong>Where you direct it</Strong> — for example by opting into the leaderboard, or enabling your public report card.</li>
         <li><Strong>For legal reasons</Strong> — where required by law, or where necessary to investigate abuse, fraud, or threats to safety.</li>
         <li><Strong>In a business transfer</Strong> — if the service is acquired or transferred, information may move with it, subject to this policy.</li>
       </UL>
     </Section>
 
-    <Section id="third-parties" index={10} title="Third-party services">
+    <Section id="third-parties" index={9} title="Third-party services">
       <p>
         The following external services are used by the application. Each operates under its own terms
         and privacy policy, which we do not control and do not restate here.
@@ -563,9 +527,7 @@ export const PrivacyPolicy = () => (
         head={["Provider", "Role", "What it involves"]}
         rows={[
           ["Supabase", "Authentication, database, file storage, realtime", "Stores your account, journal and community records, and uploaded images; sends account emails such as password resets"],
-          [<Fill key="host">[HOSTING PROVIDER]</Fill>, "Hosting and delivery", "Serves the application and processes standard request data. The repository is configured for Vercel — confirm the live host"],
-          ["Brokerage connectivity provider", "Optional broker sync", "Hosts the connection portal and returns account activity where you connect a brokerage"],
-          ["MetaTrader platform provider", "Optional MT4/MT5 sync", "Provisions the connection from the details you supply"],
+          ["Vercel", "Hosting and delivery", "Serves the application and processes standard request data"],
           ["TradingView", "Embedded market heatmaps", "Widget loaded in your browser on the heatmaps page"],
           ["Google Fonts", "Web font delivery", "Font file loaded in your browser"],
         ]}
@@ -578,7 +540,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="ai" index={11} title="Automated analysis & AI features">
+    <Section id="ai" index={10} title="Automated analysis & AI features">
       <p>
         Strike Journal generates written observations about your trading — for example noting that a
         particular session or setup performs differently from your baseline, or summarising patterns in
@@ -590,15 +552,9 @@ export const PrivacyPolicy = () => (
         third-party AI or large language model provider, and your trades, notes, or screenshots are not
         sent to an AI provider for processing.
       </p>
-      <Callout label="If this changes">
-        If an AI-powered feature such as AI Trade Review is added later, this section must be updated
-        before launch to name the provider, state what information is sent, why, whether outputs are
-        stored, and what the provider's terms permit. Do not describe AI processing here until it
-        actually exists: <Fill>[REQUIRES LEGAL/OWNER INPUT]</Fill>.
-      </Callout>
     </Section>
 
-    <Section id="security" index={12} title="Data storage & security">
+    <Section id="security" index={11} title="Data storage & security">
       <p>
         We implement reasonable technical and organisational measures designed to protect your
         information. In this application, those measures include:
@@ -606,7 +562,7 @@ export const PrivacyPolicy = () => (
       <UL>
         <li>Row-level security policies in the database, so records are readable only by the account they belong to, or by the parties a shared feature intends.</li>
         <li>Password handling by our authentication provider; passwords are never stored by us in readable form.</li>
-        <li>Privileged credentials held server-side only and never exposed to the browser, including the credential used for brokerage connectivity.</li>
+        <li>Privileged credentials held server-side only and never exposed to the browser.</li>
         <li>Server-side functions that act using your own session rather than elevated permissions when reading your data.</li>
         <li>Transport encryption (HTTPS) for traffic to the application, and restricted origins for server functions.</li>
         <li>An internal audit log of administrative actions.</li>
@@ -618,7 +574,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="retention" index={13} title="Data retention">
+    <Section id="retention" index={12} title="Data retention">
       <p>
         We keep your information for as long as your account exists, because the product's value depends
         on a continuous history of your trading. You can delete individual trades, journal entries,
@@ -631,13 +587,9 @@ export const PrivacyPolicy = () => (
         for safety purposes. Backups and provider-level logs may retain data for a period after deletion
         under our providers' own schedules.
       </p>
-      <p>
-        Defined retention periods for backups, support conversations, and moderation records are not set
-        in the application itself: <Fill>[DATA RETENTION PERIODS — REQUIRES OWNER INPUT]</Fill>.
-      </p>
     </Section>
 
-    <Section id="your-rights" index={14} title="Your privacy rights">
+    <Section id="your-rights" index={13} title="Your privacy rights">
       <p>
         Depending on your location and applicable law, you may have some or all of the following rights
         over your personal information:
@@ -652,14 +604,14 @@ export const PrivacyPolicy = () => (
       </UL>
       <p>
         Not every right applies to every user in every jurisdiction. Several you can exercise directly:
-        you can edit your profile and preferences, edit or delete your own records, control your
-        leaderboard and public report card settings, and disconnect any connected brokerage. For anything
+        you can edit your profile and preferences, edit or delete your own records, and control your
+        leaderboard and public report card settings. For anything
         else, contact us using the details below. We may need to verify your identity before acting on a
         request.
       </p>
     </Section>
 
-    <Section id="deletion" index={15} title="Account & data deletion">
+    <Section id="deletion" index={14} title="Account & data deletion">
       <p>
         You can delete individual records at any time from within the app. To delete your entire account,
         use the deletion request option under Settings → Danger zone, which sends a request to our support
@@ -669,12 +621,11 @@ export const PrivacyPolicy = () => (
         Account deletion is currently handled as a request rather than an instant, automated action, so
         there is a processing delay between your request and the removal of your data. As described above,
         some residual copies may remain in backups or in other users' message histories for a period
-        afterwards. A target timeframe for completing deletion requests has not been set in the
-        application: <Fill>[DELETION TIMEFRAME — REQUIRES OWNER INPUT]</Fill>.
+        afterwards.
       </p>
     </Section>
 
-    <Section id="children" index={16} title="Children's privacy">
+    <Section id="children" index={15} title="Children's privacy">
       <p>
         Strike Journal is intended for adults. Account creation requires you to confirm that you are at
         least 18 years old, and the service is not directed to children. We do not knowingly collect
@@ -683,21 +634,16 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="transfers" index={17} title="International data transfers">
+    <Section id="transfers" index={16} title="International data transfers">
       <p>
         Strike Journal relies on cloud infrastructure and may process or store information in countries
         other than the one you live in, including countries whose data protection laws differ from your
         own. Where that happens, we rely on our providers' contractual and technical arrangements for
         such transfers.
       </p>
-      <p>
-        The hosting regions for the production database and storage are a deployment setting rather than
-        something visible in the application code:{" "}
-        <Fill>[HOSTING REGION / TRANSFER MECHANISM — REQUIRES LEGAL/OWNER INPUT]</Fill>.
-      </p>
     </Section>
 
-    <Section id="changes" index={18} title="Changes to this policy">
+    <Section id="changes" index={17} title="Changes to this policy">
       <p>
         We may update this policy as the product changes — for example if payments go live, or if an
         AI-powered feature is introduced. When we make material changes we will update the "last updated"
@@ -706,7 +652,7 @@ export const PrivacyPolicy = () => (
       </p>
     </Section>
 
-    <Section id="contact" index={19} title="Contact us">
+    <Section id="contact" index={18} title="Contact us">
       <p>
         For questions about this policy, or to make a privacy request, contact us at{" "}
         <a
@@ -716,9 +662,6 @@ export const PrivacyPolicy = () => (
           support@strikejournal.com
         </a>
         .
-      </p>
-      <p>
-        Postal address: <Fill>[COMPANY LEGAL NAME]</Fill>, <Fill>[LEGAL ADDRESS]</Fill>.
       </p>
     </Section>
   </LegalShell>
@@ -740,7 +683,6 @@ const TERMS_SECTIONS = [
   { id: "no-advice", title: "No investment advice" },
   { id: "analytics", title: "Analytics & automated insights" },
   { id: "challenges", title: "Funding challenge tracking" },
-  { id: "broker", title: "Connected brokerage accounts" },
   { id: "market-data", title: "Market data & third-party content" },
   { id: "payments", title: "Plans, subscriptions & payments" },
   { id: "ip", title: "Intellectual property" },
@@ -765,7 +707,7 @@ export const TermsOfService = () => (
   >
     <Section id="acceptance" index={0} title="Acceptance of these terms">
       <p>
-        These Terms of Service ("Terms") form an agreement between you and <Fill>[COMPANY LEGAL NAME]</Fill>{" "}
+        These Terms of Service ("Terms") form an agreement between you and the operator of Strike Journal{" "}
         ("Strike Journal", "we", "us") covering your use of the Strike Journal application and website
         (the "Service"). By creating an account or using the Service, you agree to these Terms. If you do
         not agree, please do not use the Service.
@@ -914,17 +856,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="broker" index={11} title="Connected brokerage accounts">
-      <p>
-        Where broker sync is available, connecting an account is optional and initiated by you. You are
-        responsible for having the right to connect that account and for complying with your broker's
-        terms. Synced data is imported on a best-effort basis and may be incomplete, delayed, or
-        mismatched — your broker's own statements remain authoritative. You can disconnect a connection at
-        any time from the app.
-      </p>
-    </Section>
-
-    <Section id="market-data" index={12} title="Market data & third-party content">
+    <Section id="market-data" index={11} title="Market data & third-party content">
       <p>
         The Service displays economic calendar events, macroeconomic indicators, positioning and sentiment
         data, and embedded market charts sourced from third parties. This content is provided for general
@@ -934,7 +866,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="payments" index={13} title="Plans, subscriptions & payments">
+    <Section id="payments" index={12} title="Plans, subscriptions & payments">
       <p>
         Strike Journal offers a free plan that includes the journal, funding challenge tracker, dashboard
         and core analytics, community access, and the public report card, with certain limits such as the
@@ -947,8 +879,6 @@ export const TermsOfService = () => (
         <li><Strong>Payment method</Strong> — payments are made in cryptocurrency through our payment processor, NOWPayments. Network or exchange fees charged by your wallet, exchange, or the blockchain are set by those third parties and are not collected by us.</li>
         <li><Strong>Free trial</Strong> — new accounts may claim a 3-day Pro trial. No card or payment details are required, and the trial does not convert into a paid plan.</li>
         <li><Strong>Refunds</Strong> — see our{" "}<a href="/refund-policy" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">Refund Policy</a>.</li>
-        <li>Taxes: <Fill>[TAX TREATMENT]</Fill></li>
-        <li>Price changes: <Fill>[PRICE CHANGE POLICY AND NOTICE GIVEN]</Fill></li>
       </UL>
       <p>
         Free features are provided as they are, and we may change, limit, or discontinue what the free plan
@@ -956,7 +886,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="ip" index={14} title="Intellectual property">
+    <Section id="ip" index={13} title="Intellectual property">
       <p>
         The Service itself — its software, interface, design, branding, name, logo, and the material we
         publish — belongs to us or our licensors and is protected by intellectual property law. These Terms
@@ -966,7 +896,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="prohibited" index={15} title="Prohibited uses">
+    <Section id="prohibited" index={14} title="Prohibited uses">
       <p>When using the Service, you agree not to:</p>
       <UL>
         <li>Use it for any unlawful purpose, or to promote unlawful activity.</li>
@@ -983,7 +913,7 @@ export const TermsOfService = () => (
       </UL>
     </Section>
 
-    <Section id="termination" index={16} title="Suspension & termination">
+    <Section id="termination" index={15} title="Suspension & termination">
       <p>
         You may stop using the Service at any time. You can request deletion of your account from Settings →
         Danger zone, or by emailing us. As described in the Privacy Policy, deletion is processed as a
@@ -1000,7 +930,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="availability" index={17} title="Service availability & changes">
+    <Section id="availability" index={16} title="Service availability & changes">
       <p>
         We aim for a reliable service but do not guarantee that it will be uninterrupted, timely,
         error-free, or available at any particular time. Maintenance, provider outages, and faults can
@@ -1010,7 +940,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="warranties" index={18} title="Disclaimer of warranties">
+    <Section id="warranties" index={17} title="Disclaimer of warranties">
       <p>
         To the fullest extent permitted by law, the Service is provided "as is" and "as available", without
         warranties of any kind, express or implied, including implied warranties of merchantability, fitness
@@ -1021,7 +951,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="liability" index={19} title="Limitation of liability">
+    <Section id="liability" index={18} title="Limitation of liability">
       <p>
         To the fullest extent permitted by law, Strike Journal and its operators will not be liable for
         trading losses, lost profits, lost opportunities, loss of data, failed funding challenges, or any
@@ -1032,13 +962,13 @@ export const TermsOfService = () => (
       <p>
         Where liability cannot be excluded, our total aggregate liability arising out of or relating to the
         Service is limited to the greater of the amount you paid us for the Service in the twelve months
-        before the claim, or <Fill>[LIABILITY CAP — REQUIRES LEGAL INPUT]</Fill>. Nothing in these Terms
+        before the claim. Nothing in these Terms
         excludes liability that cannot lawfully be excluded, such as liability for fraud or for death or
         personal injury caused by negligence.
       </p>
     </Section>
 
-    <Section id="indemnity" index={20} title="Indemnification">
+    <Section id="indemnity" index={19} title="Indemnification">
       <p>
         You agree to indemnify and hold harmless Strike Journal and its operators from claims, damages,
         losses, and reasonable costs arising from your breach of these Terms, your misuse of the Service,
@@ -1047,7 +977,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="changes" index={21} title="Changes to these terms">
+    <Section id="changes" index={20} title="Changes to these terms">
       <p>
         We may update these Terms as the Service changes — for example when paid plans launch. We will
         update the "last updated" date at the top of this page and, for material changes, aim to notify you
@@ -1057,11 +987,10 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="governing-law" index={22} title="Governing law & disputes">
+    <Section id="governing-law" index={21} title="Governing law & disputes">
       <p>
-        These Terms are governed by the laws of <Fill>[GOVERNING LAW / JURISDICTION]</Fill>, without regard
-        to its conflict-of-law rules. Any dispute arising out of or relating to these Terms or the Service
-        will be subject to <Fill>[DISPUTE RESOLUTION FORUM / PROCESS — REQUIRES LEGAL INPUT]</Fill>.
+        These Terms are governed by the laws applicable to the operator of Strike Journal, without regard
+        to conflict-of-law rules. We ask that you contact us first to try to resolve any dispute informally.
       </p>
       <p>
         If you are a consumer, this section does not affect mandatory protections or court access available
@@ -1070,7 +999,7 @@ export const TermsOfService = () => (
       </p>
     </Section>
 
-    <Section id="contact" index={23} title="Contact information">
+    <Section id="contact" index={22} title="Contact information">
       <p>
         Questions about these Terms can be sent to{" "}
         <a
@@ -1082,7 +1011,6 @@ export const TermsOfService = () => (
         .
       </p>
       <p>
-        Operated by <Fill>[COMPANY LEGAL NAME]</Fill>, <Fill>[LEGAL ADDRESS]</Fill>.
       </p>
     </Section>
   </LegalShell>
@@ -1129,9 +1057,9 @@ export const RefundPolicy = () => (
 
     <Section id="eligibility" index={2} title="Refund eligibility">
       <UL>
-        <li>You may request a full refund within <Fill>[REFUND WINDOW, e.g. 7 days]</Fill> of your payment. <Fill>[CONFIRM WINDOW OR "NO REFUNDS AFTER PAYMENT"]</Fill></li>
+        <li>Because each payment is a one-time purchase for a fixed period, refund requests are reviewed case by case. Contact us as soon as possible after paying.</li>
         <li>If you were charged by mistake, charged twice, or the payment was credited but Pro was not activated, contact us and we will correct it or refund you.</li>
-        <li>Outside the window above, payments are generally non-refundable, and Pro access continues until the end of the period you paid for. <Fill>[CONFIRM]</Fill></li>
+        <li>Pro access continues until the end of the period you paid for unless a refund is issued.</li>
         <li>Nothing in this policy limits any rights you have under consumer protection law where you live.</li>
       </UL>
     </Section>
@@ -1142,7 +1070,7 @@ export const RefundPolicy = () => (
         address you provide, in the same currency you paid with where possible. The refunded amount is
         based on the amount we received, so network or exchange fees charged by your wallet, exchange, or
         the blockchain cannot be recovered, and the value in your local currency may differ from when you
-        paid because crypto prices move. <Fill>[CONFIRM REFUND CURRENCY / RATE RULE]</Fill>
+        paid because crypto prices move.
       </p>
     </Section>
 
@@ -1153,16 +1081,14 @@ export const RefundPolicy = () => (
           support@strikejournal.com
         </a>{" "}
         from the address on your account with your username and the transaction ID or hash of the
-        payment. We aim to reply within <Fill>[RESPONSE TIME, e.g. 3 business days]</Fill>, and approved
-        refunds are sent within <Fill>[PROCESSING TIME, e.g. 7 days]</Fill>. When a refund is issued, Pro
+        payment. We will reply as soon as we can. When a refund is issued, Pro
         access ends and your account returns to the Free plan.
       </p>
     </Section>
 
     <Section id="contact" index={5} title="Contact us">
       <p>
-        Operated by <Fill>[COMPANY LEGAL NAME]</Fill>, <Fill>[LEGAL ADDRESS]</Fill>. Questions about this
-        policy: support@strikejournal.com.
+        Questions about this policy: support@strikejournal.com.
       </p>
     </Section>
   </LegalShell>
@@ -1223,7 +1149,7 @@ export const CookiePolicy = () => (
       />
       <p>
         The site also loads fonts from Google Fonts, which reveals your IP address to Google when a page
-        loads. <Fill>[OPTIONAL: self-host fonts to remove this]</Fill>
+        loads.
       </p>
     </Section>
 

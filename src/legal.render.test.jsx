@@ -19,7 +19,7 @@ describe("legal pages", () => {
       const ids = new Set([...html.matchAll(/id="([a-z-]+)"/g)].map((m) => m[1]));
       const missing = hrefs.filter((h) => !ids.has(h));
       expect(missing).toEqual([]);
-      expect(hrefs.length).toBeGreaterThan(20);
+      expect(hrefs.length).toBeGreaterThan(15);
     }
   });
 

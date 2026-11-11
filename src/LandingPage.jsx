@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
   Banknote, Gauge, CheckCircle2, TrendingUp, TrendingDown, Menu, X,
-  MessagesSquare, Users, Send, ChevronDown, Lock, Zap, Plug, Brain,
+  MessagesSquare, Users, Send, ChevronDown, Lock, Zap, Brain,
   AlertTriangle, XCircle, Flame, NotebookPen,
 } from "lucide-react";
 import { LogoMark, LogoFull } from "./Logo";
@@ -280,7 +280,6 @@ const FlagshipSection = () => (
 const MORE_FEATURES = [
   { icon: BookOpen, title: "Trade Journal", desc: "Entry/exit, setup tags, session, psychology notes, and chart screenshots on every trade." },
   { icon: NotebookPen, title: "Daily Market Plan", desc: "Write your bias and key levels before the session — trade the plan, not the moment." },
-  { icon: Plug, title: "Broker Sync", desc: "Connect Robinhood, Schwab, Fidelity, IBKR, and 20+ brokerages — no manual entry." },
   { icon: CalendarDays, title: "P&L Calendar", desc: "Every day shaded by profit or loss so your best and worst days jump out fast." },
   { icon: BarChart3, title: "Analytics", desc: "Win rate, profit factor, R:R, streaks, and setup performance side by side." },
   { icon: Banknote, title: "Payout Tracking", desc: "Once you're funded, track profit splits and payout history in one place." },
