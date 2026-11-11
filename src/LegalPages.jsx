@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown } from "lucide-react";
 import { LogoFull } from "./Logo";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { usePageMeta } from "./lib/seo";
+import { reopenConsent } from "./lib/consent";
 
 /* ============================================================
    SHARED LEGAL PAGE FURNITURE
@@ -20,6 +21,8 @@ const SUB_NAV = [
   { label: "Home", href: "/" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms of Service", href: "/terms" },
+  { label: "Refund Policy", href: "/refund-policy" },
+  { label: "Cookie Policy", href: "/cookies" },
   { label: "Pricing", href: "/pricing" },
   { label: "Changelog", href: "/changelog" },
 ];
@@ -933,22 +936,19 @@ export const TermsOfService = () => (
 
     <Section id="payments" index={13} title="Plans, subscriptions & payments">
       <p>
-        Strike Journal currently offers a free plan that includes the journal, funding challenge tracker,
-        dashboard and core analytics, community access, and the public report card, with certain limits
-        such as the number of trading accounts.
-      </p>
-      <p>
-        A paid "Pro" plan is described in the product as upcoming. Billing is not live in the Service at
-        the time of writing, and no payment details are collected or charged through it. Where a paid plan
-        is enabled, the following terms will apply and must be completed before launch:
+        Strike Journal offers a free plan that includes the journal, funding challenge tracker, dashboard
+        and core analytics, community access, and the public report card, with certain limits such as the
+        number of trading accounts. A paid "Pro" plan unlocks additional features, as listed on the{" "}
+        <a href="/pricing" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">Pricing page</a>.
       </p>
       <UL>
-        <li>Pricing and billing intervals: <Fill>[PRICING & BILLING INTERVALS]</Fill></li>
-        <li>Payment processing and accepted methods: <Fill>[PAYMENT PROCESSOR]</Fill></li>
-        <li>Renewal and cancellation: <Fill>[RENEWAL & CANCELLATION TERMS]</Fill></li>
-        <li>Refunds: <Fill>[REFUND POLICY]</Fill></li>
+        <li><Strong>Prices</Strong> — Pro is $9.99 for one month or $99 for one year, as shown on the Pricing page at the time you pay. The price shown at checkout is the price you pay; we do not add hidden fees.</li>
+        <li><Strong>One-time payments, no auto-renewal</Strong> — each payment covers a single period only. We never charge you automatically. When your period ends your account returns to the Free plan unless you pay again, and there is nothing to cancel.</li>
+        <li><Strong>Payment method</Strong> — payments are made in cryptocurrency through our payment processor, NOWPayments. Network or exchange fees charged by your wallet, exchange, or the blockchain are set by those third parties and are not collected by us.</li>
+        <li><Strong>Free trial</Strong> — new accounts may claim a 3-day Pro trial. No card or payment details are required, and the trial does not convert into a paid plan.</li>
+        <li><Strong>Refunds</Strong> — see our{" "}<a href="/refund-policy" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">Refund Policy</a>.</li>
         <li>Taxes: <Fill>[TAX TREATMENT]</Fill></li>
-        <li>Price changes and notice given: <Fill>[PRICE CHANGE POLICY]</Fill></li>
+        <li>Price changes: <Fill>[PRICE CHANGE POLICY AND NOTICE GIVEN]</Fill></li>
       </UL>
       <p>
         Free features are provided as they are, and we may change, limit, or discontinue what the free plan
@@ -1084,6 +1084,165 @@ export const TermsOfService = () => (
       <p>
         Operated by <Fill>[COMPANY LEGAL NAME]</Fill>, <Fill>[LEGAL ADDRESS]</Fill>.
       </p>
+    </Section>
+  </LegalShell>
+);
+
+/* ============================================================
+   REFUND POLICY
+   Facts (crypto one-time payments, no auto-renewal, 3-day trial)
+   come from the Pricing page. Items that are business decisions
+   are left as visible placeholders for the owner.
+   ============================================================ */
+
+const REFUND_SECTIONS = [
+  { id: "overview", title: "Overview" },
+  { id: "free-and-trial", title: "Free plan & trial" },
+  { id: "eligibility", title: "Refund eligibility" },
+  { id: "crypto", title: "Refunds for crypto payments" },
+  { id: "how-to-request", title: "How to request a refund" },
+  { id: "contact", title: "Contact us" },
+];
+
+export const RefundPolicy = () => (
+  <LegalShell
+    title="Refund Policy"
+    subtitle="When and how you can get your money back for Strike Journal Pro."
+    updated={UPDATED}
+    path="/refund-policy"
+    sections={REFUND_SECTIONS}
+  >
+    <Section id="overview" index={0} title="Overview">
+      <p>
+        Strike Journal Pro is sold as a one-time payment for a single period (one month or one year). It
+        never renews automatically, so you will never be charged again unless you choose to pay again.
+        This policy explains when a payment can be refunded.
+      </p>
+    </Section>
+
+    <Section id="free-and-trial" index={1} title="Free plan & trial">
+      <p>
+        The Free plan costs nothing, and the 3-day Pro trial requires no payment details, so there is
+        nothing to refund. We recommend trying the Free plan and the trial before you buy.
+      </p>
+    </Section>
+
+    <Section id="eligibility" index={2} title="Refund eligibility">
+      <UL>
+        <li>You may request a full refund within <Fill>[REFUND WINDOW, e.g. 7 days]</Fill> of your payment. <Fill>[CONFIRM WINDOW OR "NO REFUNDS AFTER PAYMENT"]</Fill></li>
+        <li>If you were charged by mistake, charged twice, or the payment was credited but Pro was not activated, contact us and we will correct it or refund you.</li>
+        <li>Outside the window above, payments are generally non-refundable, and Pro access continues until the end of the period you paid for. <Fill>[CONFIRM]</Fill></li>
+        <li>Nothing in this policy limits any rights you have under consumer protection law where you live.</li>
+      </UL>
+    </Section>
+
+    <Section id="crypto" index={3} title="Refunds for crypto payments">
+      <p>
+        Payments are made in cryptocurrency through NOWPayments. Approved refunds are sent to a wallet
+        address you provide, in the same currency you paid with where possible. The refunded amount is
+        based on the amount we received, so network or exchange fees charged by your wallet, exchange, or
+        the blockchain cannot be recovered, and the value in your local currency may differ from when you
+        paid because crypto prices move. <Fill>[CONFIRM REFUND CURRENCY / RATE RULE]</Fill>
+      </p>
+    </Section>
+
+    <Section id="how-to-request" index={4} title="How to request a refund">
+      <p>
+        Email{" "}
+        <a href="mailto:support@strikejournal.com" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">
+          support@strikejournal.com
+        </a>{" "}
+        from the address on your account with your username and the transaction ID or hash of the
+        payment. We aim to reply within <Fill>[RESPONSE TIME, e.g. 3 business days]</Fill>, and approved
+        refunds are sent within <Fill>[PROCESSING TIME, e.g. 7 days]</Fill>. When a refund is issued, Pro
+        access ends and your account returns to the Free plan.
+      </p>
+    </Section>
+
+    <Section id="contact" index={5} title="Contact us">
+      <p>
+        Operated by <Fill>[COMPANY LEGAL NAME]</Fill>, <Fill>[LEGAL ADDRESS]</Fill>. Questions about this
+        policy: support@strikejournal.com.
+      </p>
+    </Section>
+  </LegalShell>
+);
+
+/* ============================================================
+   COOKIE POLICY
+   Mirrors the storage table in the Privacy Policy and the actual
+   third-party embeds in the code.
+   ============================================================ */
+
+const COOKIE_SECTIONS = [
+  { id: "what", title: "What this covers" },
+  { id: "necessary", title: "Strictly necessary storage" },
+  { id: "optional", title: "Optional third-party content" },
+  { id: "not-used", title: "What we do not use" },
+  { id: "choices", title: "Your choices" },
+  { id: "contact", title: "Contact us" },
+];
+
+export const CookiePolicy = () => (
+  <LegalShell
+    title="Cookie Policy"
+    subtitle="What Strike Journal stores in your browser and the choices you have."
+    updated={UPDATED}
+    path="/cookies"
+    sections={COOKIE_SECTIONS}
+  >
+    <Section id="what" index={0} title="What this covers">
+      <p>
+        This policy explains the cookies and similar browser storage (local storage and session storage)
+        used by Strike Journal. For how we handle personal information more broadly, see our{" "}
+        <a href="/privacy" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">Privacy Policy</a>.
+      </p>
+    </Section>
+
+    <Section id="necessary" index={1} title="Strictly necessary storage">
+      <p>These are needed for the app to work and are used without asking for consent.</p>
+      <Table
+        head={["What is stored", "Purpose", "Where"]}
+        rows={[
+          ["Session token", "Keeps you signed in between page loads", "Local storage, or session storage if you do not choose \u201ckeep me signed in\u201d"],
+          ["Keep-signed-in preference", "Remembers which store your session uses", "Local storage"],
+          ["Cookie choice", "Remembers whether you accepted or rejected optional content", "Local storage"],
+          ["Pending profile details", "Short-lived fallback during sign-up if profile creation needs a retry", "Local storage"],
+        ]}
+      />
+      <p>We also store a few preferences you set, such as theme, calendar filters, and dismissed notices, in local storage.</p>
+    </Section>
+
+    <Section id="optional" index={2} title="Optional third-party content">
+      <p>These load only if you choose "Accept all" (or allow them on the page that needs them).</p>
+      <Table
+        head={["Provider", "Purpose", "What it involves"]}
+        rows={[
+          ["TradingView", "Market heatmaps widget", "Your browser connects to TradingView, which receives your IP address and may set its own storage under its own policy"],
+        ]}
+      />
+      <p>
+        The site also loads fonts from Google Fonts, which reveals your IP address to Google when a page
+        loads. <Fill>[OPTIONAL: self-host fonts to remove this]</Fill>
+      </p>
+    </Section>
+
+    <Section id="not-used" index={3} title="What we do not use">
+      <p>Strike Journal does not use advertising cookies, cross-site tracking, or third-party analytics trackers.</p>
+    </Section>
+
+    <Section id="choices" index={4} title="Your choices">
+      <p>
+        You can change your decision at any time:{" "}
+        <button type="button" onClick={reopenConsent} className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">
+          reopen cookie settings
+        </button>
+        . You can also clear local and session storage in your browser settings, which signs you out.
+      </p>
+    </Section>
+
+    <Section id="contact" index={5} title="Contact us">
+      <p>Questions: support@strikejournal.com.</p>
     </Section>
   </LegalShell>
 );

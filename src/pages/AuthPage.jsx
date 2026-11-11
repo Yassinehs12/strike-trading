@@ -190,6 +190,7 @@ export const AuthPage = ({ onBack }) => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [age, setAge] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedInState] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -213,6 +214,7 @@ export const AuthPage = ({ onBack }) => {
     if (password.length < 6) { setError("Password must be at least 6 characters."); setLoading(false); return; }
 
     if (mode === "signup") {
+      if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy to create an account."); setLoading(false); return; }
       const cleanUsername = username.trim();
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanUsername)) {
         setError("Username must be 3-20 characters: letters, numbers, and underscores only.");
@@ -409,6 +411,18 @@ export const AuthPage = ({ onBack }) => {
                   </div>
                 )}
 
+                {mode === "signup" && (
+                  <label className="flex items-start gap-2 text-xs text-[var(--text-muted)] cursor-pointer select-none mb-4">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
+                      className="w-3.5 h-3.5 mt-0.5 rounded border-[var(--border-secondary)] accent-[var(--accent)] cursor-pointer shrink-0" />
+                    <span>
+                      I am 18 or older and I agree to the{" "}
+                      <a href="/terms" target="_blank" rel="noopener" className="underline text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Terms of Service</a>{" "}and{" "}
+                      <a href="/privacy" target="_blank" rel="noopener" className="underline text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Privacy Policy</a>.
+                    </span>
+                  </label>
+                )}
+
                 {error && <p className="text-xs text-rose-400 mb-3 flex items-center gap-1"><AlertTriangle size={11} /> {error}</p>}
                 {notice && <p className="text-xs text-emerald-400 mb-3 flex items-center gap-1"><CheckCircle size={11} /> {notice}</p>}
 
@@ -427,14 +441,6 @@ export const AuthPage = ({ onBack }) => {
                 </button>
               </p>
 
-              {mode === "signup" && (
-                <p className="text-center text-[11px] text-[var(--text-faint)] mt-3">
-                  By creating an account, you agree to our{" "}
-                  <a href="/terms" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Terms</a>{" "}
-                  and{" "}
-                  <a href="/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline">Privacy Policy</a>.
-                </p>
-              )}
             </div>
           )}
         </div>

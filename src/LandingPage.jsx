@@ -1,3 +1,4 @@
+import { reopenConsent } from "./lib/consent";
 import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowRight, ShieldCheck, BookOpen, BarChart3, CalendarDays,
@@ -469,6 +470,9 @@ const Footer = () => (
         <ul className="space-y-2.5">
           <li><a href="/privacy" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">Privacy Policy</a></li>
           <li><a href="/terms" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">Terms of Service</a></li>
+          <li><a href="/refund-policy" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">Refund Policy</a></li>
+          <li><a href="/cookies" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">Cookie Policy</a></li>
+          <li><button type="button" onClick={reopenConsent} className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">Cookie settings</button></li>
         </ul>
       </div>
     </div>

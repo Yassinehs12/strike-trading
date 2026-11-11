@@ -3,13 +3,16 @@ import {
   Grid3x3,
 } from "lucide-react";
 import { Card } from "../components/ui/Primitives";
+import { setConsent, useConsent } from "../lib/consent";
 
 export const MarketHeatmapsPage = () => {
   const containerRef = useRef(null);
   const [market, setMarket] = useState("stocks"); // "stocks" | "crypto"
+  const consent = useConsent();
+  const allowed = consent === "accepted";
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!allowed || !containerRef.current) return;
     containerRef.current.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
     const script = document.createElement("script");
     script.type = "text/javascript";
@@ -53,7 +56,7 @@ export const MarketHeatmapsPage = () => {
       });
     }
     containerRef.current.appendChild(script);
-  }, [market]);
+  }, [market, allowed]);
 
   return (
     <div className="p-4 md:p-6">
@@ -71,9 +74,22 @@ export const MarketHeatmapsPage = () => {
             <button onClick={() => setMarket("crypto")} className={`px-4 py-2 text-sm font-medium transition-colors ${market === "crypto" ? "bg-[var(--accent)] text-[var(--text-inverse)]" : "bg-[var(--bg-primary)] text-[var(--text-tertiary)]"}`}>Crypto</button>
           </div>
         </div>
-        <div className="tradingview-widget-container rounded-lg overflow-hidden" ref={containerRef}>
-          <div className="tradingview-widget-container__widget" />
-        </div>
+        {allowed ? (
+          <div className="tradingview-widget-container rounded-lg overflow-hidden" ref={containerRef}>
+            <div className="tradingview-widget-container__widget" />
+          </div>
+        ) : (
+          <div className="rounded-lg border border-white/10 p-8 text-center">
+            <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Third-party content is turned off</p>
+            <p className="text-xs text-[var(--text-muted)] mb-4 max-w-md mx-auto">
+              The heatmap is provided by TradingView and loading it shares your IP address with them. Allow it to view the heatmap.
+            </p>
+            <button onClick={() => setConsent("accepted")}
+              className="text-sm font-semibold px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity">
+              Allow third-party content
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   );

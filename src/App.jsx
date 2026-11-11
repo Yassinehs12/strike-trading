@@ -21,7 +21,7 @@ import { filterTradesByPeriod } from "./insights";
 import LandingPage from "./LandingPage";
 import { InstallBanner, InstallMenuItem, IOSInstallModal } from "./InstallPrompt";
 import { joinPresence, leavePresence } from "./lib/presence";
-import { PrivacyPolicy, TermsOfService } from "./LegalPages";
+import { PrivacyPolicy, TermsOfService, RefundPolicy, CookiePolicy } from "./LegalPages";
 import PricingPage from "./PricingPage";
 import ChangelogPage from "./ChangelogPage";
 import ReportCardPage from "./ReportCardPage";
@@ -117,6 +117,8 @@ export default function App() {
     const raw = window.location.pathname.replace(/^\/+/, "").split(/[?#]/)[0];
     if (raw === "privacy") return "privacy";
     if (raw === "terms") return "terms";
+    if (raw === "refund-policy") return "refund";
+    if (raw === "cookies") return "cookies";
     if (raw === "changelog") return "changelog";
     if (raw === "blog") return "blog";
     if (raw === "pricing") return "pricing";
@@ -458,6 +460,8 @@ export default function App() {
 
   if (legalPage === "privacy") return <PrivacyPolicy />;
   if (legalPage === "terms") return <TermsOfService />;
+  if (legalPage === "refund") return <RefundPolicy />;
+  if (legalPage === "cookies") return <CookiePolicy />;
   if (legalPage === "changelog") return <ChangelogPage />;
   if (legalPage === "pricing") return <PricingPage />;
   if (legalPage === "blog") return <BlogListPage />;
