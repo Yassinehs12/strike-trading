@@ -132,6 +132,32 @@ export async function fetchRetailSentiment() {
   return { symbols: data?.symbols || [], cachedAt: data?.cachedAt || null };
 }
 
+// Month-end closes for one pair (ECB reference rates, via the fx-seasonality
+// edge function). Responses are cached per pair for 30 minutes in memory —
+// the underlying data only changes once per working day — and the server
+// caches the full history for 6h. Pass { force: true } to bypass.
+const FX_CACHE_TTL_MS = 30 * 60 * 1000;
+const fxSeasonalityCache = new Map();
+
+export async function fetchFxSeasonality(pair, { force = false } = {}) {
+  const hit = fxSeasonalityCache.get(pair);
+  if (!force && hit && Date.now() - hit.at < FX_CACHE_TTL_MS) return hit.data;
+  const { data, error } = await supabase.functions.invoke(`fx-seasonality?pair=${encodeURIComponent(pair)}`, { method: "GET" });
+  if (error) {
+    const err = await unwrapFunctionError(error);
+    if (/failed to send a request/i.test(err?.message || "")) {
+      throw new Error("Couldn't reach the fx-seasonality function. It may not be deployed yet (run: supabase functions deploy fx-seasonality) or the request was blocked by the network.");
+    }
+    throw err;
+  }
+  if (data?.error) throw new Error(data.error);
+  if (!data || !Array.isArray(data.closes) || data.closes.length === 0) {
+    throw new Error("The data provider returned no history for this pair.");
+  }
+  fxSeasonalityCache.set(pair, { at: Date.now(), data });
+  return data;
+}
+
 /* ---------- pre-market checklist (synced across devices) ---------- */
 const ALL_ACCOUNTS_CHECKLIST_ID = "00000000-0000-0000-0000-000000000000";
 

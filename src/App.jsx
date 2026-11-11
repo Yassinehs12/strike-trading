@@ -64,6 +64,7 @@ import { EconomicCalendarPage } from "./pages/EconomicCalendarPage";
 import { JournalPage } from "./pages/JournalPage";
 import { MarketHeatmapsPage } from "./pages/MarketHeatmapsPage";
 import { MacroSentimentPage } from "./pages/MacroSentimentPage";
+import { SeasonalityPage } from "./pages/SeasonalityPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { todayISO } from "./lib/format";
 
@@ -277,6 +278,7 @@ export default function App() {
     "econ-calendar": ["Economic Calendar", "Live market-moving events"],
     heatmaps: ["Market Heatmaps", "Live stocks and crypto performance"],
     "macro-sentiment": ["Macro & Sentiment", "Institutional positioning, macro backdrop, and retail crowd sentiment"],
+    seasonality: ["Forex Seasonality", "Average monthly returns by currency pair, from official ECB reference-rate history"],
     calculator: ["Pips Calculator", "Know what a pip is worth, and how far between two prices"],
     "position-calculator": ["Position Calculator", "Size a position to risk exactly what you intend, before you're in it"],
     "risk-tools": ["Risk of Ruin", "Sanity-check your edge before it costs you money"],
@@ -602,6 +604,7 @@ export default function App() {
                 {active === "econ-calendar" && <EconomicCalendarPage />}
                 {active === "heatmaps" && <MarketHeatmapsPage />}
                 {active === "macro-sentiment" && <MacroSentimentPage />}
+                {active === "seasonality" && <SeasonalityPage />}
                 {active === "calculator" && <CalculatorPage />}
                 {active === "position-calculator" && <PositionCalculatorPage />}
                 {active === "risk-tools" && <RiskToolsPage />}
