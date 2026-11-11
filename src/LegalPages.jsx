@@ -1154,17 +1154,38 @@ export const CookiePolicy = () => (
     </Section>
 
     <Section id="not-used" index={3} title="What we do not use">
-      <p>Strike Journal does not use advertising cookies, cross-site tracking, or third-party analytics trackers.</p>
+      <p>Strike Journal keeps its use of browser storage deliberately small. We do not use:</p>
+      <UL>
+        <li><Strong>Advertising cookies</Strong> — we do not show ads or build advertising profiles.</li>
+        <li><Strong>Cross-site tracking</Strong> — we do not follow you across other websites.</li>
+        <li><Strong>Third-party analytics trackers</Strong> — no Google Analytics, Meta Pixel, or similar tools.</li>
+        <li><Strong>Selling of browsing data</Strong> — we do not sell or rent data collected through cookies or local storage.</li>
+      </UL>
     </Section>
 
     <Section id="choices" index={4} title="Your choices">
-      <p>
-        You can change your decision at any time:{" "}
-        <button type="button" onClick={reopenConsent} className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">
-          reopen cookie settings
-        </button>
-        . You can also clear local and session storage in your browser settings, which signs you out.
-      </p>
+      <p>You are in control of the optional content on this site:</p>
+      <UL>
+        <li>
+          <Strong>Cookie banner</Strong> — on your first visit you can choose "Accept all" or "Reject
+          non-essential". Both options are equally easy to pick, and you can use the whole app either way.
+        </li>
+        <li>
+          <Strong>Change your mind</Strong> — you can{" "}
+          <button type="button" onClick={reopenConsent} className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline underline-offset-2">
+            reopen cookie settings
+          </button>{" "}
+          at any time, or use the "Cookie settings" link in the site footer.
+        </li>
+        <li>
+          <Strong>If you reject</Strong> — only the strictly necessary storage above is used. Third-party
+          content such as the TradingView market heatmap stays switched off until you allow it.
+        </li>
+        <li>
+          <Strong>Browser controls</Strong> — you can clear or block local and session storage in your
+          browser settings. Doing so signs you out and resets your saved preferences.
+        </li>
+      </UL>
     </Section>
 
     <Section id="contact" index={5} title="Contact us">
